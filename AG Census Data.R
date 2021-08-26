@@ -316,11 +316,6 @@ plot(st_geometry(top.two.ccs.farm.types))
 plot(farm.ccs.join["VALUE"])
 as(top.two.ccs.farm.types, "sf") # This won't convert a data.frame or tibble 
 
-library(credentials)
-library(gitcreds)
-usethis::create_github_token()
-gitcreds_get
+library(gitcreds) #may need to install this too
 
-
-gitcreds_set
-set_github_pat
+gitcreds_set() #should prompt you for your pat - paste it here

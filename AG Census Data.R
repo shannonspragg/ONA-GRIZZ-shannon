@@ -309,13 +309,10 @@ st_write(top.two.ccs.farm.types,"Dominant and Total Farm Types CCS.shp")
 
 st_write(totals.ccs.farm.types, "Total Farms By Type CCS.shp") #These map well!
 
-# Next up: need to figure out how to assign max values to individual colors and map
+# Next up: need to figure out how to assign max values to individual colors and map (not sure how to do this)
 
-# Trying to Get this to Plot - Doesn't want to bc iot is a data.frame
+# Trying to Get this to Plot - Doesn't want to bc it is a data.frame
 plot(st_geometry(top.two.ccs.farm.types))
 plot(farm.ccs.join["VALUE"])
 as(top.two.ccs.farm.types, "sf") # This won't convert a data.frame or tibble 
 
-library(gitcreds) #may need to install this too
-
-gitcreds_set() #should prompt you for your pat - paste it here

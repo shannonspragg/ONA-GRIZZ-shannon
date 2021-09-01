@@ -16,53 +16,46 @@ options(
   gargle_oauth_cache = ".secrets",
   gargle_oauth_email = TRUE
 )
-# Download point files ----------------------------------------------------
-## Aberg Data
-folder_url <- c("https://drive.google.com/drive/folders/104kSOEYIydVLKxts11mtxriXfzdMcKaQ?usp=sharing", "https://drive.google.com/drive/folders/10eB16tcp1zCr1ygmXR-D9p6Ou-r4zgqA?usp=sharing", "https://drive.google.com/drive/folders/10e9XnSJyRICqs3tmnnK_u15DTlVkDWci?usp=sharing")
 
-# Creating a Function:
-download_points <- function(folder_url){
-  folder <- drive_get(as_id(folder_url))
-  gdrive_files <- drive_ls(folder)
-  lapply(gdrive_files$id, function(x) drive_download(as_id(x), 
-                                                     path = paste0(here::here("datatemp/original/"), gdrive_files[gdrive_files$id==x,]$name), overwrite = TRUE))
-}
-lapply(folder_url, function(x) download_points(x))
+# Here's What We Need for This: -------------------------------------------
+# I need to import a points file (WARP points), a polygon of the BC boundary line,
+# and then a raster of grizzly density (from Clayton's data):
 
-# Read in the dowloaded point files ---------------------------------------
-mar28.sf <- read_sf(here::here("datatemp/original/28-MARCH-20.shp"))
-mar21.sf <- read_sf(here::here("datatemp/original/21-MARCH-20.shp"))
-mar07.sf <- read_sf(here::here("datatemp/original/07-MARCH-20.shp"))
+# NOTE TO SHANNON: Since the other script is running, we are just gonna fill in the import files
+# before runing them
 
-#Combine Points
-allpoints.sf <- bind_rows(mar28.sf, mar21.sf, mar07.sf)
+# Download WARP Point Files ----------------------------------------------------
 
-# Download the tabular file and join --------------------------------------
-folder_url <- "https://drive.google.com/drive/folders/12UEOYJgp7hPy9vy11e4TFhHJmh5OOll5?usp=sharing"
-folder <- drive_get(as_id(folder_url))
-gdrive_files <- drive_ls(folder)
-lapply(gdrive_files$id, function(x) drive_download(as_id(x), 
-                                                   path = paste0(here::here("datatemp/original/"), gdrive_files[gdrive_files$id==x,]$name), overwrite = TRUE))
-# Read in the downloaded file
-tab_data <- read_csv(here::here("datatemp/original/DrivingRoutes_March2020.csv"))
+warp.bears.pts<- read.csv("/Users/shannonspragg/ONA_GRIZZ/WARP Bears /WARP_bears only_3.24.20_3.31.21.csv")
+# Next this needs to be made into an sf object
 
-# Join the tab data and select the bearing and distance column for adjusting
-allpoints.sf.tab <- allpoints.sf %>% 
-  left_join(., tab_data, by = c("name" = "point.id")) %>% 
-  dplyr::select(bearing, distance)
+head(warp.bears.pts)
 
-# Adjust the points -------------------------------------------------------
+# Merge the two encounter columns into one total column
+warp.bears.pts$total_encounter<-warp.bears.pts$encounter_adults + warp.bears.pts$encounter_young
+head(warp.bears.pts)
 
-# Get rid of NAs
-allpoints.sf.tab$bearing <- as.numeric(allpoints.sf.tab$bearing)
-allpoints.sf.tab$bearing[is.na(allpoints.sf.tab$bearing)] <- 0
-allpoints.sf.tab$distance <- as.numeric(allpoints.sf.tab$distance)
-allpoints.sf.tab$distance[is.na(allpoints.sf.tab$distance)] <- 600
+# Convert selected species to 1's and all others to 0's: Don't need to do this with "bears only"
+
+bear.conflict.pts<- warp.bears.pts %>% 
+  mutate(warp.bears.pts, bears = if_else(species_name == "BLACK BEAR" | species_name == "GRIZZLY BEAR", 1, 0))
+head(bears.conflict.pts)
+
+# Steps to Create a Distance to PA variable:
+
+# Making Conflict Data a Spatial Dataframe --------------------------------
+
+bc.pts.sp<-structure(bears.conflict.pts,longitude= "encounter_lng", latitude= "encounter_lat", class="data.frame")
+head(bc.pts.sp)
+xy<-bc.pts.sp[,c(8,7)]
+bears.pts.spdf<-SpatialPointsDataFrame(coords = xy,data = bc.sp,
+                                   proj4string = CRS("+proj=longlat +datum=WGS84 +ellps=WGS84 +towgs84=0,0,0"))
+str(bears.pts.spdf)
+
+bears.pts.sf <- as(bears.pts.spdf, "sf")
 
 # Convert to spatial points for using geosphere ---------------------------
-allpoints.sp <- as_Spatial(allpoints.sf.tab)
-allpoints.sp.adj <- SpatialPoints(destPoint(allpoints.sp, allpoints.sf.tab$bearing, allpoints.sf.tab$distance))
-proj4string(allpoints.sp.adj) <- proj4string(allpoints.sp)
+bears.pts.sp <- as_Spatial(bears.pts.sf)
 
 # Analyzing a point pattern ------------------------------------------------
 
@@ -80,8 +73,26 @@ lapply(gdrive_files$id, function(x) drive_download(as_id(x),
 id_ncas <- read_sf(here::here("datatemp/original/BDY_NOC_NLCSNMNCA_PUB_24K_POLY.shp"))
 mn_snbp <- id_ncas %>% filter(NLCS_NAME=="MORLEY NELSON SNAKE RIVER BIRDS OF PREY NATIONAL CONSERVATION AREA") %>% as(., "Spatial")
 
+# Bring in the BC Boundary Polygon ----------------------------------------
+
+can.bound <- read_sf("/Users/shannonspragg/ONA_GRIZZ/CAN Spatial Data/CAN Province Boundaries/lpr_000b16a_e.shp")
+
+# Make sure it is an sf object
+str(can.boundary)
+
+bc.boundary<-fsa.sf %>%
+  filter(., PRNAME == "British Columbia / Colombie-Britannique") %>%
+  st_make_valid()
+str(bc.boundary)
+
+
 # Load the Snake River Birds of prey shapefile 
-snbp    <- as(mn_snbp, "owin") 
+snbp    <- as(mn_snbp, "owin") # Not sure if I need to do this??
+bc.bo <- as(bc.boundary, "owin")
+
+
+# STOPPING POINT FROM EDITING ---------------------------------------------
+
 
 # Load a starbucks.shp point feature shapefile
 allpoints.sp.adj.proj  <- spTransform(allpoints.sp.adj, proj4string(mn_snbp))
@@ -152,5 +163,5 @@ raster.cors <- cor(raster::values(comp.stack), use = "pairwise")
 plot(raster.cors)
 
 
-
+#testing
 

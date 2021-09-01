@@ -35,9 +35,25 @@ st_crs(crown.reproj) == st_crs(bc.zips)
 # Finding where the Crown Lands & Zipcodes Intersect ----------------------
 #Trying to find the proportion of crown land in each postal code and assign that to each respondent
 
-str(crown.reproj)
+# st_is_valid(st_make_valid(st_set_precision(bc.zips, 1e6)))     https://github.com/r-spatial/sf/issues/1710
+#This doesn't do what I want it to...
+# sf_use_s2(FALSE)        https://stackoverflow.com/questions/68478179/how-to-resolve-spherical-geometry-failures-when-joining-spatial-data
+#This just turns off the spherical geometry
+crown.valid<-st_make_valid(crown.reproj)
+str(crown.valid)
+bc.zips.valid<- st_make_valid(bc.zips)
+str(bc.zips.valid)
+
 ??st_intersection
-intersect_bcz <- st_intersection(crown.reproj, bc.zips) 
-# %>%
-# dplyr::mutate(intersect_area = st_area(.)) %>%   # create new column with shape area
-#  dplyr::select(NAME, intersect_area)   # only select columns needed to merge
+intersect_bcz <- st_intersection(crown.valid, bc.zips.valid)
+intersect_bcz <- st_intersection(crown.valid, bc.zips.valid)  %>%
+ dplyr::mutate(intersect_area = st_area(.)) %>%   # create new column with shape area  
+  dplyr::select(NAME, intersect_area)   # only select columns needed to merge
+
+# The "Evaluation error: Found 2 features with invalid spherical geometry" suggests that some of your polygon geometries 
+# are invalid (possibly because they were digitized badly in the first place)
+
+
+
+
+

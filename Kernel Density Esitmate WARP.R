@@ -5,17 +5,11 @@
 # Kernel Density & Point Selection Script: ----------------------------------------------------
 
 # Load the packages -------------------------------------------------------
-library(googledrive)
 library(tidyverse)
 library(sf)
 library(sp)
 library(geosphere)
 library(spatstat)
-# Make sure you've authorized googledrive:
-options(
-  gargle_oauth_cache = ".secrets",
-  gargle_oauth_email = TRUE
-)
 
 # Here's What We Need for This: -------------------------------------------
 # I need to import a points file (WARP points), a polygon of the BC boundary line,
@@ -37,20 +31,30 @@ head(warp.bears.pts)
 
 # Convert selected species to 1's and all others to 0's: Don't need to do this with "bears only"
 
-bear.conflict.pts<- warp.bears.pts %>% 
-  mutate(warp.bears.pts, bears = if_else(species_name == "BLACK BEAR" | species_name == "GRIZZLY BEAR", 1, 0))
-head(bears.conflict.pts)
+#bear.conflict.pts<- warp.bears.pts %>% 
+#  mutate(warp.bears.pts, bears = if_else(species_name == "BLACK BEAR" | species_name == "GRIZZLY BEAR", 1, 0))
+#head(bears.conflict.pts)
 
 # Steps to Create a Distance to PA variable:
 
 # Making Conflict Data a Spatial Dataframe --------------------------------
 
-bc.pts.sp<-structure(bears.conflict.pts,longitude= "encounter_lng", latitude= "encounter_lat", class="data.frame")
+bc.pts.sp<-structure(warp.bears.pts,longitude= "encounter_lng", latitude= "encounter_lat", class="data.frame")
 head(bc.pts.sp)
 xy<-bc.pts.sp[,c(8,7)]
-bears.pts.spdf<-SpatialPointsDataFrame(coords = xy,data = bc.sp,
+bears.pts.spdf<-SpatialPointsDataFrame(coords = xy,data = bc.pts.sp,
                                    proj4string = CRS("+proj=longlat +datum=WGS84 +ellps=WGS84 +towgs84=0,0,0"))
 str(bears.pts.spdf)
+
+# bears.pts <- as.ppp(bears.pts.spdf)
+
+# Load a starbucks.shp point feature shapefile
+s  <- st_read("starbucks.shp")  
+starbucks  <- as.ppp(s)
+marks(starbucks) <- NULL
+starbucks <- rescale(starbucks, 1000)
+Window(starbucks) <- starbucks 
+
 
 bears.pts.sf <- as(bears.pts.spdf, "sf")
 
@@ -64,34 +68,60 @@ library(rgdal)
 library(maptools)
 library(raster)
 
-# Download the NCA polygon so we have an analysis window
-folder_url <- "https://drive.google.com/drive/folders/11dK1z2nV0I8txyyymH2m5X_ZFAfWLwBi?usp=sharing"
-folder <- drive_get(as_id(folder_url))
-gdrive_files <- drive_ls(folder)
-lapply(gdrive_files$id, function(x) drive_download(as_id(x), 
-                                                   path = paste0(here::here("datatemp/original/"), gdrive_files[gdrive_files$id==x,]$name), overwrite = TRUE))
-id_ncas <- read_sf(here::here("datatemp/original/BDY_NOC_NLCSNMNCA_PUB_24K_POLY.shp"))
-mn_snbp <- id_ncas %>% filter(NLCS_NAME=="MORLEY NELSON SNAKE RIVER BIRDS OF PREY NATIONAL CONSERVATION AREA") %>% as(., "Spatial")
-
 # Bring in the BC Boundary Polygon ----------------------------------------
 
-can.bound <- read_sf("/Users/shannonspragg/ONA_GRIZZ/CAN Spatial Data/CAN Province Boundaries/lpr_000b16a_e.shp")
+can.bound <- st_read("/Users/shannonspragg/ONA_GRIZZ/CAN Spatial Data/CAN Province Boundaries/lpr_000b16a_e.shp")
 
 # Make sure it is an sf object
-str(can.boundary)
+str(can.bound)
 
-bc.boundary<-fsa.sf %>%
+bc.boundary<-can.bound %>%
   filter(., PRNAME == "British Columbia / Colombie-Britannique") %>%
   st_make_valid()
 str(bc.boundary)
 
-
-# Load the Snake River Birds of prey shapefile 
-snbp    <- as(mn_snbp, "owin") # Not sure if I need to do this??
-bc.bo <- as(bc.boundary, "owin")
+bcb.spdf <- as_Spatial(bc.boundary)
+str(bcb.spdf)
 
 
-# STOPPING POINT FROM EDITING ---------------------------------------------
+# Import the Grizzly Density Raster  -------------------------------------
+
+grizz.density.raster <- raster("/Users/shannonspragg/ONA_GRIZZ/Grizz Density/Clayton_griz_dens.tiff")
+str(grizz.density.raster)
+# Reproject and Plot the WARP Points with Polygon -------------------------
+
+# Check the CRS:
+st_crs(bears.pts.sf) #WGS84
+st_crs(bc.boundary) #Lambert Conformal Conic
+
+# Reproject the BC boundary to WGS 84:
+bcb.reproj.sf <- st_transform(bc.boundary, st_crs(bears.pts.sf)) # Both in WGS84
+st_crs(bcb.reproj.sf)
+
+# Reproject the Density Raster to WGS84:
+new.crs <- CRS("+proj=longlat +datum=WGS84 +no_defs")
+# grizz.dens.reproj <- st_transform(grizz.density.raster, st_crs(bears.pts.sf)) # Both in WGS84
+griz.dens.reproj <- grizz.density.raster %>% st_transform(., new.crs)
+# NEED TO: figure out how to reproject a raster!!
+
+
+# STOPPING POINT ----------------------------------------------------------
+
+
+# Let's plot these and see:
+plot(grizz.density.raster)
+plot(st_geometry(bcb.reproj.sf), add=TRUE)
+plot(st_geometry(bears.pts.sf), add= TRUE)
+#  BEAUTIFUL!
+
+# Window(bears.pts.sf) <- bcb.spdf # This doesnt work
+
+# Not sure if the below is needed:
+bc.bo <- as.owin(bcb.spdf)
+bc.bo <- as(bcb.spdf, "owin")
+??as.owin
+
+# Trying to Do some Analyses Now ---------------------------------------------
 
 
 # Load a starbucks.shp point feature shapefile

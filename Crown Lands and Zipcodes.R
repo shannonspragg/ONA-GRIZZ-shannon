@@ -35,6 +35,19 @@ st_crs(crown.reproj) == st_crs(bc.zips)
 # Finding where the Crown Lands & Zipcodes Intersect ----------------------
 #Trying to find the proportion of crown land in each postal code and assign that to each respondent
 
+
+# Lets try this on a smaller chunk of the zipcodes data to see if it works ok:
+zips.mini<- bc.zips[1:5, ]
+crown.mini <- crown.reproj[1:5, ]
+str(zips.mini)
+st_crs(zips.mini)
+
+zip.mini.reproj <- st_transform(zips.mini, st_crs(crown.mini))
+
+
+intersect_mini <- st_intersection(crown.reproj$geometry, zips.mini$geometry) 
+
+??st_intersection()
 # st_is_valid(st_make_valid(st_set_precision(bc.zips, 1e6)))     https://github.com/r-spatial/sf/issues/1710
 #This doesn't do what I want it to...
 # sf_use_s2(FALSE)        https://stackoverflow.com/questions/68478179/how-to-resolve-spherical-geometry-failures-when-joining-spatial-data

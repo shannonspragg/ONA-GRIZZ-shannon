@@ -46,6 +46,7 @@ str(bc.zips.valid)
 
 ??st_intersection
 intersect_bcz <- st_intersection(crown.valid, bc.zips.valid)
+
 intersect_bcz <- st_intersection(crown.valid, bc.zips.valid)  %>%
  dplyr::mutate(intersect_area = st_area(.)) %>%   # create new column with shape area  
   dplyr::select(NAME, intersect_area)   # only select columns needed to merge

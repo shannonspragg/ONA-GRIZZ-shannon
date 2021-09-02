@@ -35,14 +35,13 @@ st_crs(crown.reproj) == st_crs(bc.zips)
 # Finding where the Crown Lands & Zipcodes Intersect ----------------------
 #Trying to find the proportion of crown land in each postal code and assign that to each respondent
 
-
 # Lets try this on a smaller chunk of the zipcodes data to see if it works ok:
 zips.mini<- bc.zips[1:5, ]
-crown.mini <- crown.reproj[1:5, ]
+# crown.mini <- crown.reproj[1:5, ] # Don't need this at all
 str(zips.mini)
 st_crs(zips.mini)
 
-zip.mini.reproj <- st_transform(zips.mini, st_crs(crown.mini))
+zip.mini.reproj <- st_transform(zips.mini, st_crs(crown.reproj))
 
 
 intersect_mini <- st_intersection(crown.reproj$geometry, zips.mini$geometry) 

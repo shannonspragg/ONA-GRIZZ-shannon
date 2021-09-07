@@ -56,10 +56,11 @@ intersect_mini <- st_intersection(crown.valid, zips.mini)
 # This is returning an error: attribute variables are assumed to be spatially constant throughout all geometries 
 
 # The mini data kept getting errors, but running the full might work:
+# https://cran.r-project.org/web/packages/sf/vignettes/sf4.html
 
 intersect_full<- st_intersection(st_geometry(crown.valid), st_geometry(bc.zips.valid))
 # Now this seemed to work... lets check it
-intersect_full_tibble<- as_tibble(intersect_full) # This makes it a tibble
+intersect_full_tibble<- as_tibble(intersect_full) # This makes it a tibble https://rpubs.com/rural_gis/255550
 
 plot(st_geometry(intersect_full))
 # I THINK THIS WORKED?!

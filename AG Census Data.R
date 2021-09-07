@@ -316,3 +316,5 @@ plot(st_geometry(top.two.ccs.farm.types))
 plot(farm.ccs.join["VALUE"])
 as(top.two.ccs.farm.types, "sf") # This won't convert a data.frame or tibble 
 
+
+

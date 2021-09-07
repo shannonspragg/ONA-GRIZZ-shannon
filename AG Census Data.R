@@ -300,6 +300,19 @@ farm.ccs.join$VALUE<- as.integer(farm.ccs.join$VALUE)
 top.two.ccs.farm.types<- farm.ccs.join %>% group_by(GEO) %>% top_n(2,VALUE)  # YAY! This worked!
 str(top.two.ccs.farm.types)
 
+
+# Subset the Farm Join & Print --------------------------------------------
+
+# Try putting this in the console: farm.ccs.join %>% group_by(GEO) %>% top_n(2,VALUE)[2,]
+
+# RUN THIS NEXT!! (Try with and without comma after bracket)
+#top.two.ccs.farm.types<- farm.ccs.join %>% group_by(GEO) %>% top_n(2,VALUE)[2,]
+# TRY THIS: https://stackoverflow.com/questions/2453326/fastest-way-to-find-second-third-highest-lowest-value-in-vector-or-column
+dominant.ccs.farm.type <- Rfast::nth(farm.ccs.join, 2, descending = T)
+
+# Also try this: (Do this with the total farms too)
+# df %>% group_by(ccs) %>% top_n(2,x) %>% slice_min(., order_by = "x")
+
 # Pull out the top one (total farms) from the join:
 totals.ccs.farm.types<- farm.ccs.join %>% group_by(GEO) %>% top_n(1,VALUE)  # YAY! This worked!
 str(totals.ccs.farm.types) # This seems to have given us what we need

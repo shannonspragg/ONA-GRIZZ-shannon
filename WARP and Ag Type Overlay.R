@@ -79,3 +79,5 @@ plot(bears.reproj$geometry, pch=21, cex=0.7, col="purple", bg="gray80", add=T)
 # Write Farm Type Join into .shp: -----------------------------------------
 st_write(bears.farm.join, "/Users/shannonspragg/ONA_GRIZZ/Ag census/Ag Census Dominant Farm Type /Dominant Farm Type by CCS/WARP Dominant Farm Type Join.shp")
 
+unique(bears.farm.join$N_A_I_C)
+tail(names(sort(table(bears.farm.join$N_A_I_C))), decreasing= TRUE, 10) #This gives us top 10 most frequent farm types by report

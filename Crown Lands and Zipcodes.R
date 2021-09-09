@@ -22,42 +22,61 @@ st_geometry(bc.crown.lands.shp) #The CRS for this is not WGS84
 bc.zips<- st_read("/Users/shannonspragg/ONA_GRIZZ/CAN Spatial Data/BC Survey Zipcodes/BC.survey.res.zips.sf.shannon.shp")
 plot(st_geometry(bc.zips))
 
-# Check the projections:
-st_geometry(bc.zips) #This is WGS84 CRS
+# Re-project the Data ------------------------------------------------------
+albers.crs <- CRS("+proj=aea +lat_0=23 +lon_0=-96 +lat_1=29.5 +lat_2=45.5 +x_0=0 +y_0=0 +datum=NAD83
+# +units=m +no_defs")
+st_crs(albers.crs) # Let's Match the data.frames to this CRS
 
-st_crs(bc.crown.lands.shp) # This is NAD83 and BC Albers
-
-# Lets  try matching the zips CRS to the crown land CRS:
-zips.reproj <- st_transform(bc.zips, st_crs(bc.crown.lands.shp))
-st_crs(zips.reproj)
+# Now we have the Ag Census areas projected to match the bears data
+zips.reproj <- st_transform(bc.zips, st_crs(albers.crs))
+plot(st_geometry(zips.reproj))
+crown.reproj <- st_transform(bc.crown.lands.shp, st_crs(albers.crs))
+plot(st_geometry(crown.reproj))
 
 #make sure your coordinate systems projections are equal.
- st_crs(zips.reproj) == st_crs(bc.crown.lands.shp)
+ st_crs(zips.reproj) == st_crs(crown.reproj)
 # This returns TRUE so we are good
 
-# Finding where the Crown Lands & Zipcodes Intersect ----------------------
-#Trying to find the proportion of crown land in each postal code and assign that to each respondent
- #     https://github.com/r-spatial/sf/issues/1710
- #    https://stackoverflow.com/questions/68478179/how-to-resolve-spherical-geometry-failures-when-joining-spatial-data
-
 # Need to start by making the crown and zip reprojected files "valid"
-crown.valid<-st_make_valid(bc.crown.lands.shp)
+ crown.valid<-st_make_valid(crown.reproj)
  str(crown.valid)
  st_is_valid(zips.reproj)
  bc.zips.valid<- st_make_valid(zips.reproj)
  str(bc.zips.valid)
  
-# Lets try this on a smaller chunk of the zipcodes data to see if it works ok:
-zips.mini<- bc.zips.valid[1:5, ]
-# crown.mini <- crown.reproj[1:5, ] # Don't need this at all
-str(zips.mini)
-st_crs(zips.mini)
-intersect_mini <- st_intersection(crown.valid, zips.mini) 
-# This is returning an error: attribute variables are assumed to be spatially constant throughout all geometries 
+# Finding where the Crown Lands & Zipcodes Intersect ----------------------
+#Trying to find the proportion of crown land in each postal code and assign that to each respondent
+ #     https://github.com/r-spatial/sf/issues/1710
+ #    https://stackoverflow.com/questions/68478179/how-to-resolve-spherical-geometry-failures-when-joining-spatial-data
 
-# The mini data kept getting errors, but running the full might work:
-# https://cran.r-project.org/web/packages/sf/vignettes/sf4.html
+# Trying to find proportion of intersection: (Matt's code below)
+# zipcode.df <- zipcode.df %>%
+# mutate(propCrownLands = (st_area(st_intersection(zipcode.sf, crownland.sf))/st_area(zipcode.sf) *100)
+# We need to split this  up to work
+ 
+# Let's do the intersection:
+bc.crown.zips.intersect <- st_intersection(bc.zips.valid, crown.valid)
+head(bc.crown.zips.intersect) # This returns a whole sfc ...
+plot(st_geometry(bc.crown.zips.intersect)) # These are indeed our overlap areas!
 
+# Don't NEED to do this part...
+intersect.area <- st_area(bc.crown.zips.intersect)
+head(intersect.area) # This is in m^2
+bc.zips.area <- st_area(bc.zips.valid)
+head(bc.zips.area) # This is also in m^2
+
+bc.crown.zips.intersect$propCrownLand <- st_area(intersect.area)/st_area(bc.zips.area)*100 #This is causing errors ?
+
+# Calculate the Proportion of Intersection Area / Zipcode Area:
+bc.crown.zips.intersect$proportionCrownLand <- st_area(bc.crown.zips.intersect)/st_area(bc.zips.valid)*100
+# This gave us a new column, seems to have worked.. is technically m^2 / m^2
+
+plot(st_geometry(bc.crown.zips.intersect))
+
+# Write this as a .shp for later:
+st_write(bc.crown.zips.intersect, "/Users/shannonspragg/ONA_GRIZZ/Proportion Crown Lands x Survey Zips/BC Crown Proportion Zipcode Intersection.shp")
+
+# Spatial Intersection : NOT what we wanted.. but still worked to show us visual overlaps  --------
 intersect_full<- st_intersection(st_geometry(crown.valid), st_geometry(bc.zips.valid))
 # Now this seemed to work... lets check it
 intersect_full_tibble<- as_tibble(intersect_full) # This makes it a tibble https://rpubs.com/rural_gis/255550
@@ -72,21 +91,6 @@ plot(st_geometry(crown.valid), col= 'grey', border='grey')
 plot(st_geometry(intersect_full), col= 'red', add=TRUE)
 # HECK YES, we can see the overlap areas in red!!
 
-# Calculate the Area of Overlapping Zipcode & Crown Lands -----------------
-intersect_full_tibble$area_overlap <- st_area(intersect_full_tibble$geometry)
-#This seems to work with the tibble.. not sure about the sfc_geometry
-
-# Is there a way to attach this to the broader intersect_full object?
-
-
-# Calculating the Proportion of Crown Land in Survey Zipcodes -------------
-# Not sure how to do this yet
-
-
-
-#intersect_bcz <- st_intersection(st_geometry(crown.valid), st_geometry(bc.zips.valid))  %>%
-# dplyr::mutate(intersect_area = st_area(.)) #%>%   # create new column with shape area  
-#  dplyr::select(NAME, intersect_area)   # only select columns needed to merge
 
 
 

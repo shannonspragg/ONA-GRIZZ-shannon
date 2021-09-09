@@ -24,6 +24,7 @@ unique(can.ccs.sf$PRNAME) # Shows that the name for BC is "British Columbia / Co
 bc.ccs<-can.ccs.sf %>%
   filter(., PRNAME == "British Columbia / Colombie-Britannique") %>%
   st_make_valid()
+st_write(bc.ccs, "/Users/shannonspragg/ONA_GRIZZ/CAN Spatial Data/BC census subdivs/BC CCS.shp")
 
 # Filter the Ag Files down to just BC districts:
 # See here: https://www.statology.org/filter-rows-that-contain-string-dplyr/  searched: 'Return rows with partial string, filter dplyr'

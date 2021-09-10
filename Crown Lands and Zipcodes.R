@@ -52,26 +52,44 @@ plot(st_geometry(crown.reproj))
 # Trying to find proportion of intersection: (Matt's code below)
 # zipcode.df <- zipcode.df %>%
 # mutate(propCrownLands = (st_area(st_intersection(zipcode.sf, crownland.sf))/st_area(zipcode.sf) *100)
-# We need to split this  up to work
+# Need to figure out which zip code each intersect belongs to, then you can sum the area of the intersection within each zipcode:
  
 # Let's do the intersection:
-bc.crown.zips.intersect <- st_intersection(bc.zips.valid, crown.valid)
+# bc.crown.zips.intersect <- st_intersection(bc.zips.valid, crown.valid) this is where the zips intersect crown land (we need to flip)
 head(bc.crown.zips.intersect) # This returns a whole sfc ...
 plot(st_geometry(bc.crown.zips.intersect)) # These are indeed our overlap areas!
+bc.crown.zips.intersect <- st_intersection(crown.valid, bc.zips.valid) # This should be where crown lands intersect the zips
 
-# Don't NEED to do this part...
-intersect.area <- st_area(bc.crown.zips.intersect)
-head(intersect.area) # This is in m^2
-bc.zips.area <- st_area(bc.zips.valid)
-head(bc.zips.area) # This is also in m^2
+# Calculate the area of each intersection:
+bc.crown.zips.intersect$intersection_area <-st_area(bc.crown.zips.intersect)
 
-bc.crown.zips.intersect$propCrownLand <- st_area(intersect.area)/st_area(bc.zips.area)*100 #This is causing errors ?
+# use a spatial join to assign a zip code to each intersection
+bc.crown.zips.join <- st_join(bc.crown.zips.intersect, left = FALSE, bc.zips.valid["zip"]) # join points
+head(bc.crown.zips.join) # we successfully assigned zips to the intersection area
 
+# use group_by %>% summarise() (use the help files to get the syntax) to get a zip code by zip code estimate of the 
+# sum of the intersected areas
+names(bc.crown.zips.join)[names(bc.crown.zips.join) == 'zip.y'] <- 'zip_intersects' #Just changed the column name here
+
+sum_area_intersection <- aggregate(bc.crown.zips.join$intersection_area, by=list(zip_intersects=bc.crown.zips.join$zip_intersects), FUN=sum)
+# This returns a column with summary of intersection area for each different zipcode
+
+# Let's see if we can join the sum_area column to the big table:
+bc.crown.zips.join <- sum_area_intersection %>% left_join(bc.crown.zips.join, by = "zip_intersects")
+names(bc.crown.zips.join)[names(bc.crown.zips.join) == 'x'] <- 'sum_area_intersections' #Just changed the column name here
+head(bc.crown.zips.join) # Only thing is that this is a data.frame ... not sf ?
+
+?right_join()
 # Calculate the Proportion of Intersection Area / Zipcode Area:
-bc.crown.zips.intersect$proportionCrownLand <- st_area(bc.crown.zips.intersect)/st_area(bc.zips.valid)*100
-# This gave us a new column, seems to have worked.. is technically m^2 / m^2
+# bc.crown.zips.intersect$proportionCrownLand <- st_area(bc.crown.zips.intersect)/st_area(bc.zips.valid)*100 #This gives us a %
 
-plot(st_geometry(bc.crown.zips.intersect))
+# Let's try this with the new columns: divide intersection_area over area_sum_inttersection:
+bc.crown.zips.join$proportionCrownLand <- (bc.crown.zips.join$intersection_area / bc.crown.zips.join$sum_area_intersections)*100
+# This has returned % values, looks to be correct.. none are >100%
+range(bc.crown.zips.join$proportionCrownLand)
+# [1] 2.624172e-08 1.000000e+02  This confirms, none are above 100% !!
+
+plot(st_geometry(bc.crown.zips.join))
 
 # Write this as a .shp for later:
 st_write(bc.crown.zips.intersect, "/Users/shannonspragg/ONA_GRIZZ/Proportion Crown Lands x Survey Zips/BC Crown Proportion Zipcode Intersection.shp")

@@ -77,19 +77,30 @@ sum_area_intersection <- aggregate(bc.crown.zips.join$intersection_area, by=list
 # Let's see if we can join the sum_area column to the big table:
 bc.crown.zips.join <- sum_area_intersection %>% left_join(bc.crown.zips.join, by = "zip_intersects")
 names(bc.crown.zips.join)[names(bc.crown.zips.join) == 'x'] <- 'sum_area_intersections' #Just changed the column name here
-head(bc.crown.zips.join) # Only thing is that this is a data.frame ... not sf ?
 
-?right_join()
 # Calculate the Proportion of Intersection Area / Zipcode Area:
 # bc.crown.zips.intersect$proportionCrownLand <- st_area(bc.crown.zips.intersect)/st_area(bc.zips.valid)*100 #This gives us a %
 
 # Let's try this with the new columns: divide intersection_area over area_sum_inttersection:
 bc.crown.zips.join$proportionCrownLand <- (bc.crown.zips.join$intersection_area / bc.crown.zips.join$sum_area_intersections)*100
 # This has returned % values, looks to be correct.. none are >100%
+
 range(bc.crown.zips.join$proportionCrownLand)
 # [1] 2.624172e-08 1.000000e+02  This confirms, none are above 100% !!
 
-plot(st_geometry(bc.crown.zips.join))
+head(bc.crown.zips.join) # Only thing is that this is a data.frame ... not sf ?
+
+# Trying to change this to sf:
+bc.crown.zips.join <- st_as_sf(x = bc.crown.zips.join,                         
+                               coords = c("LONGITU", "LATITUD"),
+                               crs = albers.crs)
+str(bc.crown.zips.join) #Sweet, this worked, but they're points? how to do polygons
+bc.crown.zips.join.sf <- st_as_sf(x = bc.crown.zips.join,                         
+                               geometry = c("geometry"),
+                               crs = albers.crs)
+str(bc.crown.zips.join.sf) # Still points... gotta fix this next
+
+plot(st_geometry(bc.crown.zips.join.sf$geometry))
 
 # Write this as a .shp for later:
 st_write(bc.crown.zips.intersect, "/Users/shannonspragg/ONA_GRIZZ/Proportion Crown Lands x Survey Zips/BC Crown Proportion Zipcode Intersection.shp")

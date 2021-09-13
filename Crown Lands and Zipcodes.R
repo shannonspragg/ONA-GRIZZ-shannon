@@ -7,7 +7,6 @@
 # Load Packages -----------------------------------------------------------
 library(tidyverse)
 library(dplyr)
-install.packages("raster")
 library("raster")
 library("sp")
 library("sf")
@@ -74,30 +73,37 @@ names(bc.crown.zips.join)[names(bc.crown.zips.join) == 'zip.y'] <- 'zip_intersec
 sum_area_intersection <- aggregate(bc.crown.zips.join$intersection_area, by=list(zip_intersects=bc.crown.zips.join$zip_intersects), FUN=sum)
 # This returns a column with summary of intersection area for each different zipcode
 
-# Let's see if we can join the sum_area column to the big table:
-bc.crown.zips.join <- sum_area_intersection %>% left_join(bc.crown.zips.join, by = "zip_intersects")
-names(bc.crown.zips.join)[names(bc.crown.zips.join) == 'x'] <- 'sum_area_intersections' #Just changed the column name here
-
+# Let's see if we can join the sum_area column to the big table: https://github.com/tidyverse/dplyr/issues/2833
+bc.crown.zips.join.sum.area <- sum_area_intersection %>% left_join(bc.crown.zips.join, by = "zip_intersects")
+names(bc.crown.zips.join.sum.area)[names(bc.crown.zips.join.sum.area) == 'x'] <- 'sum_area_intersections' #Just changed the column name here
+head(bc.crown.zips.join.sum.area)
 # Calculate the Proportion of Intersection Area / Zipcode Area:
 # bc.crown.zips.intersect$proportionCrownLand <- st_area(bc.crown.zips.intersect)/st_area(bc.zips.valid)*100 #This gives us a %
 
 # Let's try this with the new columns: divide intersection_area over area_sum_inttersection:
 bc.crown.zips.join$proportionCrownLand <- (bc.crown.zips.join$intersection_area / bc.crown.zips.join$sum_area_intersections)*100
+bc.crown.zips.join.sum.area$proportionCrownLand <- (bc.crown.zips.join.sum.area$intersection_area / bc.crown.zips.join.sum.area$sum_area_intersections)
 # This has returned % values, looks to be correct.. none are >100%
 
-range(bc.crown.zips.join$proportionCrownLand)
+range(bc.crown.zips.join.sum.area$proportionCrownLand)
 # [1] 2.624172e-08 1.000000e+02  This confirms, none are above 100% !!
 
-head(bc.crown.zips.join) # Only thing is that this is a data.frame ... not sf ?
+head(bc.crown.zips.join.sum.area) # Only thing is that this is a data.frame ... not sf ?
 
 # Trying to change this to sf:
-bc.crown.zips.join <- st_as_sf(x = bc.crown.zips.join,                         
+bc.crown.zips.join.sf <- st_as_sf(x = bc.crown.zips.join,                         
                                coords = c("LONGITU", "LATITUD"),
                                crs = albers.crs)
-str(bc.crown.zips.join) #Sweet, this worked, but they're points? how to do polygons
-bc.crown.zips.join.sf <- st_as_sf(x = bc.crown.zips.join,                         
+str(bc.crown.zips.join.sf) #Sweet, this worked, but they're points? how to do polygons
+?st_as_sfc.SpatialPolygons
+bc.crown.zips.join.sf <- st_as_sf(x = bc.crown.zips.join.sum.area,                         
                                geometry = c("geometry"),
-                               crs = albers.crs)
+                               crs = albers.crs, sf_column_name = "geometry") 
+
+# STOPPED HERE: still trying to configure it from points to polygo --------
+
+
+# %>% group_by(zip_intersects) %>% summarise(geometry = st_combine(geometry)) %>% st_cast("POLYGON")
 str(bc.crown.zips.join.sf) # Still points... gotta fix this next
 
 plot(st_geometry(bc.crown.zips.join.sf$geometry))

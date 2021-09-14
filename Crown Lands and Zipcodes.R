@@ -75,14 +75,14 @@ sum_area_intersection <- aggregate(bc.crown.zips.join$intersection_area, by=list
 str(sum_area_intersection) #This is a df but needs to be joined so it has geometries?
 
 # Let's see if we can join the sum_area column to the big table: https://github.com/tidyverse/dplyr/issues/2833
-bc.crown.zips.join.sum.area <- sum_area_intersection %>% left_join(bc.crown.zips.join, by = "zip_intersects") # - BUT THIS ISNT SPATIAL
+bc.crown.zips.join.sum.area <- bc.crown.zips.join %>% left_join(., sum_area_intersection, by = "zip_intersects") # - BUT THIS ISNT SPATIAL
 names(bc.crown.zips.join.sum.area)[names(bc.crown.zips.join.sum.area) == 'x'] <- 'sum_area_intersections' #Just changed the column name here
 str(bc.crown.zips.join.sum.area)
 # Let's make intersection_area numeric so there arent units issues
 bc.crown.zips.join.sum.area$intersection_area <- as.numeric(bc.crown.zips.join.sum.area$intersection_area)
 str(bc.crown.zips.join.sum.area)
+
 # Calculate the Proportion of Intersection Area / Zipcode Area:
-# bc.crown.zips.intersect$proportionCrownLand <- st_area(bc.crown.zips.intersect)/st_area(bc.zips.valid)*100 #This gives us a %
 
 # Let's try this with the new columns: divide intersection_area over area_sum_inttersection:
 # bc.crown.zips.join$proportionCrownLand <- (bc.crown.zips.join$intersection_area / sum_area_intersection)*100
@@ -91,37 +91,16 @@ head(bc.crown.zips.join.sum.area)
 str(bc.crown.zips.join.sum.area)
 # This has returned % values, looks to be correct.. none are >100%
 
-# we need to do the proportion but keep a column with zip IDs:
-proportionCrownLand <- (bc.crown.zips.join.sum.area$intersection_area / bc.crown.zips.join.sum.area$sum_area_intersections)*100
-
-bc.crown.zips.prop.join <- st_join(bc.crown.zips.join, left = FALSE, proportionCrownLand) # this won't work because there is no zipcodes tied to the props
-
 range(bc.crown.zips.join.sum.area$proportionCrownLand)
 # [1] 2.624172e-08 1.000000e+02  This confirms, none are above 100% !!
-plot(bc.crown.zips.join)
 
 str(bc.crown.zips.join.sum.area) # Only thing is that this is a data.frame ... not sf ?
 plot(st_geometry(bc.crown.zips.join.sum.area))
-# Trying to change this to sf:
-bc.crown.zips.join.sf <- st_as_sf(x = bc.crown.zips.join.sum.area,                         
-                               coords = c("LONGITU", "LATITUD"),
-                               crs = albers.crs)
-str(bc.crown.zips.join.sf) #Sweet, this worked, but they're points? how to do polygons
-plot(st_geometry(bc.crown.zips.join.sum.area))
-bc.crown.zips.join.sf <- st_as_sf(x = bc.crown.zips.join.sum.area,                         
-                               geometry = c("geometry"),
-                               crs = albers.crs, agr = "constant") 
-?st_as_sf
-# STOPPED HERE: still trying to configure it from points to polygo --------
-
-
-# %>% group_by(zip_intersects) %>% summarise(geometry = st_combine(geometry)) %>% st_cast("POLYGON")
-str(bc.crown.zips.join.sf) # Still points... gotta fix this next
-
-plot(st_geometry(bc.crown.zips.join.sf$geometry))
 
 # Write this as a .shp for later:
-st_write(bc.crown.zips.intersect, "/Users/shannonspragg/ONA_GRIZZ/Proportion Crown Lands x Survey Zips/BC Crown Proportion Zipcode Intersection.shp")
+st_write(bc.crown.zips.join.sum.area, "/Users/shannonspragg/ONA_GRIZZ/Proportion Crown Lands x Survey Zips/BC Crown Proportion Zipcode Intersection.shp")
+test.crownprop.data <- st_read("/Users/shannonspragg/ONA_GRIZZ/Proportion Crown Lands x Survey Zips/BC Crown Proportion Zipcode Intersection.shp")
+plot(st_geometry(test.crownprop.data))
 
 # Spatial Intersection : NOT what we wanted.. but still worked to show us visual overlaps  --------
 intersect_full<- st_intersection(st_geometry(crown.valid), st_geometry(bc.zips.valid))

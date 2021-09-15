@@ -24,7 +24,13 @@ st_crs(warp.dist.to.metro.data) == st_crs(warp.dominant.ag.data) # TRUE
 
 # Creating the Master Dataframe -------------------------------------------
 master.test <- warp.dist.to.pa.data %>% 
-  left_join(., warp.dominant.ag.data. by = "encontr_d")
+  left_join(., warp.dom.ag.df, by = "encontr_d")
+# y should not have class sf - should we convert this??
+warp.dom.ag.df <- st_drop_geometry(warp.dominant.ag.data)
+# this worked. may just need to strip some geometries for the y slots
+# ALSO - it seems like there is not an issue with the # of ag data objects, result is still 18,146
+
+# NEED TO: figure out why the 
 
 master.df <- warp.metro %>%
   left_join(., warp.pa, by = "WarpID")

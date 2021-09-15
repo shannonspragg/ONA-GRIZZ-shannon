@@ -48,6 +48,9 @@ str(bears.spdf)
 
 bears.sf <- as(bears.spdf, "sf")
 
+bears.sf <- st_read("/Users/shannonspragg/ONA_GRIZZ/WARP Bears /WARP Bears Only Full.shp")
+str(bears.sf.full) 
+
 # Load in Canada Spatial Data ---------------------------------------------
 # This is where we bring in the metro areas shapefile
 
@@ -56,8 +59,8 @@ bc.metro.shp<-st_read("/Users/shannonspragg/ONA_GRIZZ/CAN Spatial Data/BC census
 
 # Make sf and filter down to only British Columbia for Census SubDivs (CCS):
 bc.metro.sf<- as(bc.metro.shp, "sf")
-str(bc.metro.sf)
-head(bc.metro.sf)
+str(bc.metro.shp)
+head(bc.metro.shp)
 
 # Re-project the Data ------------------------------------------------------
 
@@ -68,11 +71,17 @@ st_crs(bears.reproj.full)
 bc.met.reproj<- st_transform(bc.metro.sf, st_crs(bears.reproj.full))
 plot(st_geometry(bc.met.reproj))
 
+# Try this:
+bears.reproj.m <- st_transform(bears.sf, st_crs(albers.crs))
+plot(st_geometry(bears.reproj.m))
+metro.reproj.m <- st_transform(bc.metro.shp, st_crs(albers.crs))
+plot(st_geometry(metro.reproj.m))
+
 # Create Distance of Conflict Points to Metro's -----------------------------
 #calculation of the distance between the metro areas and our points
 
 # dist[1:9, 1:9] Here are the distances btwn metro areas and points
-dist.pts2met <- st_distance(bears.reproj.full, bc.metro.sf)
+dist.pts2met <- st_distance(bears.reproj.m, metro.reproj.m)
 head(dist.pts2met)
 
 # Must find the minimum distance to PA's (Distance from conflict point to nearest PA)
@@ -80,23 +89,24 @@ min.dist.met <- apply(dist.pts2met, 1, min)
 
 # Add Distance Variable into Datatable -----------------------------------
 # Here we create a new column for Distance to Metro Areas in km
-bears.reproj.full$distance_to_METRO<-min.dist.met
-head(bears.reproj.full)
+bears.reproj.m$distance_to_METRO<-min.dist.met
+head(bears.reproj.m)
 
 # Remove the units from the values (note: in meters)
-as.numeric(bears.reproj.full$distance_to_METRO)
+as.numeric(bears.reproj.m$distance_to_METRO)
 
 # Convert units from meters to km:
 install.packages("measurements")
 library(measurements)
 
-met_dist_in_km<-conv_unit(bears.reproj.full$distance_to_METRO,"m","km")
-str(met_dist_in_km)
-bears.reproj.full$distance_to_METRO<-NULL
-head(bears.reproj.full)
-write_csv(bears.reproj.full,"bears_w_METRO_distance.csv")
-st_write(bears.reproj.full, "bears_w_Metro_distance.shp")
-plot(st_geometry(bears.reproj.full))
+metro_dist_in_km<-conv_unit(bears.reproj.m$distance_to_METRO,"m","km")
+str(metro_dist_in_km)
+bears.reproj.m$distance_to_METRO_km <- metro_dist_in_km
+bears.reproj.m$distance_to_METRO<-NULL
+head(bears.reproj.m)
+plot(st_geometry(bears.reproj.m))
+
+st_write(bears.reproj.m, "/Users/shannonspragg/ONA_GRIZZ/WARP Bears / WARP Dist to Metro Areas.shp")
 
 # Bring in the CCS Farm Type to join with Distance to Metro ---------------
 bc.farm.ccs.shp<-st_read("/Users/shannonspragg/Desktop/Boise State/BSU Research Lab/Grizzly Project/ONA_GRIZZ_ss/ONA-GRIZZ-SS/farm_type_ccs.shp")

@@ -56,7 +56,6 @@ warp.total.fm.df <- st_drop_geometry(warp.total.farm.data)
 str(warp.total.fm.df)
 warp.dist.metro.df <- st_drop_geometry(warp.dist.to.metro.data)
 str(warp.dist.metro.df)
-<<<<<<< HEAD
 
 # Creating the Master Dataframe -------------------------------------------
 # First, we join the warp distance to PA df to the Dominant Ag df:
@@ -83,7 +82,6 @@ st_write(master.join, "/Users/shannonspragg/ONA_GRIZZ/WARP Bears /WARP Master Da
 write_csv(master.join, "/Users/shannonspragg/ONA_GRIZZ/WARP Bears /WARP Master Dataframe/ WARP Master df.csv")
 
 # QUESTION: should I include the CCSUID column in the master (as it relates to Ag data)? How?
-=======
 
 # Creating the Master Dataframe -------------------------------------------
 # First, we join the warp distance to PA df to the Dominant Ag df:
@@ -105,4 +103,3 @@ str(master.join)
 # and columns for the distance to PA (km), Dominant Farm Type by CCS, Total Farm Count by CCS, and Distance
 # to Metro Areas (km)
 plot(st_geometry(master.join)) # Testing the geometry here
->>>>>>> 140fae250f0e819c6ed55e69333cee2cb87f0c64

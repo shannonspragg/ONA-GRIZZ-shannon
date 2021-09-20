@@ -56,6 +56,7 @@ warp.total.fm.df <- st_drop_geometry(warp.total.farm.data)
 str(warp.total.fm.df)
 warp.dist.metro.df <- st_drop_geometry(warp.dist.to.metro.data)
 str(warp.dist.metro.df)
+<<<<<<< HEAD
 
 # Creating the Master Dataframe -------------------------------------------
 # First, we join the warp distance to PA df to the Dominant Ag df:
@@ -82,3 +83,26 @@ st_write(master.join, "/Users/shannonspragg/ONA_GRIZZ/WARP Bears /WARP Master Da
 write_csv(master.join, "/Users/shannonspragg/ONA_GRIZZ/WARP Bears /WARP Master Dataframe/ WARP Master df.csv")
 
 # QUESTION: should I include the CCSUID column in the master (as it relates to Ag data)? How?
+=======
+
+# Creating the Master Dataframe -------------------------------------------
+# First, we join the warp distance to PA df to the Dominant Ag df:
+dist.pa.2.dom.ag.join <- warp.dist.to.pa.data %>% 
+  left_join(., warp.dom.ag.df[, c("N_A_I_C", "encontr_d")], by = "encontr_d")
+str(dist.pa.2.dom.ag.join)
+
+# Next we join the above df to the Total Farms df: 
+master.a.to.total.fm.join <- dist.pa.2.dom.ag.join %>% 
+  left_join(., warp.total.fm.df[, c("ttlfrmc", "encontr_d")], by = "encontr_d")
+str(master.a.to.total.fm.join)
+
+# Lastly, we join the above combined df with our final df: the Dist to Metro:
+master.join <- master.a.to.total.fm.join %>% 
+  left_join(., warp.dist.metro.df[, c("d__METR", "encontr_d")], by = "encontr_d")
+str(master.join)
+
+# The results of this is a sf df with all 18,146 of our WARP ID's, the corresponding encounter info,
+# and columns for the distance to PA (km), Dominant Farm Type by CCS, Total Farm Count by CCS, and Distance
+# to Metro Areas (km)
+plot(st_geometry(master.join)) # Testing the geometry here
+>>>>>>> 140fae250f0e819c6ed55e69333cee2cb87f0c64

@@ -19,6 +19,28 @@ warp.dist.to.metro.data <- st_read("/Users/shannonspragg/ONA_GRIZZ/WARP Bears / 
 warp.dominant.ag.data <- st_read("/Users/shannonspragg/ONA_GRIZZ/Ag census/Ag Census Dominant Farm Type /Dominant Farm Type by CCS/WARP Dominant Farm Type Join.shp")
 warp.total.farm.data <- st_read("/Users/shannonspragg/ONA_GRIZZ/Ag census/Ag Census Dominant Farm Type /Total Farm Type by CCS/WARP Total Farm Count Join.shp")
 
+# Prep a CCS Join to WARP points ------------------------------------------
+# I found the .shp for BC Metro Areas! Read in Below:
+bc.ccs<-st_read("/Users/shannonspragg/ONA_GRIZZ/CAN Spatial Data/BC census subdivs/BC CCS.shp")
+str(bc.ccs)
+
+# Reproject data:
+albers.crs <- CRS("+proj=aea +lat_0=23 +lon_0=-96 +lat_1=29.5 +lat_2=45.5 +x_0=0 +y_0=0 +datum=NAD83
+# +units=m +no_defs")
+st_crs(albers.crs) # Let's Match the data.frames to this CRS
+
+# Now we have the Ag Census areas projected to match the bears data
+bears.reproj <- st_transform(bears.full, st_crs(albers.crs))
+bc.ccs.reproj <- st_transform(bc.ccs, st_crs(albers.crs))
+plot(st_geometry(bc.ccs))
+
+# Check to see if they match:
+st_crs(bears.reproj) == st_crs(bc.ccs.reproj) # [TRUE] = These ARE now the same
+
+# For WARP POINTS that fall within CCS REGIONS, adds CCSUID, retains ALL pts if left=TRUE, otherwise uses inner_join
+bears.ccs.join <- st_join(bears.reproj, left = TRUE, bc.ccs.reproj["CCSUID",]) # join points
+head(bears.ccs.join) # FOR some reason this returns NA values.. maybe because there is no defined spatial overlap??
+str(bears.ccs.join)
 
 # Checking Projections ----------------------------------------------------
 str(warp.dist.to.pa.data)
@@ -57,3 +79,6 @@ str(master.join)
 plot(st_geometry(master.join)) # Testing the geometry here
 
 st_write(master.join, "/Users/shannonspragg/ONA_GRIZZ/WARP Bears /WARP Master Dataframe/ WARP Master df.shp")
+write_csv(master.join, "/Users/shannonspragg/ONA_GRIZZ/WARP Bears /WARP Master Dataframe/ WARP Master df.csv")
+
+# QUESTION: should I include the CCSUID column in the master (as it relates to Ag data)? How?

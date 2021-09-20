@@ -43,7 +43,7 @@ st_crs(bears.reproj) == st_crs(total.farms.reproj) # [TRUE] = These ARE now the 
 
 # Spatial Join: WARP Points to Total Farm Polygon Attributes ---------------
 # For WARP POINTS that fall within CCS REGIONS, adds FARM COUNT ATTRIBUTES (VALUE), retains ALL pts if left=TRUE, otherwise uses inner_join
-bears.total.farm.join <- st_join(bears.reproj, left = TRUE, total.farms.reproj["VALUE"]) # join points
+bears.total.farm.join <- st_join(bears.reproj, left = TRUE, total.farms.reproj["VALUE",]) # join points
 head(bears.total.farm.join) # HECK TO THE YES - we successfully assigned points to a farm type category
 names(bears.total.farm.join)[names(bears.total.farm.join) == 'VALUE'] <- 'total farm count' #Just changed the column name here
 str(bears.total.farm.join)

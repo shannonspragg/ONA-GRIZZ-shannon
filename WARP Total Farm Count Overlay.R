@@ -37,15 +37,16 @@ bears.reproj <- st_transform(bears.full, st_crs(albers.crs))
 plot(st_geometry(bears.reproj))
 total.farms.reproj <- st_transform(bc.total.farms.sf, st_crs(albers.crs))
 plot(st_geometry(total.farms.reproj))
-
+str(bears.reproj)
 # Check to see if they match:
 st_crs(bears.reproj) == st_crs(total.farms.reproj) # [TRUE] = These ARE now the same
 
 # Spatial Join: WARP Points to Total Farm Polygon Attributes ---------------
 # For WARP POINTS that fall within CCS REGIONS, adds FARM COUNT ATTRIBUTES (VALUE), retains ALL pts if left=TRUE, otherwise uses inner_join
-bears.total.farm.join <- st_join(bears.reproj, left = FALSE, total.farms.reproj["VALUE"]) # join points
+bears.total.farm.join <- st_join(bears.reproj, left = TRUE, total.farms.reproj["VALUE"]) # join points
 head(bears.total.farm.join) # HECK TO THE YES - we successfully assigned points to a farm type category
-
+names(bears.total.farm.join)[names(bears.total.farm.join) == 'VALUE'] <- 'total farm count' #Just changed the column name here
+str(bears.total.farm.join)
 # Let's Plot this:
 plot(total.farms.reproj$geometry, border="gray20", col=NA)
 plot(bears.reproj$geometry, pch=21, cex=0.7, col="purple", bg="gray80", add=T)

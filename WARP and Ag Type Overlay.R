@@ -41,7 +41,7 @@ st_write(bears.sf, "WARP Bears Only Full.shp") #These map well!
 bears.full <- st_read("/Users/shannonspragg/ONA_GRIZZ/WARP Bears /WARP Bears Only Full.shp")
 str(bears.full)
 head(bears.full) # This looks good, reads in as an sf data.frame!
-
+str(bears.full)
 # Load in Canada Spatial Data ---------------------------------------------
 # This is where we bring in the farm types shapefile
 
@@ -62,14 +62,17 @@ bears.reproj <- st_transform(bears.full, st_crs(albers.crs))
 plot(st_geometry(bears.reproj))
 farms.reproj <- st_transform(bc.dom.farms.sf, st_crs(albers.crs))
 plot(st_geometry(farms.reproj))
+str(bears.reproj) # This has all 18146 rows, good
 
 # Check to see if they match:
 st_crs(bears.reproj) == st_crs(farms.reproj) # [TRUE] = These ARE now the same
 
 # Spatial Join: WARP Points to Farm Type Polygon Attributes ---------------
 # For WARP POINTS that fall within CCS REGIONS, adds FARM TYPE ATTRIBUTES, retains ALL pts if left=TRUE, otherwise uses inner_join
-bears.farm.join <- st_join(bears.reproj, left = FALSE, farms.reproj["N_A_I_C"]) # join points
+bears.farm.join <- st_join(bears.reproj, left = TRUE, farms.reproj["N_A_I_C"]) # join points
 head(bears.farm.join) # HECK TO THE YES - we successfully assigned points to a farm type category
+str(bears.farm.join)
+which(is.na(bears.farm.join$N_A_I_C))
 
 # Let's Plot this:
 plot(farms.reproj$geometry, border="gray20", col=NA)

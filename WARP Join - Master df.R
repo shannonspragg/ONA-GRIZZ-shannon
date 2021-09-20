@@ -4,6 +4,11 @@
 # new vairable tied to the WARP point ID's and their spatial location
 
 
+# Load Packages -----------------------------------------------------------
+library(tidyverse)
+library(sf)
+library(dplyr)
+
 # Importing the WARP variable data.tables ---------------------------------
 # Let's bring in the WARP Dist to PA's first:
 warp.dist.to.pa.data <- st_read("/Users/shannonspragg/ONA_GRIZZ/WARP Bears /WARP Bears Dist to PAs.shp")
@@ -21,17 +26,32 @@ st_crs(warp.dist.to.metro.data) == st_crs(warp.dist.to.pa.data) # TRUE
 st_crs(warp.dominant.ag.data) == st_crs(warp.total.farm.data) # TRUE
 st_crs(warp.dist.to.metro.data) == st_crs(warp.dominant.ag.data) # TRUE
 
-
-# Creating the Master Dataframe -------------------------------------------
-master.test <- warp.dist.to.pa.data %>% 
-  left_join(., warp.dom.ag.df, by = "encontr_d")
-# y should not have class sf - should we convert this??
+# Convert y Inputs for Join from Spatial to Regular df --------------------
+# y should not have class sf - we convert this (only need one set of geometry)
 warp.dom.ag.df <- st_drop_geometry(warp.dominant.ag.data)
 # this worked. may just need to strip some geometries for the y slots
-# ALSO - it seems like there is not an issue with the # of ag data objects, result is still 18,146
+warp.total.fm.df <- st_drop_geometry(warp.total.farm.data)
+str(warp.total.fm.df)
+warp.dist.metro.df <- st_drop_geometry(warp.dist.to.metro.data)
+str(warp.dist.metro.df)
 
-# NEED TO: figure out why the 
+# Creating the Master Dataframe -------------------------------------------
+# First, we join the warp distance to PA df to the Dominant Ag df:
+dist.pa.2.dom.ag.join <- warp.dist.to.pa.data %>% 
+  left_join(., warp.dom.ag.df[, c("N_A_I_C", "encontr_d")], by = "encontr_d")
+str(dist.pa.2.dom.ag.join)
 
-master.df <- warp.metro %>%
-  left_join(., warp.pa, by = "WarpID")
+# Next we join the above df to the Total Farms df: 
+master.a.to.total.fm.join <- dist.pa.2.dom.ag.join %>% 
+  left_join(., warp.total.fm.df[, c("ttlfrmc", "encontr_d")], by = "encontr_d")
+str(master.a.to.total.fm.join)
 
+# Lastly, we join the above combined df with our final df: the Dist to Metro:
+master.join <- master.a.to.total.fm.join %>% 
+  left_join(., warp.dist.metro.df[, c("d__METR", "encontr_d")], by = "encontr_d")
+str(master.join)
+
+# The results of this is a sf df with all 18,146 of our WARP ID's, the corresponding encounter info,
+# and columns for the distance to PA (km), Dominant Farm Type by CCS, Total Farm Count by CCS, and Distance
+# to Metro Areas (km)
+plot(st_geometry(master.join)) # Testing the geometry here

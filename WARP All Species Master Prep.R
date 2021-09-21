@@ -44,7 +44,11 @@ str(bc.PAs) # Proper sf object, nice
 bc.metro<-st_read("/Users/shannonspragg/ONA_GRIZZ/CAN Spatial Data/BC census metro areas/CEN_CENSUS_METRO_AREAS_SVW/CNCNSSMTRR_polygon.shp")
 str(bc.metro)
 
-farm.type <- read.csv("/Users/shannonspragg/ONA_GRIZZ/Ag census/farm type_32100403/farm type_32100403.csv")
+bc.dom.farms<-st_read("/Users/shannonspragg/ONA_GRIZZ/Ag census/Ag Census Dominant Farm Type /Dominant Farm Type by CCS/Dominant Farm Types by CCS.shp")
+str(bc.dom.farms)
+
+bc.total.farms<-st_read("/Users/shannonspragg/ONA_GRIZZ/Ag census/Ag Census Dominant Farm Type /Total Farm Type by CCS/Total Farm Count by CCS.shp")
+str(bc.total.farms)
 
 bc.ccs<-st_read("/Users/shannonspragg/ONA_GRIZZ/CAN Spatial Data/BC census subdivs/BC CCS.shp")
 str(bc.ccs)
@@ -59,6 +63,8 @@ bears.reproj <- st_transform(bears.sf, st_crs(albers.crs))
 bc.PAs.reproj <- st_transform(bc.PAs, st_crs(albers.crs))
 metro.reproj <- st_transform(bc.metro, st_crs(albers.crs))
 bc.ccs.reproj <- st_transform(bc.ccs, st_crs(albers.crs))
+farms.reproj <- st_transform(bc.dom.farms.sf, st_crs(albers.crs))
+total.farms.reproj <- st_transform(bc.total.farms.sf, st_crs(albers.crs))
 
 # Check to see if they match:
 st_crs(bears.reproj) == st_crs(bc.PAs.reproj) # [TRUE] = These ARE now the same
@@ -116,39 +122,29 @@ head(bears.reproj)
 # This added the dist to metro areas column to our bears.reproj df
 
 
-
-
 # Prep Variable 3: the Dominant Ag Type by CCS ----------------------------
-# Filter the Ag Files down to just BC districts:
-farm.type.bc <- farm.type %>% filter(grepl("British Columbia", farm.type$GEO)) 
-unique(farm.type.bc$North.American.Industry.Classification.System..NAICS.) # There are 43 unique farm types in BC
+# Spatial Join: WARP Points to Farm Type Polygon Attributes
+# For WARP POINTS that fall within CCS REGIONS, adds FARM TYPE ATTRIBUTES, retains ALL pts if left=TRUE, otherwise uses inner_join
+warp.farm.join <- st_join(bears.reproj, left = TRUE, farms.reproj["N_A_I_C"]) # join points
+bears.reproj$Dominant_Farm_Type <- warp.farm.join$N_A_I_C
+head(bears.reproj) # HECK TO THE YES - we successfully assigned points to a farm type category
+str(bears.reproj)
+# This gives us a nice added column to the master sheet
 
-# Filtering to just the BC regions with a CCS number:
-bc.farm.filter.ccs<-farm.type.bc %>%
-  filter(., grepl("*CCS59*", farm.type.bc$GEO))
+# Prep Variable 4: Total Farm Count ---------------------------------------
+# Spatial Join: WARP Points to Total Farm Polygon Attributes:
+# For WARP POINTS that fall within CCS REGIONS, adds FARM COUNT ATTRIBUTES (VALUE), retains ALL pts if left=TRUE, otherwise uses inner_join
+bears.total.farm.join <- st_join(bears.reproj, left = TRUE, total.farms.reproj["VALUE"]) # join points
+bears.reproj$Total_Farm_Count <- bears.total.farm.join$`total farm count`
+head(bears.reproj) # HECK TO THE YES - we successfully assigned points to a farm count category
 
-# Filter for just the 2016 census results (this has 2011 and 2016):
-bc.farm.2016.ccs<-bc.farm.filter.ccs %>%
-  filter(., grepl("2016", bc.farm.filter.ccs$REF_DATE)) # Now there are 344 observations
-head(bc.farm.2016.ccs)
 
-# Crop the CCS column for bc.ccs:
-bc.ccs.reproj$CCSUID.crop<- str_sub(bc.ccs.reproj$CCSUID,-5,-1) # There we go, now we have a matching 6 digits
-unique(bc.ccs.reproj$CCSUID.crop) #This is a 5 digit code
 
-# Do the same for the farm data:
-bc.farm.2016.ccs$CCSUID.crop<- str_sub(bc.farm.2016.ccs$GEO,-6,-2) #This gives usa 6 digit code - there is an extra zero!!
 
-# Join the BC CCS with Ag Files:
-farm.ccs.join <- merge(bc.farm.2016.ccs, bc.ccs.reproj, by.x = "CCSUID.crop", by.y = "CCSUID.crop") 
-head(farm.ccs.join)
-str(farm.ccs.join) # Classes sf and data.table
 
-# Extract Total Farm Counts by CCS: (Do this with the dominant farms too)
-total.farms.bc<- farm.ccs.join %>% group_by(GEO) %>% top_n(2,VALUE) %>% slice_min(., order_by = "VALUE")
-# This successfully gives us total farm count by CCS region
-dominant.farms.bc<- farm.ccs.join %>% group_by(GEO) %>% top_n(2,VALUE) %>% slice_tail()
-# YUSS! This gives us the dominant type WITHOUT the total farms :))
+# WARP All Species Master Data Frame --------------------------------------
+# Since we did this progressively, our bears.reproj file is the new "all species master", so
+# let us write that into a .shp and a .csv here
 
-st_write(dominant.farms.bc,"Dominant Farm Types by CCS All Species.shp")
-
+st_write(bears.reproj, "/Users/shannonspragg/ONA_GRIZZ/WARP Bears /WARP All Species Full Yr/ WARP All Species Master Data Frame.shp")
+write_csv(bears.reproj, "/Users/shannonspragg/ONA_GRIZZ/WARP Bears /WARP All Species Full Yr/ WARP All Species Master Data Frame.csv")

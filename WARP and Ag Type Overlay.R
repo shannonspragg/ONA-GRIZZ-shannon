@@ -45,7 +45,7 @@ str(bears.full)
 # Load in Canada Spatial Data ---------------------------------------------
 # This is where we bring in the farm types shapefile
 
-# I found the .shp for BC Metro Areas! Read in Below:
+# Dominant farms produced! Read in Below:
 bc.dom.farms<-st_read("/Users/shannonspragg/ONA_GRIZZ/Ag census/Ag Census Dominant Farm Type /Dominant Farm Type by CCS/Dominant Farm Types by CCS.shp")
 
 # Make sf and filter down to only British Columbia for Census SubDivs (CCS):

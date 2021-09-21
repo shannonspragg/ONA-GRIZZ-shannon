@@ -25,7 +25,7 @@ albers.crs <- CRS("+proj=aea +lat_0=23 +lon_0=-96 +lat_1=29.5 +lat_2=45.5 +x_0=0
 # +units=m +no_defs")
 st_crs(albers.crs) # Let's Match the data.frames to this CRS
 
-# Now we have the Ag Census areas projected to match the bears data
+# Now we have the protected areas projected to match the bears data
 bears.reproj <- st_transform(bears.sf.full, st_crs(albers.crs))
  plot(st_geometry(bears.reproj))
 bc.PAs.reproj <- st_transform(bc.PAs, st_crs(albers.crs))

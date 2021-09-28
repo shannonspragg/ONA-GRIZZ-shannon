@@ -10,6 +10,7 @@
 warp.all.sp <- st_read("/Users/shannonspragg/ONA_GRIZZ/WARP Bears /WARP All Species Full Yr/ WARP All Species Master Data Frame.shp")
 
 # Create Binomial GLM -- Dist to PA Variable -----------------------------------------------------
+<<<<<<< HEAD
 b2pa.distance <- scale(warp.all.sp$ds__PA_)
 bears_presence <- warp.all.sp$bears
 
@@ -25,10 +26,20 @@ y_sim <- rbinom(length(bears_presence), 1, prob = p)
 glm(y_sim ~ b2pa.distance, family = "binomial")
 
 # Example from Class Project:
+=======
+b2pa.distance <- warp.all.sp$ds__PA_
+bears_presence <- warp.all.sp$bears
+
+Intercept=10
+Slope=30
+
+p=plogis(Intercept+Slope*b2pa.distance)
+>>>>>>> c90dfc9451abe0becf3e42c4ae48007617546c91
 b.lik=dbinom(x=bears_presence,size = 1,prob = p,log = T)
 b.lik_sum=sum(b.lik)
 print(b.lik_sum)
 plot(jitter(bears_presence)~b2pa.distance, xlim=c(0,20),xlab="Distance to Nearest Protected Area (km)",ylab="Reported Conflict Point (Bear = 1, Other = 0)")
+<<<<<<< HEAD
 B1 <- glm(bears_presence~b2pa.distance,family="binomial") # Fit the other variables in here, to run them together in this model
 
 
@@ -47,11 +58,22 @@ curve(plogis(2.444168e-01+ 7.115651e-05*x),add=T,col="blue")
 
 # Creating a quadratic term for the model (since data is bell shap --------
 B1.sq <- glm(warp.all.sp$bears~b2pa.distance + I(b2pa.distance^2),family="binomial")
+=======
+B1 <- glm(bears_presence~b2pa.distance,family="binomial")
+
+
+# Creating a quadratic term for the model (since data is bell shap --------
+B1.sq <- glm(bears.reproj$bears~b2pa.distance + I(b2pa.distance^2),family="binomial")
+>>>>>>> c90dfc9451abe0becf3e42c4ae48007617546c91
 coef(B1.sq)
 summary(B1.sq)
 plot(B1.sq)
 curve(plogis(-5.770904e-01+-1.740486e-05 *x),add=T,col="blue")
 
+<<<<<<< HEAD
 # Results indicate that there is an intercept of 1.492e-01 and slope of ???
+=======
+# Results indicate that there is an intercept of -6.4327 and slope of 0.000000105
+>>>>>>> c90dfc9451abe0becf3e42c4ae48007617546c91
 
 

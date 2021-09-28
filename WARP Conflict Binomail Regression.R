@@ -10,18 +10,27 @@
 warp.all.sp <- st_read("/Users/shannonspragg/ONA_GRIZZ/WARP Bears /WARP All Species Full Yr/ WARP All Species Master Data Frame.shp")
 
 # Create Binomial GLM -- Dist to PA Variable -----------------------------------------------------
-b2pa.distance <- warp.all.sp$ds__PA_
+b2pa.distance <- scale(warp.all.sp$ds__PA_)
 bears_presence <- warp.all.sp$bears
 
-Intercept=10
-Slope=30
+# Creating a simulation to see if it returns close to the intercept and slope we input initially 
+# https://daviddalpiaz.github.io/appliedstats/logistic-regression.html
+Intercept=0.3 # This is set for a 0-1 value, representing bear presence
+Slope=2 # need a slope for each variable, create a matrix for each variable 
+    # Do this like this: slope (B) <- runif(15,-2,2) https://data.library.virginia.edu/simulating-a-logistic-regression-model/
 
-p=plogis(Intercept+Slope*b2pa.distance)
+p=plogis(Intercept+Slope*b2pa.distance) # simulating p, to fit model to p
+
+y_sim <- rbinom(length(bears_presence), 1, prob = p)
+glm(y_sim ~ b2pa.distance, family = "binomial")
+
+# Example from Class Project:
 b.lik=dbinom(x=bears_presence,size = 1,prob = p,log = T)
 b.lik_sum=sum(b.lik)
 print(b.lik_sum)
 plot(jitter(bears_presence)~b2pa.distance, xlim=c(0,20),xlab="Distance to Nearest Protected Area (km)",ylab="Reported Conflict Point (Bear = 1, Other = 0)")
-B1 <- glm(bears_presence~b2pa.distance,family="binomial")
+B1 <- glm(bears_presence~b2pa.distance,family="binomial") # Fit the other variables in here, to run them together in this model
+
 
 
 # Log of Plot Distances ---------------------------------------------------

@@ -62,8 +62,6 @@ str(bc.farm.2016.ccs)
 # Got this to go through, now to view it!
 str(farm.ccs.join) # Here we have a dataframe with Multipolygon geometry - check!
 
-farm.ccs.j.sf<-as(farm.ccs.join, "sf") #This won't work..?
-
 # Trying to write these for easier use later
 st_write(farm.ccs.join,"farm_type_ccs.shp")
 write_csv(farm.ccs.join, "farm_type_ccs.csv") # There is something funky with this table.. ?

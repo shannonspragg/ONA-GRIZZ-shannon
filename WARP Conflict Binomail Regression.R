@@ -16,25 +16,53 @@ warp.all.sp <- st_read("/Users/shannonspragg/ONA_GRIZZ/WARP Bears /WARP All Spec
 # Create Binomial GLM -- Bring in All Covariates -----------------------------------------------------
 bears_presence <- warp.all.sp$bears # Binomial bears
 b2pa.distance <- scale(warp.all.sp$ds__PA_) # Dist to PA covariate
-dom.farms <- warp.all.sp$Dmn_F_T # Dominant farm type covariate
+dom.farms <- warp.all.sp$Dmn_F_T # Dominant farm type covariate -- non numeric, may not work
 total.farms <- warp.all.sp$Ttl_F_C # Total farm count covariate
 b2met.dist <- warp.all.sp$dstn___ # Dist to metro covariate
 
+# Messing with Binomial Reg Tutorials -------------------------------------
 
 # Prep Simulation to Match Data with Binomial Reg: ------------------------
 # Creating a simulation to see if it returns close to the intercept and slope we input initially 
 # https://daviddalpiaz.github.io/appliedstats/logistic-regression.html
 
+# First we create a slope and intercept for our bears and covariates:
 Intercept=0.3 # This is set for a 0-1 value, representing bear presence
-Slope=2 # need a slope for each variable, so we create a matrix for each variable 
+Slope=2.1 # need a slope for each variable, so we create a matrix for each variable 
     # Do this like this: slope (B) <- runif(15,-2,2) https://data.library.virginia.edu/simulating-a-logistic-regression-model/
-B_slope <- runif(10, -2,2) # Created a randomized slope matrix for the variables
+B_slope <- runif(4, -2,2) # Created a randomized slope matrix for the variables
+# Or, just make a slope for each variable and test with that:
+Slope_distPA=1.6 
+Slope_distmet=-.4 
+Slope_totalfarms=-.6 
 
+# Next we run p using our slopes and covariates:
 p=plogis(Intercept+Slope*b2pa.distance) # simulating p with our intercept and slope, to fit model to p
 
-y_sim <- rbinom(length(bears_presence), 1, prob = p) # running the simulation with probability p
-glm(y_sim ~ b2pa.distance, family = "binomial") # running the regression based on the simulation
+# p=plogis(Intercept+B_slope[[1]]*b2pa.distance + B_slope[[2]]*b2met.dist + B_slope[[4]]*total.farms) 
+# Leaving out B_slope[[3]]*dom.farms for now bc it isn't numeric
+p=plogis(Intercept+Slope_distPA*b2pa.distance + Slope_distmet*b2met.dist + Slope_totalfarms*total.farms) # simulating p with our intercept and slope, to fit model to p
 
+# Creating a simulation with probability p:
+y_sim <- rbinom(length(bears_presence), 1, prob = p) # running the simulation with probability p
+
+# Now let's run this with the simulation to get a simulated model:
+sim.glm <- glm(y_sim ~ b2pa.distance + b2met.dist + total.farms, family = "binomial") # running the regression based on the simulation
+
+summary(sim.glm) # This shows that dist to metro area and total farm count are "signitifcant"
+coef(sim.glm) # Gives us the Intercept and slopes of the variables
+confint(sim.glm, level = 0.95)
+
+covar.glm <- glm(bears_presence ~ b2pa.distance + b2met.dist + total.farms, family = "binomial") # running the regression based on the simulation
+summary(covar.glm)
+
+# Adding an interaction to the model:
+glm_mod_interaction = glm(bears_presence ~ b2pa.distance + b2met.dist + total.farms + b2pa.distance:b2met.dist, family = "binomial")
+summary(glm_mod_interaction)
+
+# Predict the probabilities based on this model:
+glm.probs <- predict(covar.glm, type = "response")
+glm.probs[1:5]
 
 
 # Example from Class Project:

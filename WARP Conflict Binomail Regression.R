@@ -19,7 +19,7 @@ b2pa.distance <- scale(warp.all.sp$ds__PA_) # Dist to PA covariate
 dom.farms <- warp.all.sp$Dmn_F_T # Dominant farm type covariate -- non numeric, may not work
 total.farms <- warp.all.sp$Ttl_F_C # Total farm count covariate
 b2met.dist <- warp.all.sp$dstn___ # Dist to metro covariate
-
+dom.farms <- as.factor(warp.all.sp$Dmn_F_T)
 # Messing with Binomial Reg Tutorials -------------------------------------
 
 # Prep Simulation to Match Data with Binomial Reg: ------------------------
@@ -49,21 +49,26 @@ y_sim <- rbinom(length(bears_presence), 1, prob = p) # running the simulation wi
 # Now let's run this with the simulation to get a simulated model:
 sim.glm <- glm(y_sim ~ b2pa.distance + b2met.dist + total.farms, family = "binomial") # running the regression based on the simulation
 
-summary(sim.glm) # This shows that dist to metro area and total farm count are "signitifcant"
+summary(sim.glm) # This shows that dist to metro area and total farm count are "significant"
 coef(sim.glm) # Gives us the Intercept and slopes of the variables
 confint(sim.glm, level = 0.95)
 
-covar.glm <- glm(bears_presence ~ b2pa.distance + b2met.dist + total.farms, family = "binomial") # running the regression based on the simulation
+covar.glm <- glm(bears_presence ~ b2pa.distance + b2met.dist + total.farms + dom.farms, family = "binomial") # running the regression based on the simulation
 summary(covar.glm)
 
+# Plot the regression results:
+# Not entirely sure of the best way to do this...
+library(ggplot2)
+ggplot(covar.glm, aes(x=dom.farms, y=b2pa.distance)) + geom_point() + 
+  stat_smooth(method="glm", method.args=list(family="binomial"), se=FALSE)
+
 # Adding an interaction to the model:
-glm_mod_interaction = glm(bears_presence ~ b2pa.distance + b2met.dist + total.farms + b2pa.distance:b2met.dist, family = "binomial")
+glm_mod_interaction = glm(bears_presence ~ b2pa.distance + b2met.dist + total.farms + b2pa.distance:b2met.dist + total.farms:dom.farms, family = "binomial")
 summary(glm_mod_interaction)
 
 # Predict the probabilities based on this model:
 glm.probs <- predict(covar.glm, type = "response")
 glm.probs[1:5]
-
 
 # Example from Class Project:
 

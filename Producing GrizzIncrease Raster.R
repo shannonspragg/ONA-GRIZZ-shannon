@@ -31,3 +31,15 @@ writeRaster(social, "/Users/shannonspragg/ONA_GRIZZ/Sociobio, Resist, & Survey R
 social.test <- rast("/Users/shannonspragg/ONA_GRIZZ/Sociobio, Resist, & Survey Rasters/GrizzIncrease (Social).tif")
 plot(social.test)
 social.test # Checked, this saved properly!
+
+
+# Bring in Grizz Density Raster -------------------------------------------
+# Bringing this in to check the dimensions and projection:
+grizz.density <- rast("/Users/shannonspragg/rasters/Clayton_griz_dens.tif")
+grizz.density
+plot(grizz.density)
+comb.resist
+ext(grizz.density) <- c(3700, 1946700, 300900, 1750900)
+
+# Attempt to match projections:
+grizz.dens.reproj <- terra::project(grizz.density, comb.resist)

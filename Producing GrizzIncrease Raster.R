@@ -17,15 +17,17 @@ plot(comb.resist)
 
 # Raster Math: Subtract to get Social Raster ------------------------------
 # Here I subtract the sociobio raster from the combined resistance raster to get social (grizzIncrease)
-social <- comb.resist - sociobio
-social
-plot(social) # Yep, this shows us the difference - NICE!
+social <- comb.resist - sociobio # This produces negative resistances... let's try to flip it
+social.2 <- sociobio - comb.resist
+social.2
+plot(social.2) # I think this shows us the difference - NICE!
 
 
 # Save the New Raster -----------------------------------------------------
 # Let's write this as a tif file and save it for use in omniscape
 
 writeRaster(social, "/Users/shannonspragg/ONA_GRIZZ/Sociobio, Resist, & Survey Rasters/GrizzIncrease (Social).tif")
+writeRaster(social.2, "/Users/shannonspragg/rasters/GrizzIncrease (Social)_2.tif")
 
 # Let's confirm this saved properly:
 social.test <- rast("/Users/shannonspragg/ONA_GRIZZ/Sociobio, Resist, & Survey Rasters/GrizzIncrease (Social).tif")
@@ -51,7 +53,7 @@ crs(grizz.density) <- "+proj=aea +lat_0=45 +lon_0=-126 +lat_1=50 +lat_2=58.5 +x_
 # Want to aggregate to go from 500 to 1000 res:
 grizz.agg <- raster::aggregate(grizz.density, fact=2)
 grizz.agg
-
+plot(grizz.agg)
 res(grizz.density) <- c(1000,1000) # Now they match in resolution
 
 # grizz.resample <- resample(grizz.density, comb.resist, method="ngb") # Moves r values over to s - bilinear does a weighted average based on proximity
@@ -77,7 +79,7 @@ ext(huck.occurance) <- c(3700, 1946700, 300900, 1750900) #Match in extents
 crs(huck.occurance) <- "+proj=aea +lat_0=45 +lon_0=-126 +lat_1=50 +lat_2=58.5 +x_0=1000000 +y_0=0 +datum=NAD83 +units=m +no_defs"
 
 # Match Resolution:
-huck.resampl <- resample(huck.agg, comb.resist)
+huck.resampl <- resample(huck.occurance, comb.resist)
 huck.resampl
 plot(huck.resampl)
 

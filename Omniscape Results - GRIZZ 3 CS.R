@@ -19,6 +19,7 @@ plot(sociobio.cum.curmap)
 sociobio.flow.potential <- rast("/Users/shannonspragg/rasters/SocioBio Resistance CS/flow_potential.tif")
 plot(sociobio.flow.potential)
 
+<<<<<<< HEAD
 
 # GrizzIncrease (Survey) CS Outputs ---------------------------------------
 grizzinc.cum.curmap <- rast("/Users/shannonspragg/rasters/Social GrizzIncrease CS/cum_currmap.tif")
@@ -31,3 +32,5 @@ grizzinc.cum.curmap
 
 plot(sociobio.cum.curmap)
 plot(grizzinc.cum.curmap)
+=======
+>>>>>>> 8209398148e98e1c8696ecc717704eb05c4f2b42

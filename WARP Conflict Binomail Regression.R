@@ -11,7 +11,7 @@ library(dplyr)
 
 # Import the All Species Master df ----------------------------------------
 
-warp.all.sp <- st_read("/Users/shannonspragg/ONA_GRIZZ/WARP Bears /WARP All Species Full Yr/ WARP All Species Master Data Frame.shp")
+warp.all.sp <- st_read("/Users/shannonspragg/ONA_GRIZZ/WARP Bears /WARP Master DF (+CS resistance values)/WARP Master DF (+CS resist values).shp")
 
 # Create Binomial GLM -- Bring in All Covariates -----------------------------------------------------
 bears_presence <- warp.all.sp$bears # Binomial bears
@@ -20,7 +20,13 @@ dom.farms <- warp.all.sp$Dmn_F_T # Dominant farm type covariate -- non numeric, 
 total.farms <- warp.all.sp$Ttl_F_C # Total farm count covariate
 b2met.dist <- warp.all.sp$dstn___ # Dist to metro covariate
 dom.farms <- as.factor(warp.all.sp$Dmn_F_T)
+comb.resist.cs <- warp.all.sp$CmbRssE
+sociobio.cs <- warp.all.sp$ScbExtr
+grizzinc.survey.cs <- warp.all.sp$GrzzInE
+bear.habitat.bhs <- warp.all.sp$BHSExtr
+
 # Messing with Binomial Reg Tutorials -------------------------------------
+
 
 # Prep Simulation to Match Data with Binomial Reg: ------------------------
 # Creating a simulation to see if it returns close to the intercept and slope we input initially 
@@ -53,6 +59,23 @@ summary(sim.glm) # This shows that dist to metro area and total farm count are "
 coef(sim.glm) # Gives us the Intercept and slopes of the variables
 confint(sim.glm, level = 0.95)
 
+
+
+# Running Linear Regressions ----------------------------------------------
+  # Here I will be running the three models Adam requested:
+    # 1. Full model: glm(bear_pres ~ Comb resist + Sociobio resist + Survey + biophys)
+    # 2. Ecol mod: glm(bear_pres ~ bear habitat + CS Bears)
+    # 3. Soc mod: glm(bear_pres ~ survey + CS Survey)
+
+fullmod.glm <- glm(bears_presence ~ comb.resist.cs + sociobio.cs + grizzinc.survey.cs, family = "binomial")
+ecol.mod.glm <- glm(bears_presence ~ bear.habitat.bhs + comb.resist.cs, family = "binomial") 
+social.mod.glm <- glm(bears_presence ~ grizzinc.survey.cs, family = "binomial") 
+
+summary(fullmod.glm)
+summary(ecol.mod.glm)
+summary(social.mod.glm)
+
+  # Here I run a glm with the covariates:
 covar.glm <- glm(bears_presence ~ b2pa.distance + b2met.dist + total.farms + dom.farms, family = "binomial") # running the regression based on the simulation
 summary(covar.glm)
 
@@ -70,8 +93,8 @@ summary(glm_mod_interaction)
 glm.probs <- predict(covar.glm, type = "response")
 glm.probs[1:5]
 
-# Example from Class Project:
 
+# EX From Class Project ---------------------------------------------------
 b2pa.distance <- warp.all.sp$ds__PA_
 bears_presence <- warp.all.sp$bears
 
@@ -84,8 +107,6 @@ b.lik_sum=sum(b.lik)
 print(b.lik_sum)
 # plot(jitter(bears_presence)~b2pa.distance, xlim=c(0,20),xlab="Distance to Nearest Protected Area (km)",ylab="Reported Conflict Point (Bear = 1, Other = 0)")
 B1 <- glm(bears_presence~b2pa.distance,family="binomial") # Fit the other variables in here, to run them together in this model
-
-
 
 # Log of Plot Distances ---------------------------------------------------
 log.dist<-log(b2pa.distance)
@@ -101,22 +122,18 @@ curve(plogis(2.444168e-01+ 7.115651e-05*x),add=T,col="blue")
 
 # Creating a quadratic term for the model (since data is bell shap --------
 B1.sq <- glm(warp.all.sp$bears~b2pa.distance + I(b2pa.distance^2),family="binomial")
-=======
+
 B1 <- glm(bears_presence~b2pa.distance,family="binomial")
 
 
 # Creating a quadratic term for the model (since data is bell shap --------
 B1.sq <- glm(bears.reproj$bears~b2pa.distance + I(b2pa.distance^2),family="binomial")
->>>>>>> c90dfc9451abe0becf3e42c4ae48007617546c91
 coef(B1.sq)
 summary(B1.sq)
 plot(B1.sq)
 curve(plogis(-5.770904e-01+-1.740486e-05 *x),add=T,col="blue")
 
-<<<<<<< HEAD
 # Results indicate that there is an intercept of 1.492e-01 and slope of ???
-=======
 # Results indicate that there is an intercept of -6.4327 and slope of 0.000000105
->>>>>>> c90dfc9451abe0becf3e42c4ae48007617546c91
 
 

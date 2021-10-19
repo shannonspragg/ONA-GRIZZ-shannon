@@ -81,15 +81,56 @@ plot(warp.sv, add = TRUE) # GOT IT
 plot(grizzinc.cum.curmap)
 plot(warp.sv, add = TRUE) # AGAIN FOR THE PEOPLE IN THE BACK
 
-# Overlay WARP Points with CS Raster --------------------------------------
-# Here I will extract the values from each raster to the points
-
-warp.comb.resist.ext <- terra::extract(comb.resist.cum.curmap, warp.sv) # YAY! This worked
-??terra::extract
-# Buffer the WARP Points AFTER OVERLAY--------------------------------------------------
+# Buffer the WARP Points (Before Overlay) --------------------------------------------------
 # Here we buffer the WARP points by 500m before extracting the attributes from the current maps
-warp.all.buf <- warp.all.sp.bc %>% 
-  st_buffer(., 500)
+warp.all.buf <- warp.reproj %>% 
+  st_buffer(., 5000)
 plot(st_geometry(warp.all.buf)) # Check the buffers
 
 st_crs(warp.all.buf)
+
+# Let's Turn the Buffered Points into a SpatVector:
+warp.sv.buf <- vect(warp.all.buf)
+crs(warp.sv.buf)
+str(warp.sv.buf)
+plot(warp.sv.buf)
+
+# Overlay WARP Points with CS Raster BUFFERED --------------------------------------
+# Here I will extract the mean values from each raster to the buffered points
+
+warp.comb.resist.b.ext <- terra::extract(comb.resist.cum.curmap, warp.sv.buf, mean, na.rm = TRUE) 
+# This gives us the mean value of each buffered area --> what we want!
+warp.sociobio.b.ext <- terra::extract(sociobio.cum.curmap, warp.sv.buf, mean, na.rm = TRUE) 
+warp.grizzinc.b.ext <- terra::extract(grizzinc.cum.curmap, warp.sv.buf, mean, na.rm = TRUE) 
+
+# Create New Column(s) for Extracted Values:
+warp.reproj$CombResistExtract <- warp.comb.resist.b.ext[,2]
+warp.reproj$SociobioExtract <- warp.sociobio.b.ext[,2]
+warp.reproj$GrizzIncExtract <- warp.grizzinc.b.ext[,2]
+
+# Overlay WARP Points with CS Raster UNBUFFERED --------------------------------------
+# Here I will extract the values from each raster to the points
+
+warp.comb.resist.ext <- terra::extract(comb.resist.cum.curmap, warp.sv) # YAY! This worked
+warp.sociobio.ext <- terra::extract(sociobio.cum.curmap, warp.sv) # YAY! This worked
+warp.grizzinc.ext <- terra::extract(grizzinc.cum.curmap, warp.sv) # YAY! This worked
+
+# Create New Column(s) for Extracted Values:
+warp.reproj$CombResistExtract <- warp.comb.resist.ext[,2]
+warp.reproj$SociobioExtract <- warp.sociobio.ext[,2]
+warp.reproj$GrizzIncExtract <- warp.grizzinc.ext[,2]
+
+
+
+
+
+# Create & Save New Master DF ------------------------------------------------------
+# Now we should have a "master dataframe with these values, in the same projection:
+warp.master.complete <- warp.reproj
+str(warp.master.complete)
+st_crs(warp.master.complete)
+plot(st_geometry(warp.master.complete))
+
+# Let's save this to our folder as a new dataframe .shp:
+st_write(warp.master.complete, "/Users/shannonspragg/ONA_GRIZZ/WARP Bears /WARP Master DF (+CS resistance values)/WARP Master DF (+CS resist values).shp")
+

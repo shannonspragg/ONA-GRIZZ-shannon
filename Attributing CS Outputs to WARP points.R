@@ -34,6 +34,7 @@ bc.reproj <- st_transform(bc.boundary, st_crs(warp.all.sp))
 plot(st_geometry(bc.reproj))
 st_write(bc.reproj, "/Users/shannonspragg/ONA_GRIZZ/CAN Spatial Data/BC Boundary.shp")
 
+bc.reproj <- st_read("/Users/shannonspragg/ONA_GRIZZ/CAN Spatial Data/BC Boundary.shp")
 
 # Crop WARP Points to within the BC Boundary ------------------------------
 warp.all.sp.bc <- st_crop(warp.all.sp, bc.reproj)
@@ -42,37 +43,49 @@ st_crs(warp.all.sp.bc)
 crs(warp.all.sp.bc)
 
 # Check / Set CRS for Raster and Points -----------------------------------
- # Match the projection and CRS of the current map to the resistance map:
-crs(comb.resist.cum.curmap) <- crs(combined.resist)
+ # Match the projection and CRS of the current map to the resistance maps:
+    # Combined Resistance Current Map:
+crs(comb.resist.cum.curmap) <- crs(combined.resist) 
+crs(comb.resist.cum.curmap) == crs(combined.resist) # Nice, this worked --> now in BC Albers EPSG 3005
+    # Sociobio Current Map:
+crs(sociobio.cum.curmap) <- crs(combined.resist) 
+crs(sociobio.cum.curmap) == crs(combined.resist) # Nice, this worked --> now in BC Albers EPSG 3005
+# GrizzInc Survey Current Map:
+crs(grizzinc.cum.curmap) <- crs(combined.resist) 
+crs(grizzinc.cum.curmap) == crs(combined.resist) # Nice, this worked --> now in BC Albers EPSG 3005
 
 # Match the projection and CRS of the WARP to the resistance map:
-st_crs(warp.all.sp.bc)
+st_crs(warp.all.sp.bc) # This is in NAD83 Conus Albers - EPSG 5070
 
-# Need to find out how to do this with an sf object 
-crs(warp.all.sp.bc) 
-crs(comb.resist.cum.curmap) # These don't match...
-
-new.crs <- CRS("+proj=aea +lat_1=20 +lat_2=60 +lat_0=40 +lon_0=-96 +x_0=0 +y_0=0 +ellps=GRS80 +datum=NAD83 +units=m no_defs")
-warp.reproj <- warp.all.sp.bc %>% st_transform(., crs(combined.resist))
-
+# Match the sf points CRS directly to the resistance raster:
+warp.reproj <- st_make_valid(warp.all.sp.bc) %>% 
+  st_transform(crs=crs(combined.resist))
+  
 plot(st_geometry(warp.reproj))
-crs(warp.reproj)
-
-plot(comb.resist.cum.curmap)
-plot(st_geometry(warp.reproj, add=TRUE))
-
-# Overlay WARP Points with CS Raster --------------------------------------
-# Here I will extract the values from each raster to the points
+st_crs(warp.reproj)
+crs(comb.resist.cum.curmap) # The same as above, just formatted differently - success!
 
 # Need to make points a SpatVector:
-warp.sv <- vect(warp.all.sp.bc)
+warp.sv <- vect(warp.reproj)
 st_crs(warp.all.sp.bc)
 str(warp.sv)
 crs(warp.sv)
 
-plot(warp.sv)
-warp.comb.resist.ext <- terra::extract(comb.resist.cum.curmap, vect(warp.all.sp.bc))
+# Plot them together to see if projection is same:
+plot(comb.resist.cum.curmap)
+plot(warp.sv, add = TRUE) # HECK YES
 
+plot(sociobio.cum.curmap)
+plot(warp.sv, add = TRUE) # GOT IT
+
+plot(grizzinc.cum.curmap)
+plot(warp.sv, add = TRUE) # AGAIN FOR THE PEOPLE IN THE BACK
+
+# Overlay WARP Points with CS Raster --------------------------------------
+# Here I will extract the values from each raster to the points
+
+warp.comb.resist.ext <- terra::extract(comb.resist.cum.curmap, warp.sv) # YAY! This worked
+??terra::extract
 # Buffer the WARP Points AFTER OVERLAY--------------------------------------------------
 # Here we buffer the WARP points by 500m before extracting the attributes from the current maps
 warp.all.buf <- warp.all.sp.bc %>% 

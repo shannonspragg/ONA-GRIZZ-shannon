@@ -24,6 +24,7 @@ grizzinc.cum.curmap <- rast("/Users/shannonspragg/rasters/Social GrizzIncrease C
 combined.resist <- rast("/Users/shannonspragg/rasters/combined_resist.tif")
 sociobio.resist <- rast("/Users/shannonspragg/rasters/sociobio_resist.tif")
 survey.resist <- rast("/Users/shannonspragg/rasters/GrizzIncrease (Social)_2.tif")
+bear.habitat.berry <- rast("/Users/shannonspragg/rasters/Huck_Occur_adjusted.tif")
 
 # Bring in Provinces and Filter to BC -------------------------------------
 can.prov <- st_read("/Users/shannonspragg/ONA_GRIZZ/CAN Spatial Data/CAN Province Boundaries/lpr_000b16a_e.shp")
@@ -42,6 +43,8 @@ plot(st_geometry(warp.all.sp.bc)) # Cropped these to only the points in BC
 st_crs(warp.all.sp.bc)
 crs(warp.all.sp.bc)
 
+st_write(warp.all.sp.bc, "/Users/shannonspragg/ONA_GRIZZ/WARP Bears /WARP All Species Full Yr/ WARP All Sp Full Yr BC.shp")
+
 # Check / Set CRS for Raster and Points -----------------------------------
  # Match the projection and CRS of the current map to the resistance maps:
     # Combined Resistance Current Map:
@@ -50,9 +53,12 @@ crs(comb.resist.cum.curmap) == crs(combined.resist) # Nice, this worked --> now 
     # Sociobio Current Map:
 crs(sociobio.cum.curmap) <- crs(combined.resist) 
 crs(sociobio.cum.curmap) == crs(combined.resist) # Nice, this worked --> now in BC Albers EPSG 3005
-# GrizzInc Survey Current Map:
+    # GrizzInc Survey Current Map:
 crs(grizzinc.cum.curmap) <- crs(combined.resist) 
 crs(grizzinc.cum.curmap) == crs(combined.resist) # Nice, this worked --> now in BC Albers EPSG 3005
+    # CLayton's Huck Model (BHS):
+crs(bear.habitat.berry) <- crs(combined.resist) 
+crs(bear.habitat.berry) == crs(combined.resist) # Nice, this worked --> now in BC Albers EPSG 3005
 
 # Match the projection and CRS of the WARP to the resistance map:
 st_crs(warp.all.sp.bc) # This is in NAD83 Conus Albers - EPSG 5070
@@ -78,6 +84,9 @@ plot(warp.sv, add = TRUE) # HECK YES
 plot(sociobio.cum.curmap)
 plot(warp.sv, add = TRUE) # GOT IT
 
+plot(bear.habitat.berry)
+plot(warp.sv, add = TRUE)
+
 plot(grizzinc.cum.curmap)
 plot(warp.sv, add = TRUE) # AGAIN FOR THE PEOPLE IN THE BACK
 
@@ -102,11 +111,14 @@ warp.comb.resist.b.ext <- terra::extract(comb.resist.cum.curmap, warp.sv.buf, me
 # This gives us the mean value of each buffered area --> what we want!
 warp.sociobio.b.ext <- terra::extract(sociobio.cum.curmap, warp.sv.buf, mean, na.rm = TRUE) 
 warp.grizzinc.b.ext <- terra::extract(grizzinc.cum.curmap, warp.sv.buf, mean, na.rm = TRUE) 
+warp.bhs.b.extract <- terra::extract(bear.habitat.berry, warp.sv.buf, mean, na.rm = TRUE) 
 
 # Create New Column(s) for Extracted Values:
 warp.reproj$CombResistExtract <- warp.comb.resist.b.ext[,2]
 warp.reproj$SociobioExtract <- warp.sociobio.b.ext[,2]
 warp.reproj$GrizzIncExtract <- warp.grizzinc.b.ext[,2]
+warp.reproj$BHSExtract <- warp.bhs.b.extract[,2]
+
 
 # Overlay WARP Points with CS Raster UNBUFFERED --------------------------------------
 # Here I will extract the values from each raster to the points

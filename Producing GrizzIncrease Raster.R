@@ -81,6 +81,7 @@ crs(huck.occurance) <- "+proj=aea +lat_0=45 +lon_0=-126 +lat_1=50 +lat_2=58.5 +x
 # Match Resolution:
 huck.resampl <- resample(huck.occurance, comb.resist)
 huck.resampl
+st_crs(huck.occurance)
 plot(huck.resampl)
 
 # Write this as the updated raster:

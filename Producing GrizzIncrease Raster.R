@@ -69,20 +69,30 @@ writeRaster(grizz.density, "/Users/shannonspragg/ONA_GRIZZ/Sociobio, Resist, & S
 
 # Try this with Hucks Raster - any different? YES! -----------------------------
 huck.occurance <- rast("/Users/shannonspragg/rasters/VACCMEM_Occ.tif")
+huck.kcal <- rast("/Users/shannonspragg/rasters/VACCMEM_kcal.tif")
 huck.occurance
 plot(huck.occurance)
+huck.kcal
+plot(huck.kcal)
 
 # Match Extent:
 ext(huck.occurance) <- c(3700, 1946700, 300900, 1750900) #Match in extents
+ext(huck.kcal) <- c(3700, 1946700, 300900, 1750900) #Match in extents
 
 # Match CRS:
 crs(huck.occurance) <- "+proj=aea +lat_0=45 +lon_0=-126 +lat_1=50 +lat_2=58.5 +x_0=1000000 +y_0=0 +datum=NAD83 +units=m +no_defs"
+crs(huck.kcal) <- "+proj=aea +lat_0=45 +lon_0=-126 +lat_1=50 +lat_2=58.5 +x_0=1000000 +y_0=0 +datum=NAD83 +units=m +no_defs"
 
 # Match Resolution:
 huck.resampl <- resample(huck.occurance, comb.resist)
 huck.resampl
+huck.kcal.resampl <- resample(huck.kcal, comb.resist)
+
 st_crs(huck.occurance)
-plot(huck.resampl)
+plot(huck.kcal.resampl)
 
 # Write this as the updated raster:
 writeRaster(huck.resampl, "/Users/shannonspragg/ONA_GRIZZ/Sociobio, Resist, & Survey Rasters/Huck_Occur_adjusted.tif")
+writeRaster(huck.kcal.resampl, "/Users/shannonspragg/ONA_GRIZZ/Sociobio, Resist, & Survey Rasters/Huck_kcal_adjusted.tif")
+
+

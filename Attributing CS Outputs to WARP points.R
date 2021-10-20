@@ -24,7 +24,9 @@ grizzinc.cum.curmap <- rast("/Users/shannonspragg/rasters/Social GrizzIncrease C
 combined.resist <- rast("/Users/shannonspragg/rasters/combined_resist.tif")
 sociobio.resist <- rast("/Users/shannonspragg/rasters/sociobio_resist.tif")
 survey.resist <- rast("/Users/shannonspragg/rasters/GrizzIncrease (Social)_2.tif")
-bear.habitat.berry <- rast("/Users/shannonspragg/rasters/Huck_Occur_adjusted.tif")
+bear.habitat.berry <- rast("/Users/shannonspragg/rasters/Huck_kcal_adjusted.tif")
+biophys <- rast("/Users/shannonspragg/ONA_GRIZZ/Sociobio, Resist, & Survey Rasters/biophys_normalized_cum_currmap.tif")
+
 
 # Bring in Provinces and Filter to BC -------------------------------------
 can.prov <- st_read("/Users/shannonspragg/ONA_GRIZZ/CAN Spatial Data/CAN Province Boundaries/lpr_000b16a_e.shp")

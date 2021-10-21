@@ -8,10 +8,12 @@
 library(sf)
 library(tidyverse)
 library(dplyr)
-
+library(raster)
+library(terra)
 # Import the All Species Master df ----------------------------------------
 
 warp.all.sp <- st_read("/Users/shannonspragg/ONA_GRIZZ/WARP Bears /WARP Master DF (+CS resistance values)/WARP Master DF (+CS resist values).shp")
+social.res <- rast("/Users/shannonspragg/ONA_GRIZZ/Sociobio, Resist, & Survey Rasters/GrizzIncrease (Social).tif")
 
 # Create Binomial GLM -- Bring in All Covariates -----------------------------------------------------
 bears_presence <- warp.all.sp$bears # Binomial bears
@@ -67,7 +69,7 @@ confint(sim.glm, level = 0.95)
     # 2. Ecol mod: glm(bear_pres ~ bear habitat + CS Bears)
     # 3. Soc mod: glm(bear_pres ~ survey + CS Survey)
 
-fullmod.glm <- glm(bears_presence ~ comb.resist.cs + sociobio.cs + grizzinc.survey.cs, family = "binomial")
+fullmod.glm <- glm(bears_presence ~ bear.habitat.bhs + comb.resist.cs + sociobio.cs + grizzinc.survey.cs, family = "binomial")
 ecol.mod.glm <- glm(bears_presence ~ bear.habitat.bhs + comb.resist.cs, family = "binomial") 
 social.mod.glm <- glm(bears_presence ~ grizzinc.survey.cs, family = "binomial") 
 

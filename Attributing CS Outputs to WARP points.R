@@ -4,6 +4,10 @@
 # then extracting the attributes from each raster to each WARP point by location. The result should
 # be the creation of three additional columns (one for each CS) in the master WARP df, representing these values.
 
+# UPDATE NOTE:
+# No need to even use the "combined resistance" cs or resistance raster (this was solely to derive the grizz inc raster from).
+# Should have: extracted values from BHS (not cs), a grizzinc CS (social), Biophysical CS (see biophys_norm_cum_current) in ONA folder, 
+# and plain Social survey resistance values (not cs, extracted from normal raster).
 
 # Load Packages -----------------------------------------------------------
 library(sf)
@@ -20,6 +24,7 @@ warp.all.sp <- st_read("/Users/shannonspragg/ONA_GRIZZ/WARP Bears /WARP All Spec
 comb.resist.cum.curmap <- rast("/Users/shannonspragg/rasters/Combined Resistance_1/cum_currmap.tif")
 sociobio.cum.curmap <- rast("/Users/shannonspragg/rasters/SocioBio Resistance CS/cum_currmap.tif")
 grizzinc.cum.curmap <- rast("/Users/shannonspragg/rasters/Social GrizzIncrease CS/cum_currmap.tif")
+biophys.cum.curmap <- rast("/Users/shannonspragg/rasters/biophys_normalized_cum_currmap.tif")
 
 combined.resist <- rast("/Users/shannonspragg/rasters/combined_resist.tif")
 sociobio.resist <- rast("/Users/shannonspragg/rasters/sociobio_resist.tif")

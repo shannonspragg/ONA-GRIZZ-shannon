@@ -18,7 +18,6 @@ library(sp)
 library(terra)
 library(rgdal)
 
-
 # Bring in WARP Master df and CS Rasters ----------------------------------
 warp.all.sp <- st_read("/Users/shannonspragg/ONA_GRIZZ/WARP Bears /WARP All Species Full Yr/ WARP All Species Master Data Frame.shp")
 # sociobio.cum.curmap <- rast("/Users/shannonspragg/rasters/SocioBio Resistance CS/cum_currmap.tif") # Don't need this CS
@@ -27,6 +26,9 @@ biophys.cum.curmap <- rast("/Users/shannonspragg/rasters/biophys_normalized_cum_
 
 sociobio.resist <- rast("/Users/shannonspragg/rasters/sociobio_resist.tif")
 survey.resist <- rast("/Users/shannonspragg/rasters/GrizzIncrease (Social)_2.tif")
+grizz.dens <- rast("/Users/shannonspragg/ONA_GRIZZ/Grizz Density/Clayton_griz_dens.tiff")
+plot(grizz.dens)
+
 
 # Need to obtain actual BHS layer from Clayton's density data...
 bear.habitat.berry <- rast("/Users/shannonspragg/rasters/Huck_kcal_adjusted.tif")

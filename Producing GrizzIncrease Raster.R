@@ -26,11 +26,10 @@ plot(social.2) # I think this shows us the difference - NICE!
 # Save the New Raster -----------------------------------------------------
 # Let's write this as a tif file and save it for use in omniscape
 
-writeRaster(social, "/Users/shannonspragg/ONA_GRIZZ/Sociobio, Resist, & Survey Rasters/GrizzIncrease (Social).tif")
 writeRaster(social.2, "/Users/shannonspragg/rasters/GrizzIncrease (Social)_2.tif")
 
 # Let's confirm this saved properly:
-social.test <- rast("/Users/shannonspragg/ONA_GRIZZ/Sociobio, Resist, & Survey Rasters/GrizzIncrease (Social).tif")
+social.test <- rast("/Users/shannonspragg/ONA_GRIZZ/Sociobio, Resist, & Survey Rasters/GrizzIncrease (Social)_2.tif")
 plot(social.test)
 social.test # Checked, this saved properly!
 
@@ -38,10 +37,10 @@ social.test # Checked, this saved properly!
 # Bring in Grizz Density Raster -------------------------------------------
 # NOTE: Was not able to get this to work like I did with hucks... maybe use those
 # Bringing this in to check the dimensions and projection:
-grizz.density <- rast("/Users/shannonspragg/rasters/Clayton_griz_dens.tif")
+grizz.density <- rast("/Users/shannonspragg/ONA_GRIZZ/Grizz Density rasters/v2.gpkg")
 grizz.density
 plot(grizz.density)
-plot(comb.resist)
+plot(social.test)
 
 # Match Extent:
 ext(grizz.density) <- c(3700, 1946700, 300900, 1750900) #Match in extents
@@ -56,18 +55,14 @@ grizz.agg
 plot(grizz.agg)
 res(grizz.density) <- c(1000,1000) # Now they match in resolution
 
-# grizz.resample <- resample(grizz.density, comb.resist, method="ngb") # Moves r values over to s - bilinear does a weighted average based on proximity
-# plot(grizz.resample) # this won't work
-
-grizz.extend <- terra::extend(grizz.agg, comb.resist)
-grizz.extend
-plot(grizz.extend)
+grizz.dens.resampl <- resample(grizz.density, social.test)
+plot(grizz.dens.resampl) 
 
 # Write this as the updated raster:
-writeRaster(grizz.density, "/Users/shannonspragg/ONA_GRIZZ/Sociobio, Resist, & Survey Rasters/Grizz_Dens_new_ext.tif")
+writeRaster(grizz.dens.resampl, "/Users/shannonspragg/rasters/grizz_dens.tif")
 
 
-# Try this with Hucks Raster - any different? YES! -----------------------------
+# Try this with Hucks Raster  -----------------------------
 huck.occurance <- rast("/Users/shannonspragg/rasters/VACCMEM_Occ.tif")
 huck.kcal <- rast("/Users/shannonspragg/rasters/VACCMEM_kcal.tif")
 huck.occurance

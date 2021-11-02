@@ -20,19 +20,16 @@ library(rgdal)
 
 # Bring in WARP Master df and CS Rasters ----------------------------------
 warp.all.sp <- st_read("/Users/shannonspragg/ONA_GRIZZ/WARP Bears /WARP All Species Full Yr/ WARP All Species Master Data Frame.shp")
-# sociobio.cum.curmap <- rast("/Users/shannonspragg/rasters/SocioBio Resistance CS/cum_currmap.tif") # Don't need this CS
-grizzinc.cum.curmap <- rast("/Users/shannonspragg/rasters/Social GrizzIncrease CS/cum_currmap.tif")
+
+# CS's for grizz increase and biophysical:
+grizzinc.cum.curmap <- rast("/Users/shannonspragg/rasters/Social GrizzIncrease CS_1/cum_currmap.tif")
 biophys.cum.curmap <- rast("/Users/shannonspragg/rasters/biophys_normalized_cum_currmap.tif")
 
-sociobio.resist <- rast("/Users/shannonspragg/rasters/sociobio_resist.tif")
+# Just survey response layer (not CS):
 survey.resist <- rast("/Users/shannonspragg/rasters/GrizzIncrease (Social)_2.tif")
-grizz.dens <- rast("/Users/shannonspragg/ONA_GRIZZ/Grizz Density/Clayton_griz_dens.tiff")
+# BHS layer:
+grizz.dens <- rast("/Users/shannonspragg/ONA_GRIZZ/Grizz Density rasters/grizz_dens.tif")
 plot(grizz.dens)
-
-
-# Need to obtain actual BHS layer from Clayton's density data...
-bear.habitat.berry <- rast("/Users/shannonspragg/rasters/Huck_kcal_adjusted.tif")
-combined.resist <- rast("/Users/shannonspragg/rasters/combined_resist.tif")
 
 # Bring in Provinces and Filter to BC -------------------------------------
 can.prov <- st_read("/Users/shannonspragg/ONA_GRIZZ/CAN Spatial Data/CAN Province Boundaries/lpr_000b16a_e.shp")
@@ -46,6 +43,7 @@ st_write(bc.reproj, "/Users/shannonspragg/ONA_GRIZZ/CAN Spatial Data/BC Boundary
 # Read this in for future runs:
 bc.reproj <- st_read("/Users/shannonspragg/ONA_GRIZZ/CAN Spatial Data/BC Boundary.shp")
 
+
 # Crop WARP Points to within the BC Boundary ------------------------------
 warp.all.sp.bc <- st_crop(warp.all.sp, bc.reproj)
 plot(st_geometry(warp.all.sp.bc)) # Cropped these to only the points in BC
@@ -57,27 +55,27 @@ st_write(warp.all.sp.bc, "/Users/shannonspragg/ONA_GRIZZ/WARP Bears /WARP All Sp
 # Read this in for future runs:
 warp.all.sp.bc <- st_read("/Users/shannonspragg/ONA_GRIZZ/WARP Bears /WARP All Species Full Yr/ WARP All Sp Full Yr BC.shp")
 
+
 # Check / Set CRS for Raster and Points -----------------------------------
  # Match the projection and CRS of the current map to the resistance maps:
-    # Biophysical Current Map:
-crs(biophys.cum.curmap) <- crs(combined.resist) 
-crs(biophys.cum.curmap) == crs(combined.resist) # Nice, this worked --> now in BC Albers EPSG 3005
-    # Sociobio Current Map:
-#crs(sociobio.cum.curmap) <- crs(combined.resist) 
-#crs(sociobio.cum.curmap) == crs(combined.resist) # Nice, this worked --> now in BC Albers EPSG 3005
-    # GrizzInc Survey Current Map:
-crs(grizzinc.cum.curmap) <- crs(combined.resist) 
-crs(grizzinc.cum.curmap) == crs(combined.resist) # Nice, this worked --> now in BC Albers EPSG 3005
-    # CLayton's Huck Model (BHS):
-crs(bear.habitat.berry) <- crs(combined.resist) 
-crs(bear.habitat.berry) == crs(combined.resist) # Nice, this worked --> now in BC Albers EPSG 3005
+ # Here we use the biophysical.cum.curmap to be the template crs
 
+    # Bear Density (BHS) Current Map:
+crs(grizz.dens) <- crs(biophys.cum.curmap) 
+crs(biophys.cum.curmap) == crs(grizz.dens) # Nice, this worked --> now in BC Albers EPSG 3005
+    # Survey Resistance Map:
+crs(survey.resist) <- crs(biophys.cum.curmap) 
+crs(survey.resist) == crs(biophys.cum.curmap) # Nice, this worked --> now in BC Albers EPSG 3005
+    # GrizzInc Survey Current Map:
+crs(grizzinc.cum.curmap) <- crs(biophys.cum.curmap) 
+crs(grizzinc.cum.curmap) == crs(biophys.cum.curmap) # Nice, this worked --> now in BC Albers EPSG 3005
+    
 # Match the projection and CRS of the WARP to the resistance map:
 st_crs(warp.all.sp.bc) # This is in NAD83 Conus Albers - EPSG 5070
 
 # Match the sf points CRS directly to the resistance raster:
 warp.reproj <- st_make_valid(warp.all.sp.bc) %>% 
-  st_transform(crs=crs(combined.resist))
+  st_transform(crs=crs(biophys.cum.curmap))
   
 plot(st_geometry(warp.reproj))
 st_crs(warp.reproj)
@@ -85,7 +83,6 @@ crs(biophys.cum.curmap) # The same as above, just formatted differently - succes
 
 # Need to make points a SpatVector:
 warp.sv <- vect(warp.reproj)
-st_crs(warp.all.sp.bc)
 str(warp.sv)
 crs(warp.sv)
 
@@ -93,11 +90,11 @@ crs(warp.sv)
 plot(biophys.cum.curmap)
 plot(warp.sv, add = TRUE) # HECK YES
 
-# plot(sociobio.cum.curmap)
-# plot(warp.sv, add = TRUE) # GOT IT
+plot(grizz.dens)
+plot(warp.sv, add = TRUE) # Sweet
 
-plot(bear.habitat.berry)
-plot(warp.sv, add = TRUE)
+plot(survey.resist)
+plot(warp.sv, add = TRUE) # Nice
 
 plot(grizzinc.cum.curmap)
 plot(warp.sv, add = TRUE) # AGAIN FOR THE PEOPLE IN THE BACK
@@ -119,15 +116,17 @@ plot(warp.sv.buf)
 # Overlay WARP Points with CS Raster BUFFERED --------------------------------------
 # Here I will extract the mean values from each raster to the buffered points
 
+# WAIT - need to run this with NEW CS grizzinc output (using grizz density)
+
 warp.biophys.b.ext <- terra::extract(biophys.cum.curmap, warp.sv.buf, mean, na.rm = TRUE) 
 # This gives us the mean value of each buffered area --> what we want!
-warp.sociobio.b.ext <- terra::extract(sociobio.cum.curmap, warp.sv.buf, mean, na.rm = TRUE) 
+warp.social.resist.b.ext <- terra::extract(survey.resist, warp.sv.buf, mean, na.rm = TRUE) 
 warp.grizzinc.b.ext <- terra::extract(grizzinc.cum.curmap, warp.sv.buf, mean, na.rm = TRUE) 
-warp.bhs.b.extract <- terra::extract(bear.habitat.berry, warp.sv.buf, mean, na.rm = TRUE) 
+warp.bhs.b.extract <- terra::extract(grizz.dens, warp.sv.buf, mean, na.rm = TRUE) 
 
 # Create New Column(s) for Extracted Values:
 warp.reproj$BiophysExtract <- warp.biophys.b.ext[,2]
-warp.reproj$SociobioExtract <- warp.sociobio.b.ext[,2]
+warp.reproj$SurveyResistExtract <- warp.social.resist.b.ext[,2]
 warp.reproj$GrizzIncExtract <- warp.grizzinc.b.ext[,2]
 warp.reproj$BHSExtract <- warp.bhs.b.extract[,2]
 
@@ -153,7 +152,7 @@ warp.reproj$GrizzIncExtract <- warp.grizzinc.ext[,2]
 warp.master.complete <- warp.reproj
 str(warp.master.complete)
 st_crs(warp.master.complete)
-plot(st_geometry(warp.master.complete))
+head(warp.master.complete)
 
 # Let's save this to our folder as a new dataframe .shp:
 st_write(warp.master.complete, "/Users/shannonspragg/ONA_GRIZZ/WARP Bears /WARP Master DF (+CS resistance values)/WARP Master DF (+CS resist values).shp")

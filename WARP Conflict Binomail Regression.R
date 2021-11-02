@@ -13,21 +13,18 @@ library(terra)
 # Import the All Species Master df ----------------------------------------
 
 warp.all.sp <- st_read("/Users/shannonspragg/ONA_GRIZZ/WARP Bears /WARP Master DF (+CS resistance values)/WARP Master DF (+CS resist values).shp")
-social.res <- rast("/Users/shannonspragg/ONA_GRIZZ/Sociobio, Resist, & Survey Rasters/GrizzIncrease (Social).tif")
 
 # Create Binomial GLM -- Bring in All Covariates -----------------------------------------------------
 bears_presence <- warp.all.sp$bears # Binomial bears
 b2pa.distance <- scale(warp.all.sp$ds__PA_) # Dist to PA covariate
-dom.farms <- warp.all.sp$Dmn_F_T # Dominant farm type covariate -- non numeric, may not work
+dom.farms <- warp.all.sp$Dmn_F_T # Dominant farm type covariate -- non numeric
+dom.farms <- as.factor(warp.all.sp$Dmn_F_T) # Making this work as a factor
 total.farms <- warp.all.sp$Ttl_F_C # Total farm count covariate
 b2met.dist <- warp.all.sp$dstn___ # Dist to metro covariate
-dom.farms <- as.factor(warp.all.sp$Dmn_F_T)
-comb.resist.cs <- warp.all.sp$CmbRssE
-sociobio.cs <- warp.all.sp$ScbExtr
-grizzinc.survey.cs <- warp.all.sp$GrzzInE
+grizzinc.cs.social <- warp.all.sp$GrzzInE
 bear.habitat.bhs <- warp.all.sp$BHSExtr
-
-# Messing with Binomial Reg Tutorials -------------------------------------
+social <- warp.all.sp$SrvyRsE
+biophys.cs <- warp.all.sp$BphysEx
 
 
 # Prep Simulation to Match Data with Binomial Reg: ------------------------
@@ -65,35 +62,50 @@ confint(sim.glm, level = 0.95)
 
 # Running Linear Regressions ----------------------------------------------
   # Here I will be running the three models Adam requested:
-    # 1. Full model: glm(bear_pres ~ Comb resist + Sociobio resist + Survey + biophys)
-    # 2. Ecol mod: glm(bear_pres ~ bear habitat + CS Bears)
-    # 3. Soc mod: glm(bear_pres ~ survey + CS Survey)
+    # 1. Full model: glm(bear_pres ~ BHS (grizz dens) + CS Social + Social (survey resist) + Biophys CS)
+    # 2. Ecol mod: glm(bear_pres ~ BHS (grizz dens) + CS Biophys)
+    # 3. Soc mod: glm(bear_pres ~ Social + CS Social (grizz inc))
 
-fullmod.glm <- glm(bears_presence ~ bear.habitat.bhs + comb.resist.cs + sociobio.cs + grizzinc.survey.cs, family = "binomial")
-ecol.mod.glm <- glm(bears_presence ~ bear.habitat.bhs + comb.resist.cs, family = "binomial") 
-social.mod.glm <- glm(bears_presence ~ grizzinc.survey.cs, family = "binomial") 
+# Variables Described Below:
+  # BHS - bear habitat suitability based on grizzly density estimate (from Clayton)
+  # CS Social - Values from the CS of Social resistance (survey responses for Grizz Increase)
+  # Social - resistance surface for survey responses for Grizz Increase
+  # CS Biophys - Values from the CS of Biophysical only raster (Human Influence Index + topographic roughness)
+
+fullmod.glm <- glm(bears_presence ~ bear.habitat.bhs + grizzinc.cs.social + social + biophys.cs, family = "binomial")
+ecol.mod.glm <- glm(bears_presence ~ bear.habitat.bhs + biophys.cs, family = "binomial") 
+social.mod.glm <- glm(bears_presence ~ social + grizzinc.survey.cs, family = "binomial") 
 
 summary(fullmod.glm)
 summary(ecol.mod.glm)
 summary(social.mod.glm)
 
   # Here I run a glm with the covariates:
-covar.glm <- glm(bears_presence ~ b2pa.distance + b2met.dist + total.farms + dom.farms, family = "binomial") # running the regression based on the simulation
+covar.glm <- glm(bears_presence ~ b2pa.distance + b2met.dist + total.farms + dom.farms, family = "binomial") # running regression based on simulation
 summary(covar.glm)
 
-# Plot the regression results:
-# Not entirely sure of the best way to do this...
-library(ggplot2)
-ggplot(covar.glm, aes(x=dom.farms, y=b2pa.distance)) + geom_point() + 
-  stat_smooth(method="glm", method.args=list(family="binomial"), se=FALSE)
+# Add in Covs to Full Mod:
+fullmod.covs.glm <- glm(bears_presence ~ bear.habitat.bhs + grizzinc.cs.social + social + biophys.cs + b2pa.distance + b2met.dist
+                        + total.farms + dom.farms, family = "binomial")
+summary(fullmod.covs.glm)
+# INTERESTING: lowest AIC is in the full model + covs, pretty significantly
 
 # Adding an interaction to the model:
 glm_mod_interaction = glm(bears_presence ~ b2pa.distance + b2met.dist + total.farms + b2pa.distance:b2met.dist + total.farms:dom.farms, family = "binomial")
 summary(glm_mod_interaction)
 
 # Predict the probabilities based on this model:
-glm.probs <- predict(covar.glm, type = "response")
+glm.probs <- predict(fullmod.covs.glm, type = "response")
 glm.probs[1:5]
+
+
+# Plotting Regression Results ---------------------------------------------
+# Plot the regression results:
+# Not entirely sure of the best way to do this...
+library(ggplot2)
+ggplot(covar.glm, aes(x=dom.farms, y=b2pa.distance)) + geom_point() + 
+  stat_smooth(method="glm", method.args=list(family="binomial"), se=FALSE)
+
 
 
 # EX From Class Project ---------------------------------------------------

@@ -72,27 +72,79 @@ confint(sim.glm, level = 0.95)
   # Social - resistance surface for survey responses for Grizz Increase
   # CS Biophys - Values from the CS of Biophysical only raster (Human Influence Index + topographic roughness)
 
+# Run model sets:
 fullmod.glm <- glm(bears_presence ~ bear.habitat.bhs + grizzinc.cs.social + social + biophys.cs, family = "binomial")
 ecol.mod.glm <- glm(bears_presence ~ bear.habitat.bhs + biophys.cs, family = "binomial") 
 social.mod.glm <- glm(bears_presence ~ social + grizzinc.survey.cs, family = "binomial") 
 
-summary(fullmod.glm)
-summary(ecol.mod.glm)
-summary(social.mod.glm)
-
-  # Here I run a glm with the covariates:
-covar.glm <- glm(bears_presence ~ b2pa.distance + b2met.dist + total.farms + dom.farms, family = "binomial") # running regression based on simulation
-summary(covar.glm)
 
 # Add in Covs to Full Mod:
 fullmod.covs.glm <- glm(bears_presence ~ bear.habitat.bhs + grizzinc.cs.social + social + biophys.cs + b2pa.distance + b2met.dist
                         + total.farms + dom.farms, family = "binomial")
-summary(fullmod.covs.glm)
+
+# Check summaries:
+summary(fullmod.glm) # AIC 43308
+summary(fullmod.glm)$coefficients # Pull up summary for coefficients
+summary(ecol.mod.glm) # AIC 43672
+summary(social.mod.glm) # AIC 43412
+
+summary(fullmod.covs.glm) # AIC 41177
 # INTERESTING: lowest AIC is in the full model + covs, pretty significantly
 
+
+# Individual covariate models:
+bhs.glm <- glm(bears_presence ~ bear.habitat.bhs, family = "binomial")
+grizz.inc.cs.glm <- glm(bears_presence ~ grizzinc.cs.social, family = "binomial")
+social.glm <- glm(bears_presence ~ social, family = "binomial")
+biophys.glm <- glm(bears_presence ~ biophys.cs, family = "binomial")
+
+b2pa.glm <- glm(bears_presence ~ b2pa.distance, family = "binomial")
+b2met.glm <- glm(bears_presence ~ b2met.dist, family = "binomial")
+tot.farm.glm <- glm(bears_presence ~ total.farms, family = "binomial")
+dom.farm.glm <- glm(bears_presence ~ dom.farms, family = "binomial")
+
+# Summaries for individual models
+summary(bhs.glm) # p of 0.0264 *, AIC 44108
+summary(grizz.inc.cs.glm) # p of <2e-16 *** , AIC 44114
+summary(social.glm) # p of <2e-16 *** , AIC 43994
+summary(biophys.glm) # p of <2e-16 *** , AIC 43778
+
+summary(b2pa.glm) # p of 2.25e-14 *** , AIC 44143
+summary(b2met.glm) # p of <2e-16 *** , AIC 44000
+summary(tot.farm.glm) # p of <2e-16 ***, AIC 43161
+summary(dom.farm.glm) # p of .000579 *** (veg & melon), .001741 ** (cattle), .038583 * (beef, feedlots), AIC 43225
+
+
 # Adding an interaction to the model:
-glm_mod_interaction = glm(bears_presence ~ b2pa.distance + b2met.dist + total.farms + b2pa.distance:b2met.dist + total.farms:dom.farms, family = "binomial")
-summary(glm_mod_interaction)
+glm_mod_interaction = glm(bears_presence ~ b2pa.distance + b2met.dist + total.farms + b2pa.distance:b2met.dist + total.farms:dom.farms, 
+                          family = "binomial")
+summary(glm_mod_interaction) 
+# Appears to be a likely interaction between total farms and the dominant farm types
+
+
+# K Fold Cross Validation: -----------------------------------------
+# Let's try this first with a mini chunk of the dataset:
+warp.all.sp.mini <- warp.all.sp[1:50,]
+st_drop_geometry(warp.all.sp.mini)
+str(warp.all.sp.mini)
+
+# Setting up a K - fold cross validation model: http://www.sthda.com/english/articles/38-regression-model-validation/157-cross-validation-essentials-in-r/
+
+install.packages("caret")
+library(caret)
+# Define training control
+set.seed(123) 
+train.control <- trainControl(method = "cv", number = 10)
+# Train the model
+model <- train(warp.all.sp.mini$encontr_d ~., data = warp.all.sp.mini, method = "lm",
+               trControl = train.control)
+# Summarize the results
+print(model)
+
+# Model Selection with ANOVA ----------------------------------------------
+anova(fullmod.covs.glm, fullmod.glm)
+
+
 
 # Predict the probabilities based on this model:
 glm.probs <- predict(fullmod.covs.glm, type = "response")
@@ -100,6 +152,7 @@ glm.probs[1:5]
 
 
 # Plotting Regression Results ---------------------------------------------
+
 # Plot the regression results:
 # Not entirely sure of the best way to do this...
 library(ggplot2)

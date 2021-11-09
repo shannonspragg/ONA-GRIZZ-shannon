@@ -142,9 +142,9 @@ model <- train(warp.all.sp.mini$encontr_d ~., data = warp.all.sp.mini, method = 
 print(model)
 
 # Model Selection with ANOVA ----------------------------------------------
-anova(fullmod.covs.glm, fullmod.glm)
-
-
+anova(fullmod.covs.glm) # major deviance with tot/dom farms, grizzinc.cs , & social
+anova(fullmod.glm) # largest deviance with grizzinc.cs & social
+anova(glm_mod_interaction) # major deviance with the interaction term
 
 # Predict the probabilities based on this model:
 glm.probs <- predict(fullmod.covs.glm, type = "response")

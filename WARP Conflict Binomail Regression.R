@@ -76,7 +76,7 @@ confint(sim.glm, level = 0.95)
 fullmod.glm <- glm(bears_presence ~ bear.habitat.bhs + grizzinc.cs.social + social + biophys.cs, family = "binomial")
 ecol.mod.glm <- glm(bears_presence ~ bear.habitat.bhs + biophys.cs, family = "binomial") 
 social.mod.glm <- glm(bears_presence ~ social + grizzinc.survey.cs, family = "binomial") 
-
+intercept.only.glm <- glm(bears_presence~1, family=binomial(link=logit))
 
 # Add in Covs to Full Mod:
 fullmod.covs.glm <- glm(bears_presence ~ bear.habitat.bhs + grizzinc.cs.social + social + biophys.cs + b2pa.distance + b2met.dist
@@ -114,6 +114,8 @@ summary(b2met.glm) # p of <2e-16 *** , AIC 44000
 summary(tot.farm.glm) # p of <2e-16 ***, AIC 43161
 summary(dom.farm.glm) # p of .000579 *** (veg & melon), .001741 ** (cattle), .038583 * (beef, feedlots), AIC 43225
 
+# Run AIC to Compare Models:
+AIC(fullmod.glm, fullmod.covs.glm, bhs.glm, grizz.inc.cs.glm, social.glm, biophys.glm, b2pa.glm, b2met.glm, tot.farm.glm, dom.farm.glm, intercept.only.glm)
 
 # Adding an interaction to the model:
 glm_mod_interaction = glm(bears_presence ~ b2pa.distance + b2met.dist + total.farms + b2pa.distance:b2met.dist + total.farms:dom.farms, 
@@ -143,7 +145,7 @@ print(model)
 
 # Model Selection with ANOVA ----------------------------------------------
 anova(fullmod.covs.glm) # major deviance with tot/dom farms, grizzinc.cs , & social
-anova(fullmod.glm) # largest deviance with grizzinc.cs & social
+anova(fullmod.glm, fullmod.covs.glm) # largest deviance with grizzinc.cs & social
 anova(glm_mod_interaction) # major deviance with the interaction term
 
 # Predict the probabilities based on this model:

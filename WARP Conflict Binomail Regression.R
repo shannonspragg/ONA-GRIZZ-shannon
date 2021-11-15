@@ -1,7 +1,7 @@
 # WARP Conflict Binomial Linear Regression ------------------------------------------------
 # This script will be where I import the all species master df and configure it into the binomial 
 # linear regression analysis code
-  # Important Questions -- NA
+# Important Questions -- NA
 
 
 # Load Packages -----------------------------------------------------------
@@ -27,6 +27,16 @@ social <- warp.all.sp$SrvyRsE
 biophys.cs <- warp.all.sp$BphysEx
 
 
+# Check for NA's ----------------------------------------------------------
+which(is.na(dom.farms)) # We have like 73 NA's -- why?
+which(is.na(total.farms)) # We have like 73 NA's -- why?
+which(is.na(social)) # We have like 73 NA's -- why?
+which(is.na(biophys.cs)) # We have like 73 NA's -- why?
+
+
+
+
+
 # Prep Simulation to Match Data with Binomial Reg: ------------------------
 # Creating a simulation to see if it returns close to the intercept and slope we input initially 
 # https://daviddalpiaz.github.io/appliedstats/logistic-regression.html
@@ -34,7 +44,7 @@ biophys.cs <- warp.all.sp$BphysEx
 # First we create a slope and intercept for our bears and covariates:
 Intercept=0.3 # This is set for a 0-1 value, representing bear presence
 Slope=2.1 # need a slope for each variable, so we create a matrix for each variable 
-    # Do this like this: slope (B) <- runif(15,-2,2) https://data.library.virginia.edu/simulating-a-logistic-regression-model/
+# Do this like this: slope (B) <- runif(15,-2,2) https://data.library.virginia.edu/simulating-a-logistic-regression-model/
 B_slope <- runif(4, -2,2) # Created a randomized slope matrix for the variables
 # Or, just make a slope for each variable and test with that:
 Slope_distPA=1.6 
@@ -61,16 +71,16 @@ confint(sim.glm, level = 0.95)
 
 
 # Running Linear Regressions ----------------------------------------------
-  # Here I will be running the three models Adam requested:
-    # 1. Full model: glm(bear_pres ~ BHS (grizz dens) + CS Social + Social (survey resist) + Biophys CS)
-    # 2. Ecol mod: glm(bear_pres ~ BHS (grizz dens) + CS Biophys)
-    # 3. Soc mod: glm(bear_pres ~ Social + CS Social (grizz inc))
+# Here I will be running the three models Adam requested:
+# 1. Full model: glm(bear_pres ~ BHS (grizz dens) + CS Social + Social (survey resist) + Biophys CS)
+# 2. Ecol mod: glm(bear_pres ~ BHS (grizz dens) + CS Biophys)
+# 3. Soc mod: glm(bear_pres ~ Social + CS Social (grizz inc))
 
 # Variables Described Below:
-  # BHS - bear habitat suitability based on grizzly density estimate (from Clayton)
-  # CS Social - Values from the CS of Social resistance (survey responses for Grizz Increase)
-  # Social - resistance surface for survey responses for Grizz Increase
-  # CS Biophys - Values from the CS of Biophysical only raster (Human Influence Index + topographic roughness)
+# BHS - bear habitat suitability based on grizzly density estimate (from Clayton)
+# CS Social - Values from the CS of Social resistance (survey responses for Grizz Increase)
+# Social - resistance surface for survey responses for Grizz Increase
+# CS Biophys - Values from the CS of Biophysical only raster (Human Influence Index + topographic roughness)
 
 # Run model sets:
 fullmod.glm <- glm(bears_presence ~ bear.habitat.bhs + grizzinc.cs.social + social + biophys.cs, family = "binomial")
@@ -204,5 +214,4 @@ curve(plogis(-5.770904e-01+-1.740486e-05 *x),add=T,col="blue")
 
 # Results indicate that there is an intercept of 1.492e-01 and slope of ???
 # Results indicate that there is an intercept of -6.4327 and slope of 0.000000105
-
 

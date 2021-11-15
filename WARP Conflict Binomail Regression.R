@@ -30,11 +30,8 @@ biophys.cs <- warp.all.sp$BphysEx
 # Check for NA's ----------------------------------------------------------
 which(is.na(dom.farms)) # We have like 73 NA's -- why?
 which(is.na(total.farms)) # We have like 73 NA's -- why?
-which(is.na(social)) # We have like 73 NA's -- why?
-which(is.na(biophys.cs)) # We have like 73 NA's -- why?
-
-
-
+which(is.na(bear.habitat.bhs)) # We have like 73 NA's -- could be due to tiny polygons in the raster cells??
+which(is.na(biophys.cs)) # We have like 65 NA's -- why?
 
 
 # Prep Simulation to Match Data with Binomial Reg: ------------------------

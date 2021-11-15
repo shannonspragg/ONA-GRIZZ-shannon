@@ -124,30 +124,57 @@ head(bears.reproj)
 
 # This added the dist to metro areas column to our bears.reproj df
 
-
 # Prep Variable 3: the Dominant Ag Type by CCS ----------------------------
 # Spatial Join: WARP Points to Farm Type Polygon Attributes
 # For WARP POINTS that fall within CCS REGIONS, adds FARM TYPE ATTRIBUTES, retains ALL pts if left=TRUE, otherwise uses inner_join
+st_make_valid(bears.reproj)
+st_make_valid(farms.reproj)
 warp.farm.join <- st_join(bears.reproj, left = TRUE, farms.reproj["N_A_I_C"]) # join points
 bears.reproj$Dominant_Farm_Type <- warp.farm.join$N_A_I_C
 head(bears.reproj) # HECK TO THE YES - we successfully assigned points to a farm type category
 str(bears.reproj) # This gives us a nice added column to the master sheet
 
-# Checking for NA's:
+
+# Checking for NA's: ------------------------------------------------------
 which(is.na(bears.reproj$Dominant_Farm_Type)) # We have like 80 NA's -- why?
-bears.reproj[85,]
+bears.reproj[10943,]
 plot(st_geometry(bc.bound.reproj))
-plot(st_geometry(bears.reproj[85,]), add = TRUE)
+plot(st_geometry(bears.reproj[26968,]), col = "red", add = TRUE)
+# These all seem to be in the Vancouver area.. 
+which(is.na(bears.reproj$Dominant_Farm_Type))# Make sure this is valid:
+
+overlap.check <- st_intersects(bears.reproj, farms.reproj)
+
+which(is.na(overlap.check)) # There are none that don't spatially overlap..
+
+# Let's try to plot the farm types by color across BC:
+plot(farms.reproj) # This gives us all attribute maps, we want NAIC
+plot(st_geometry(farms.reproj), col = sf.colors(5, categorical = TRUE), 
+     axes = TRUE)
+plot(st_geometry(bears.reproj[26968,]), col = "red", add = TRUE)
+
+# NEED TO: figure out why some farm types won't attribut to points... (without doing this manually)
+
+
 
 
 # Prep Variable 4: Total Farm Count ---------------------------------------
 # Spatial Join: WARP Points to Total Farm Polygon Attributes:
 # For WARP POINTS that fall within CCS REGIONS, adds FARM COUNT ATTRIBUTES (VALUE), retains ALL pts if left=TRUE, otherwise uses inner_join
+st_make_valid(total.farms.reproj)
 bears.total.farm.join <- st_join(bears.reproj, left = TRUE, total.farms.reproj["VALUE"]) # join points
-bears.reproj$Total_Farm_Count <- bears.total.farm.join$`total farm count`
+bears.reproj$Total_Farm_Count <- bears.total.farm.join$VALUE
 head(bears.reproj) # HECK TO THE YES - we successfully assigned points to a farm count category
 
+# Checking for NA's: ------------------------------------------------------
+which(is.na(bears.reproj$Total_Farm_Count)) # We have like 80 NA's -- why?
+# The same ones as above...
+# These all seem to be in the Vancouver area.. maybe issue with points intersecting multiple polygons??
 
+# Let's plot the farm counts by color:
+plot(total.farms.reproj, max.plot = 23) # We want value, which is 12
+plot(st_geometry(total.farms.reproj), col = sf.colors(12, categorical = FALSE), 
+     axes = TRUE)
 
 
 

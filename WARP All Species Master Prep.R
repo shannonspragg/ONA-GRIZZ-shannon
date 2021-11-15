@@ -13,7 +13,7 @@ library(sf)
 library(sp)
 
 # Bring in the WARP All Speciec 1 Year Data -------------------------------
-conflict.data.all<-read.csv("/Users/shannonspragg/ONA_GRIZZ/WARP Bears /WARP 3.24.20 to 3.31.21 full .csv")
+conflict.data.all<-read.csv("/Users/shannonspragg/ONA_GRIZZ/WARP Bears /WARP All Species Full Yr/WARP 3.24.20 to 3.31.21 full .csv")
 head(conflict.data.all)
 
 # Merge the two encounter columns into one total encounter column:
@@ -38,6 +38,8 @@ bears.sf <- as(bears.spdf, "sf")
 str(bears.sf) # This gives us a sf data frame, good!
 
 # Bring in the PA,  Metro,  Ag Type,  and Farm Count Data -----------------
+bc.boundary <- st_read("/Users/shannonspragg/ONA_GRIZZ/CAN Spatial Data/BC Boundary.shp")
+
 bc.PAs <- st_read("/Users/shannonspragg/ONA_GRIZZ/CAN Spatial Data/BC protected areas/BC PAs.shp")
 str(bc.PAs) # Proper sf object, nice
 
@@ -63,8 +65,9 @@ bears.reproj <- st_transform(bears.sf, st_crs(albers.crs))
 bc.PAs.reproj <- st_transform(bc.PAs, st_crs(albers.crs))
 metro.reproj <- st_transform(bc.metro, st_crs(albers.crs))
 bc.ccs.reproj <- st_transform(bc.ccs, st_crs(albers.crs))
-farms.reproj <- st_transform(bc.dom.farms.sf, st_crs(albers.crs))
-total.farms.reproj <- st_transform(bc.total.farms.sf, st_crs(albers.crs))
+farms.reproj <- st_transform(bc.dom.farms, st_crs(albers.crs))
+total.farms.reproj <- st_transform(bc.total.farms, st_crs(albers.crs))
+bc.bound.reproj <- st_transform(bc.boundary, st_crs(albers.crs))
 
 # Check to see if they match:
 st_crs(bears.reproj) == st_crs(bc.PAs.reproj) # [TRUE] = These ARE now the same
@@ -128,8 +131,14 @@ head(bears.reproj)
 warp.farm.join <- st_join(bears.reproj, left = TRUE, farms.reproj["N_A_I_C"]) # join points
 bears.reproj$Dominant_Farm_Type <- warp.farm.join$N_A_I_C
 head(bears.reproj) # HECK TO THE YES - we successfully assigned points to a farm type category
-str(bears.reproj)
-# This gives us a nice added column to the master sheet
+str(bears.reproj) # This gives us a nice added column to the master sheet
+
+# Checking for NA's:
+which(is.na(bears.reproj$Dominant_Farm_Type)) # We have like 80 NA's -- why?
+bears.reproj[85,]
+plot(st_geometry(bc.bound.reproj))
+plot(st_geometry(bears.reproj[85,]), add = TRUE)
+
 
 # Prep Variable 4: Total Farm Count ---------------------------------------
 # Spatial Join: WARP Points to Total Farm Polygon Attributes:

@@ -85,8 +85,6 @@ bc.bound.reproj <- st_make_valid(bc.boundary) %>%
   st_transform(crs=crs(biophys.cum.curmap))
 
 
-warp.reproj <- st_make_valid(warp.all.sp.bc) %>% 
-  st_transform(crs=crs(biophys.cum.curmap))
 # Check to see if they match:
 st_crs(bears.reproj) == st_crs(bc.PAs.reproj) # [TRUE] = These ARE now the same
 st_crs(metro.reproj) == st_crs(bc.ccs.reproj) # [TRUE]
@@ -142,11 +140,6 @@ head(bears.reproj)
 
 # This added the dist to metro areas column to our bears.reproj df
 
-# Bring in the other dataset and just modify the farm columns:
-bears.reproj <- st_read("/Users/shannonspragg/ONA_GRIZZ/WARP Bears /WARP All Species Full Yr/ WARP All Species Master Data Frame.shp")
-bears.reproj$Dmn_F_T <- NULL
-bears.reproj$Ttl_F_C <- NULL
-
 # Crop these points to just BC:
 bears.reproj <- st_crop(bears.reproj, bc.bound.reproj)
 plot(st_geometry(bears.reproj))
@@ -173,6 +166,8 @@ plot(farm.type.rast)
 farm.count.rast <- terra::rasterize(farm.count.sv, biophys.cum.curmap, field = "VALUE")
 plot(farm.count.rast)
 
+# STOP -- RERUN bears.reproj before buffering points!
+
 # Buffer WARP Points Before Attributing Farm Values -----------------------
 # Here we buffer the WARP points by 500m before extracting the attributes from the farm polygons
 bears.buf <- bears.reproj %>% 
@@ -183,6 +178,18 @@ plot(st_geometry(bears.buf)) # Check the buffers
 bears.sv.buf <- vect(bears.buf)
 
 # Prep Variable 3: the Dominant Ag Type by CCS ----------------------------
+# Here I will extract the mean values from each raster to the buffered points
+
+bears.farm.type.ext <- terra::extract(farm.type.rast, bears.sv.buf, mode, na.rm = TRUE) 
+# This gives us the mean value of each buffered area --> what we want!
+bears.total.farm.ext <- terra::extract(farm.count.rast, warp.sv.buf, mean, na.rm = TRUE) 
+
+# Create New Column(s) for Extracted Values:
+bears.reproj$FarmType <- bears.farm.type.ext[,2]
+bears.reproj$TotalFarmCount <- bears.total.farm.ext[,2]
+
+
+# Spatial Join -- Doesn't Work (need Raster) ------------------------------
 # Spatial Join: WARP Points to Farm Type Polygon Attributes
 # For WARP POINTS that fall within CCS REGIONS, adds FARM TYPE ATTRIBUTES, retains ALL pts if left=TRUE, otherwise uses inner_join
 st_make_valid(bears.buf)

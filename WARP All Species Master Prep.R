@@ -13,6 +13,11 @@ library(sf)
 library(sp)
 library(rgeos)
 library(raster)
+library(rgdal)
+install.packages("fasterize")
+library(fasterize)
+library(terra)
+library(stars)
 
 # Bring in the WARP All Speciec 1 Year Data -------------------------------
 conflict.data.all<-read.csv("/Users/shannonspragg/ONA_GRIZZ/WARP Bears /WARP All Species Full Yr/WARP 3.24.20 to 3.31.21 full .csv")
@@ -57,20 +62,31 @@ str(bc.total.farms)
 bc.ccs<-st_read("/Users/shannonspragg/ONA_GRIZZ/CAN Spatial Data/BC census subdivs/BC CCS.shp")
 str(bc.ccs)
 
+# Bring in one of our rasters for rasterizing polygon data later:
+biophys.cum.curmap <- rast("/Users/shannonspragg/rasters/biophys_normalized_cum_currmap.tif")
+
+
 # Reproject All Data ------------------------------------------------------
-albers.crs <- CRS("+proj=aea +lat_0=23 +lon_0=-96 +lat_1=29.5 +lat_2=45.5 +x_0=0 +y_0=0 +datum=NAD83
-# +units=m +no_defs")
-st_crs(albers.crs) # Let's Match the data.frames to this CRS
+# Now we have the protected areas projected to match the biophys raster:
+bears.reproj <- st_make_valid(bears.sf) %>% 
+  st_transform(crs=crs(biophys.cum.curmap))
+bc.PAs.reproj <- st_make_valid(bc.PAs) %>% 
+  st_transform(crs=crs(biophys.cum.curmap))
+metro.reproj <- st_make_valid(bc.metro) %>% 
+  st_transform(crs=crs(biophys.cum.curmap))
+bc.ccs.reproj <- st_make_valid(bc.ccs) %>% 
+  st_transform(crs=crs(biophys.cum.curmap))
 
-# Now we have the protected areas projected to match the bears data
-bears.reproj <- st_transform(bears.sf, st_crs(albers.crs))
-bc.PAs.reproj <- st_transform(bc.PAs, st_crs(albers.crs))
-metro.reproj <- st_transform(bc.metro, st_crs(albers.crs))
-bc.ccs.reproj <- st_transform(bc.ccs, st_crs(albers.crs))
-farms.reproj <- st_transform(bc.dom.farms, st_crs(albers.crs))
-total.farms.reproj <- st_transform(bc.total.farms, st_crs(albers.crs))
-bc.bound.reproj <- st_transform(bc.boundary, st_crs(albers.crs))
+farms.reproj <- st_make_valid(bc.dom.farms) %>% 
+  st_transform(crs=crs(biophys.cum.curmap))
+total.farms.reproj <- st_make_valid(bc.total.farms) %>% 
+  st_transform(crs=crs(biophys.cum.curmap))
+bc.bound.reproj <- st_make_valid(bc.boundary) %>% 
+  st_transform(crs=crs(biophys.cum.curmap))
 
+
+warp.reproj <- st_make_valid(warp.all.sp.bc) %>% 
+  st_transform(crs=crs(biophys.cum.curmap))
 # Check to see if they match:
 st_crs(bears.reproj) == st_crs(bc.PAs.reproj) # [TRUE] = These ARE now the same
 st_crs(metro.reproj) == st_crs(bc.ccs.reproj) # [TRUE]
@@ -136,12 +152,35 @@ bears.reproj <- st_crop(bears.reproj, bc.bound.reproj)
 plot(st_geometry(bears.reproj))
 # Now the dataset can be picked up and used from here:
 
+# NEED TO: rasterize these points, buffer them, then use extract with the MODE (for categorical), to get a value for each point
+
+
+# Rasterize Farm Data & WARP Points ---------------------------------------
+
+# Make farm type a spatvector:
+farm.type.sv <- vect(farms.reproj)
+
+# Now do this for total farms:
+plot(total.farms.reproj, max.plot = 23)
+total.farms.reproj$VALUE <- as.numeric(total.farms.reproj$VALUE) # Making this numeric
+
+farm.count.sv <- vect(total.farms.reproj)
+plot(farm.count.sv)
+# Now let's rasterize the farm type and count:
+farm.type.rast <- terra::rasterize(farm.type.sv, biophys.cum.curmap, field = "N_A_I_C")
+plot(farm.type.rast)
+
+farm.count.rast <- terra::rasterize(farm.count.sv, biophys.cum.curmap, field = "VALUE")
+plot(farm.count.rast)
 
 # Buffer WARP Points Before Attributing Farm Values -----------------------
 # Here we buffer the WARP points by 500m before extracting the attributes from the farm polygons
 bears.buf <- bears.reproj %>% 
   st_buffer(., 5000)
 plot(st_geometry(bears.buf)) # Check the buffers
+
+# Make the buffer points a spat vector:
+bears.sv.buf <- vect(bears.buf)
 
 # Prep Variable 3: the Dominant Ag Type by CCS ----------------------------
 # Spatial Join: WARP Points to Farm Type Polygon Attributes

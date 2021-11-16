@@ -130,6 +130,17 @@ glm_mod_interaction = glm(bears_presence ~ b2pa.distance + b2met.dist + total.fa
 summary(glm_mod_interaction) 
 # Appears to be a likely interaction between total farms and the dominant farm types
 
+# For glm, one way to simplify what predictors to take out, is that if the variance is zero, it has such a small effect, and can be removed to better fit the model
+# In bayesian, you can fit the full model with strong priors and having regularization for those models (lets you fit small variances)
+
+# Bayesian takes more time, but you can fit better models with strong priors and can eliminate uncertainty by producing distributions for all
+# Frequentest has some model evaluation tools that can make these things a bit more straightforward
+
+# Model Selection with ANOVA ----------------------------------------------
+anova(fullmod.covs.glm) # major deviance with tot/dom farms, grizzinc.cs , & social
+anova(fullmod.glm, fullmod.covs.glm) # largest deviance with grizzinc.cs & social
+anova(glm_mod_interaction) # major deviance with the interaction term
+
 
 # K Fold Cross Validation: -----------------------------------------
 # Let's try this first with a mini chunk of the dataset:
@@ -150,10 +161,6 @@ model <- train(warp.all.sp.mini$encontr_d ~., data = warp.all.sp.mini, method = 
 # Summarize the results
 print(model)
 
-# Model Selection with ANOVA ----------------------------------------------
-anova(fullmod.covs.glm) # major deviance with tot/dom farms, grizzinc.cs , & social
-anova(fullmod.glm, fullmod.covs.glm) # largest deviance with grizzinc.cs & social
-anova(glm_mod_interaction) # major deviance with the interaction term
 
 # Predict the probabilities based on this model:
 glm.probs <- predict(fullmod.covs.glm, type = "response")

@@ -126,7 +126,7 @@ head(dist.pts2met)
 # Must find the minimum distance to PA's (Distance from conflict point to nearest PA)
 min.dist.met <- apply(dist.pts2met, 1, min)
 
-# Add Distance Variable into Datatable
+# Add Distance Variable into Data table
 # Here we create a new column for Distance to Metro Areas in km
 bears.reproj$distance_to_metro_km<-min.dist.met
 head(bears.reproj)
@@ -166,8 +166,6 @@ plot(farm.type.rast)
 farm.count.rast <- terra::rasterize(farm.count.sv, biophys.cum.curmap, field = "VALUE")
 plot(farm.count.rast)
 
-# STOP -- RERUN bears.reproj before buffering points!
-
 # Buffer WARP Points Before Attributing Farm Values -----------------------
 # Here we buffer the WARP points by 500m before extracting the attributes from the farm polygons
 bears.buf <- bears.reproj %>% 
@@ -182,7 +180,7 @@ bears.sv.buf <- vect(bears.buf)
 
 bears.farm.type.ext <- terra::extract(farm.type.rast, bears.sv.buf, mode, na.rm = TRUE) 
 # This gives us the mean value of each buffered area --> what we want!
-bears.total.farm.ext <- terra::extract(farm.count.rast, warp.sv.buf, mean, na.rm = TRUE) 
+bears.total.farm.ext <- terra::extract(farm.count.rast, bears.sv.buf, mean, na.rm = TRUE) 
 
 # Create New Column(s) for Extracted Values:
 bears.reproj$FarmType <- bears.farm.type.ext[,2]

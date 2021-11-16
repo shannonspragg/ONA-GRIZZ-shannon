@@ -11,6 +11,8 @@ library(tidyverse)
 library(dplyr)
 library(sf)
 library(sp)
+library(rgeos)
+library(raster)
 
 # Bring in the WARP All Speciec 1 Year Data -------------------------------
 conflict.data.all<-read.csv("/Users/shannonspragg/ONA_GRIZZ/WARP Bears /WARP All Species Full Yr/WARP 3.24.20 to 3.31.21 full .csv")
@@ -124,12 +126,33 @@ head(bears.reproj)
 
 # This added the dist to metro areas column to our bears.reproj df
 
+# Bring in the other dataset and just modify the farm columns:
+bears.reproj <- st_read("/Users/shannonspragg/ONA_GRIZZ/WARP Bears /WARP All Species Full Yr/ WARP All Species Master Data Frame.shp")
+bears.reproj$Dmn_F_T <- NULL
+bears.reproj$Ttl_F_C <- NULL
+
+# Crop these points to just BC:
+bears.reproj <- st_crop(bears.reproj, bc.bound.reproj)
+plot(st_geometry(bears.reproj))
+# Now the dataset can be picked up and used from here:
+
+
+# Buffer WARP Points Before Attributing Farm Values -----------------------
+# Here we buffer the WARP points by 500m before extracting the attributes from the farm polygons
+bears.buf <- bears.reproj %>% 
+  st_buffer(., 5000)
+plot(st_geometry(bears.buf)) # Check the buffers
+
 # Prep Variable 3: the Dominant Ag Type by CCS ----------------------------
 # Spatial Join: WARP Points to Farm Type Polygon Attributes
 # For WARP POINTS that fall within CCS REGIONS, adds FARM TYPE ATTRIBUTES, retains ALL pts if left=TRUE, otherwise uses inner_join
-st_make_valid(bears.reproj)
+st_make_valid(bears.buf)
 st_make_valid(farms.reproj)
-warp.farm.join <- st_join(bears.reproj, left = TRUE, farms.reproj["N_A_I_C"]) # join points
+warp.farm.join <- st_join(bears.buf, left = TRUE, farms.reproj["N_A_I_C"]) # join points
+# With the buffer, we get lots of duplicates.. need to merge these
+warp.farm.merged <- warp.farm.join %>%
+  distinct(encontr_d, .keep_all = TRUE) # Here we just drop the duplicates
+
 bears.reproj$Dominant_Farm_Type <- warp.farm.join$N_A_I_C
 head(bears.reproj) # HECK TO THE YES - we successfully assigned points to a farm type category
 str(bears.reproj) # This gives us a nice added column to the master sheet

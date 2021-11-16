@@ -116,8 +116,6 @@ plot(warp.sv.buf)
 # Overlay WARP Points with CS Raster BUFFERED --------------------------------------
 # Here I will extract the mean values from each raster to the buffered points
 
-# WAIT - need to run this with NEW CS grizzinc output (using grizz density)
-
 warp.biophys.b.ext <- terra::extract(biophys.cum.curmap, warp.sv.buf, mean, na.rm = TRUE) 
 # This gives us the mean value of each buffered area --> what we want!
 warp.social.resist.b.ext <- terra::extract(survey.resist, warp.sv.buf, mean, na.rm = TRUE) 

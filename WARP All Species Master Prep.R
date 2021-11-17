@@ -74,8 +74,6 @@ bc.PAs.reproj <- st_make_valid(bc.PAs) %>%
   st_transform(crs=crs(biophys.cum.curmap))
 metro.reproj <- st_make_valid(bc.metro) %>% 
   st_transform(crs=crs(biophys.cum.curmap))
-bc.ccs.reproj <- st_make_valid(bc.ccs) %>% 
-  st_transform(crs=crs(biophys.cum.curmap))
 
 farms.reproj <- st_make_valid(bc.dom.farms) %>% 
   st_transform(crs=crs(biophys.cum.curmap))
@@ -87,7 +85,7 @@ bc.bound.reproj <- st_make_valid(bc.boundary) %>%
 
 # Check to see if they match:
 st_crs(bears.reproj) == st_crs(bc.PAs.reproj) # [TRUE] = These ARE now the same
-st_crs(metro.reproj) == st_crs(bc.ccs.reproj) # [TRUE]
+st_crs(metro.reproj) == st_crs(total.farms.reproj) # [TRUE]
 
 # Prep Variable 1: Dist to PA's -------------------------------------------
 #Calculation of the distance between the PA's and our points
@@ -178,14 +176,22 @@ bears.sv.buf <- vect(bears.buf)
 # Prep Variable 3: the Dominant Ag Type by CCS ----------------------------
 # Here I will extract the mean values from each raster to the buffered points
 
-bears.farm.type.ext <- terra::extract(farm.type.rast, bears.sv.buf, mode, na.rm = TRUE) 
+bears.farm.type.ext <- terra::extract(farm.type.rast, bears.sv.buf, modal, na.rm = TRUE) 
 # This gives us the mean value of each buffered area --> what we want!
 bears.total.farm.ext <- terra::extract(farm.count.rast, bears.sv.buf, mean, na.rm = TRUE) 
 
 # Create New Column(s) for Extracted Values:
-bears.reproj$FarmType <- bears.farm.type.ext[,2]
-bears.reproj$TotalFarmCount <- bears.total.farm.ext[,2]
+bears.reproj$Dom_Farm_Type <- bears.farm.type.ext[,2]
+bears.reproj$Total_Farm_Count <- bears.total.farm.ext[,2]
 
+# WARP All Species Master Data Frame --------------------------------------
+# Since we did this progressively, our bears.reproj file is the new "all species master", so
+# let us write that into a .shp and a .csv here
+
+st_write(bears.reproj, "/Users/shannonspragg/ONA_GRIZZ/WARP Bears /WARP All Species Full Yr/ WARP All Species Master Data Frame.shp")
+write_csv(bears.reproj, "/Users/shannonspragg/ONA_GRIZZ/WARP Bears /WARP All Species Full Yr/ WARP All Species Master Data Frame.csv")
+
+warp.all.sp <- st_read("/Users/shannonspragg/ONA_GRIZZ/WARP Bears /WARP All Species Full Yr/ WARP All Species Master Data Frame.shp")
 
 # Spatial Join -- Doesn't Work (need Raster) ------------------------------
 # Spatial Join: WARP Points to Farm Type Polygon Attributes
@@ -203,12 +209,12 @@ str(bears.reproj) # This gives us a nice added column to the master sheet
 
 
 # Checking for NA's: ------------------------------------------------------
-which(is.na(bears.reproj$Dominant_Farm_Type)) # We have like 80 NA's -- why?
+which(is.na(bears.reproj$Total_Farm_Count)) # Now only 2 NA's - good
 bears.reproj[10943,]
 plot(st_geometry(bc.bound.reproj))
 plot(st_geometry(bears.reproj[26968,]), col = "red", add = TRUE)
 # These all seem to be in the Vancouver area.. 
-which(is.na(bears.reproj$Dominant_Farm_Type))# Make sure this is valid:
+which(is.na(bears.reproj$Dominant_Farm_Type))# Still just 2 NA's
 
 overlap.check <- st_intersects(bears.reproj, farms.reproj)
 
@@ -223,33 +229,3 @@ plot(st_geometry(bears.reproj[26968,]), col = "red", add = TRUE)
 # NEED TO: figure out why some farm types won't attribut to points... (without doing this manually)
 
 
-
-
-# Prep Variable 4: Total Farm Count ---------------------------------------
-# Spatial Join: WARP Points to Total Farm Polygon Attributes:
-# For WARP POINTS that fall within CCS REGIONS, adds FARM COUNT ATTRIBUTES (VALUE), retains ALL pts if left=TRUE, otherwise uses inner_join
-st_make_valid(total.farms.reproj)
-bears.total.farm.join <- st_join(bears.reproj, left = TRUE, total.farms.reproj["VALUE"]) # join points
-bears.reproj$Total_Farm_Count <- bears.total.farm.join$VALUE
-head(bears.reproj) # HECK TO THE YES - we successfully assigned points to a farm count category
-
-# Checking for NA's: ------------------------------------------------------
-which(is.na(bears.reproj$Total_Farm_Count)) # We have like 80 NA's -- why?
-# The same ones as above...
-# These all seem to be in the Vancouver area.. maybe issue with points intersecting multiple polygons??
-
-# Let's plot the farm counts by color:
-plot(total.farms.reproj, max.plot = 23) # We want value, which is 12
-plot(st_geometry(total.farms.reproj), col = sf.colors(12, categorical = FALSE), 
-     axes = TRUE)
-
-
-
-# WARP All Species Master Data Frame --------------------------------------
-# Since we did this progressively, our bears.reproj file is the new "all species master", so
-# let us write that into a .shp and a .csv here
-
-st_write(bears.reproj, "/Users/shannonspragg/ONA_GRIZZ/WARP Bears /WARP All Species Full Yr/ WARP All Species Master Data Frame.shp")
-write_csv(bears.reproj, "/Users/shannonspragg/ONA_GRIZZ/WARP Bears /WARP All Species Full Yr/ WARP All Species Master Data Frame.csv")
-
-warp.all.sp <- st_read("/Users/shannonspragg/ONA_GRIZZ/WARP Bears /WARP All Species Full Yr/ WARP All Species Master Data Frame.shp")

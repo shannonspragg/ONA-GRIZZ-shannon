@@ -226,6 +226,12 @@ plot(st_geometry(farms.reproj), col = sf.colors(5, categorical = TRUE),
      axes = TRUE)
 plot(st_geometry(bears.reproj[26968,]), col = "red", add = TRUE)
 
-# NEED TO: figure out why some farm types won't attribut to points... (without doing this manually)
 
+# Creating a Mini DF for Examples: ----------------------------------------
+mini.warp.df <- warp.all.sp[1:5000,]
+plot(st_geometry(mini.warp.df))
+st_write(mini.warp.df, "/Users/shannonspragg/Desktop/Boise State/BSU Research Lab/R Tools/QGIS Tutorial/example data/mini.warp.df.shp")
 
+st_write(bc.dom.farms,"/Users/shannonspragg/Desktop/Boise State/BSU Research Lab/R Tools/QGIS Tutorial/example data/bc.farms.shp")
+
+writeRaster(biophys.cum.curmap, "/Users/shannonspragg/Desktop/Boise State/BSU Research Lab/R Tools/QGIS Tutorial/example data/biophys.curmap.tif")

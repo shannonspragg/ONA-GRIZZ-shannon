@@ -208,25 +208,38 @@ head(bears.reproj) # HECK TO THE YES - we successfully assigned points to a farm
 str(bears.reproj) # This gives us a nice added column to the master sheet
 
 
+
 # Checking for NA's: ------------------------------------------------------
-which(is.na(bears.reproj$Total_Farm_Count)) # Now only 2 NA's - good
-bears.reproj[10943,]
+which(is.na(warp.all.sp$Ttl_F_C)) # Now only 2 NA's - good
+warp.all.sp[10711,]
+warp.all.sp[17194,]
+
 plot(st_geometry(bc.bound.reproj))
 plot(st_geometry(bears.reproj[26968,]), col = "red", add = TRUE)
 # These all seem to be in the Vancouver area.. 
-which(is.na(bears.reproj$Dominant_Farm_Type))# Still just 2 NA's
+which(is.na(warp.all.sp$Dm_Fr_T))# Still just 2 NA's
 
-overlap.check <- st_intersects(bears.reproj, farms.reproj)
 
-which(is.na(overlap.check)) # There are none that don't spatially overlap..
-
-# Let's try to plot the farm types by color across BC:
+# Let's try to plot these 2 NA's and check their location:
 plot(farms.reproj) # This gives us all attribute maps, we want NAIC
+# Plot the first NA:
 plot(st_geometry(farms.reproj), col = sf.colors(5, categorical = TRUE), 
      axes = TRUE)
-plot(st_geometry(bears.reproj[26968,]), col = "red", add = TRUE)
+plot(st_geometry(warp.all.sp[10711,]), col = "red", add = TRUE)
+
+# Plot the second NA
+plot(st_geometry(farms.reproj), col = sf.colors(5, categorical = TRUE), 
+     axes = TRUE)
+plot(st_geometry(warp.all.sp[17194,]), col = "red", add = TRUE)
+
+# Both of these show they are actually in the ocean - so geometry is incorrect. We can remove them then :)
+warp.all.sp.master <- warp.all.sp[-c(10711, 17194), ]   # notice the -
+
+which(is.na(warp.all.sp.master$Ttl_F_C)) # Now zero NA's
+which(is.na(warp.all.sp.master$Dm_Fr_T)) # Now zero NA's!
 
 
+is.na(warp.all.sp.master)
 # Creating a Mini DF for Examples: ----------------------------------------
 mini.warp.df <- warp.all.sp[1:5000,]
 plot(st_geometry(mini.warp.df))

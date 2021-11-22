@@ -44,7 +44,8 @@ st_write(bc.reproj, "/Users/shannonspragg/ONA_GRIZZ/CAN Spatial Data/BC Boundary
 bc.reproj <- st_read("/Users/shannonspragg/ONA_GRIZZ/CAN Spatial Data/BC Boundary.shp")
 
 
-# Crop WARP Points to within the BC Boundary ------------------------------
+# Crop WARP Points to within the BC Boundary (skip this) ------------------------------
+plot(st_geometry(warp.all.sp))
 warp.all.sp.bc <- st_crop(warp.all.sp, bc.reproj)
 plot(st_geometry(warp.all.sp.bc)) # Cropped these to only the points in BC
 st_crs(warp.all.sp.bc)
@@ -71,15 +72,20 @@ crs(grizzinc.cum.curmap) <- crs(biophys.cum.curmap)
 crs(grizzinc.cum.curmap) == crs(biophys.cum.curmap) # Nice, this worked --> now in BC Albers EPSG 3005
     
 # Match the projection and CRS of the WARP to the resistance map:
-st_crs(warp.all.sp.bc) # This is in NAD83 Conus Albers - EPSG 5070
+st_crs(warp.all.sp) # This is in NAD83 BC Albers - EPSG 3005
 
 # Match the sf points CRS directly to the resistance raster:
-warp.reproj <- st_make_valid(warp.all.sp.bc) %>% 
+warp.reproj <- st_make_valid(warp.all.sp) %>% 
   st_transform(crs=crs(biophys.cum.curmap))
   
 plot(st_geometry(warp.reproj))
 st_crs(warp.reproj)
 crs(biophys.cum.curmap) # The same as above, just formatted differently - success!
+
+# Check Raster Resolutions:
+str(grizz.dens)
+res(biophys.cum.curmap)
+res(survey.resist)
 
 # Need to make points a SpatVector:
 warp.sv <- vect(warp.reproj)
@@ -127,6 +133,32 @@ warp.reproj$BiophysExtract <- warp.biophys.b.ext[,2]
 warp.reproj$SurveyResistExtract <- warp.social.resist.b.ext[,2]
 warp.reproj$GrizzIncExtract <- warp.grizzinc.b.ext[,2]
 warp.reproj$BHSExtract <- warp.bhs.b.extract[,2]
+
+
+# Check for NA's: ---------------------------------------------------------
+which(is.na(warp.reproj$BiophysExtract)) # We have about 70 NA's here..
+which(is.na(warp.reproj$SurveyResistExtract)) # NO NA's
+which(is.na(warp.reproj$GrizzIncExtract)) # NO NA's
+which(is.na(warp.reproj$BHSExtract)) # We have about 57 NA's here..
+
+# NEED TO: figure out the cause of these different sets of NA's in Biophys and BHS...
+
+# Let's try to plot these NA's and check their location:
+# Plot the first NA:
+plot(biophys.cum.curmap)
+plot(st_geometry(warp.all.sp[30031,]), col = "red", add = TRUE)
+# This somehow excludes the point value --> gives NA
+plot(survey.resist)
+plot(st_geometry(warp.all.sp[30031,]), col = "red", add = TRUE)
+# This includes the point value --> no NA
+
+plot(grizz.dens)
+plot(st_geometry(warp.all.sp[14968,]), col = "red", add = TRUE)
+warp.all.sp[178,]
+
+
+warp.reproj[10711,]
+
 
 
 # Overlay WARP Points with CS Raster UNBUFFERED --------------------------------------

@@ -193,22 +193,6 @@ write_csv(bears.reproj, "/Users/shannonspragg/ONA_GRIZZ/WARP Bears /WARP All Spe
 
 warp.all.sp <- st_read("/Users/shannonspragg/ONA_GRIZZ/WARP Bears /WARP All Species Full Yr/ WARP All Species Master Data Frame.shp")
 
-# Spatial Join -- Doesn't Work (need Raster) ------------------------------
-# Spatial Join: WARP Points to Farm Type Polygon Attributes
-# For WARP POINTS that fall within CCS REGIONS, adds FARM TYPE ATTRIBUTES, retains ALL pts if left=TRUE, otherwise uses inner_join
-st_make_valid(bears.buf)
-st_make_valid(farms.reproj)
-warp.farm.join <- st_join(bears.buf, left = TRUE, farms.reproj["N_A_I_C"]) # join points
-# With the buffer, we get lots of duplicates.. need to merge these
-warp.farm.merged <- warp.farm.join %>%
-  distinct(encontr_d, .keep_all = TRUE) # Here we just drop the duplicates
-
-bears.reproj$Dominant_Farm_Type <- warp.farm.join$N_A_I_C
-head(bears.reproj) # HECK TO THE YES - we successfully assigned points to a farm type category
-str(bears.reproj) # This gives us a nice added column to the master sheet
-
-
-
 # Checking for NA's: ------------------------------------------------------
 which(is.na(warp.all.sp$Ttl_F_C)) # Now only 2 NA's - good
 warp.all.sp[10711,]
@@ -237,6 +221,11 @@ warp.all.sp.master <- warp.all.sp[-c(10711, 17194), ]   # notice the -
 
 which(is.na(warp.all.sp.master$Ttl_F_C)) # Now zero NA's
 which(is.na(warp.all.sp.master$Dm_Fr_T)) # Now zero NA's!
+which(is.na(warp.all.sp.master$ds__PA_)) # no NA's
+which(is.na(warp.all.sp.master$dstn___)) # no NA's
+
+st_write(warp.all.sp.master, "/Users/shannonspragg/ONA_GRIZZ/WARP Bears /WARP All Species Full Yr/ WARP All Species Master Data Frame.shp")
+warp.all.sp.final <- st_read("/Users/shannonspragg/ONA_GRIZZ/WARP Bears /WARP All Species Full Yr/ WARP All Species Master Data Frame.shp")
 
 
 is.na(warp.all.sp.master)

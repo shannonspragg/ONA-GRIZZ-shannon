@@ -135,6 +135,11 @@ warp.reproj$GrizzIncExtract <- warp.grizzinc.b.ext[,2]
 warp.reproj$BHSExtract <- warp.bhs.b.extract[,2]
 
 
+# Save this as new file ---------------------------------------------------
+
+st_write(warp.reproj, "/Users/shannonspragg/ONA_GRIZZ/WARP Bears /updated.master.df.shp")
+warp.reproj <- st_read("/Users/shannonspragg/ONA_GRIZZ/WARP Bears /updated.master.df.shp")
+
 # Check for NA's: ---------------------------------------------------------
 which(is.na(warp.reproj$BiophysExtract)) # We have about 70 NA's here..
 which(is.na(warp.reproj$SurveyResistExtract)) # NO NA's
@@ -154,27 +159,32 @@ plot(st_geometry(warp.all.sp[30031,]), col = "red", add = TRUE)
 
 plot(grizz.dens)
 plot(st_geometry(warp.all.sp[14968,]), col = "red", add = TRUE)
-warp.all.sp[178,]
+warp.reproj[14968,]
+warp.reproj[8108,]
 
 
-warp.reproj[10711,]
+# Replace NA Values with Zero ---------------------------------------------
+  # It seems like all the NA values on those two rasters result from a point being right on the edge, where
+  # there isn't a current value to begin with. So if we replace them with zeros, I don't think this is a big deal.
+warp.reproj.no.na <- mutate_at(warp.reproj, c("BiophysExtract", "BHSExtract"), ~replace(., is.na(.), 0))
 
+which(is.na(warp.reproj.no.na$BiophysExtract)) # This made them all 0
+which(is.na(warp.reproj.no.na$BHSExtract)) # Same as above
 
+# Make sure all of our covariate columns have 0 NA's : CHECK!
 
-# Overlay WARP Points with CS Raster UNBUFFERED --------------------------------------
-# Here I will extract the values from each raster to the points
+which(is.na(warp.reproj.no.na$ds__PA_)) 
+which(is.na(warp.reproj.no.na$dstn___)) 
+which(is.na(warp.reproj.no.na$Dm_Fr_T))
+which(is.na(warp.reproj.no.na$Ttl_F_C))
+which(is.na(warp.reproj.no.na$BiophysExtract))
+which(is.na(warp.reproj.no.na$SurveyResistExtract))
+which(is.na(warp.reproj.no.na$GrizzIncExtract))
+which(is.na(warp.reproj.no.na$BHSExtract)) 
+# Nice, all of the above are good to go
+# NOTE: attractant column has some NA's, but that is only one in the DF
 
-warp.comb.resist.ext <- terra::extract(comb.resist.cum.curmap, warp.sv) # YAY! This worked
-warp.sociobio.ext <- terra::extract(sociobio.cum.curmap, warp.sv) # YAY! This worked
-warp.grizzinc.ext <- terra::extract(grizzinc.cum.curmap, warp.sv) # YAY! This worked
-
-# Create New Column(s) for Extracted Values:
-warp.reproj$CombResistExtract <- warp.comb.resist.ext[,2]
-warp.reproj$SociobioExtract <- warp.sociobio.ext[,2]
-warp.reproj$GrizzIncExtract <- warp.grizzinc.ext[,2]
-
-
-
+st_write(warp.reproj.no.na, "/Users/shannonspragg/ONA_GRIZZ/WARP Bears /WARP All Sp Full - Produced/warp.master.na.rem.shp")
 
 
 # Create & Save New Master DF ------------------------------------------------------

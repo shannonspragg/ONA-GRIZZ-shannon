@@ -17,8 +17,8 @@ warp.all.sp <- st_read("/Users/shannonspragg/ONA_GRIZZ/WARP Bears /WARP Master D
 # Create Binomial GLM -- Bring in All Covariates -----------------------------------------------------
 bears_presence <- warp.all.sp$bears # Binomial bears
 b2pa.distance <- scale(warp.all.sp$ds__PA_) # Dist to PA covariate
-dom.farms <- warp.all.sp$Dmn_F_T # Dominant farm type covariate -- non numeric
-dom.farms <- as.factor(warp.all.sp$Dmn_F_T) # Making this work as a factor
+dom.farms <- warp.all.sp$Dm_Fr_T # Dominant farm type covariate -- non numeric
+dom.farms <- as.factor(warp.all.sp$Dm_Fr_T) # Making this work as a factor
 total.farms <- warp.all.sp$Ttl_F_C # Total farm count covariate
 b2met.dist <- warp.all.sp$dstn___ # Dist to metro covariate
 grizzinc.cs.social <- warp.all.sp$GrzzInE
@@ -28,10 +28,10 @@ biophys.cs <- warp.all.sp$BphysEx
 
 
 # Check for NA's ----------------------------------------------------------
-which(is.na(dom.farms)) # We have like 73 NA's -- why?
-which(is.na(total.farms)) # We have like 73 NA's -- why?
-which(is.na(bear.habitat.bhs)) # We have like 73 NA's -- could be due to tiny polygons in the raster cells??
-which(is.na(biophys.cs)) # We have like 65 NA's -- why?
+which(is.na(dom.farms)) # No more NA's
+which(is.na(total.farms)) # Ditto
+which(is.na(bear.habitat.bhs)) # NA's all gone
+which(is.na(biophys.cs)) # No NA's
 
 
 # Prep Simulation to Match Data with Binomial Reg: ------------------------
@@ -82,22 +82,12 @@ confint(sim.glm, level = 0.95)
 # Run model sets:
 fullmod.glm <- glm(bears_presence ~ bear.habitat.bhs + grizzinc.cs.social + social + biophys.cs, family = "binomial")
 ecol.mod.glm <- glm(bears_presence ~ bear.habitat.bhs + biophys.cs, family = "binomial") 
-social.mod.glm <- glm(bears_presence ~ social + grizzinc.survey.cs, family = "binomial") 
+social.mod.glm <- glm(bears_presence ~ social + grizzinc.cs.social, family = "binomial") 
 intercept.only.glm <- glm(bears_presence~1, family=binomial(link=logit))
 
 # Add in Covs to Full Mod:
 fullmod.covs.glm <- glm(bears_presence ~ bear.habitat.bhs + grizzinc.cs.social + social + biophys.cs + b2pa.distance + b2met.dist
                         + total.farms + dom.farms, family = "binomial")
-
-# Check summaries:
-summary(fullmod.glm) # AIC 43308
-summary(fullmod.glm)$coefficients # Pull up summary for coefficients
-summary(ecol.mod.glm) # AIC 43672
-summary(social.mod.glm) # AIC 43412
-
-summary(fullmod.covs.glm) # AIC 41177
-# INTERESTING: lowest AIC is in the full model + covs, pretty significantly
-
 
 # Individual covariate models:
 bhs.glm <- glm(bears_presence ~ bear.habitat.bhs, family = "binomial")
@@ -110,6 +100,15 @@ b2met.glm <- glm(bears_presence ~ b2met.dist, family = "binomial")
 tot.farm.glm <- glm(bears_presence ~ total.farms, family = "binomial")
 dom.farm.glm <- glm(bears_presence ~ dom.farms, family = "binomial")
 
+# Check summaries (grouped models):
+summary(fullmod.glm) # AIC 43308
+summary(fullmod.glm)$coefficients # Pull up summary for coefficients
+summary(ecol.mod.glm) # AIC 43672
+summary(social.mod.glm) # AIC 43412
+
+summary(fullmod.covs.glm) # AIC 41177
+# INTERESTING: lowest AIC is in the full model + covs, pretty significantly
+
 # Summaries for individual models
 summary(bhs.glm) # p of 0.0264 *, AIC 44108
 summary(grizz.inc.cs.glm) # p of <2e-16 *** , AIC 44114
@@ -121,8 +120,16 @@ summary(b2met.glm) # p of <2e-16 *** , AIC 44000
 summary(tot.farm.glm) # p of <2e-16 ***, AIC 43161
 summary(dom.farm.glm) # p of .000579 *** (veg & melon), .001741 ** (cattle), .038583 * (beef, feedlots), AIC 43225
 
+
+# Running AIC for Model Comparison ----------------------------------------
 # Run AIC to Compare Models:
-AIC(fullmod.glm, fullmod.covs.glm, bhs.glm, grizz.inc.cs.glm, social.glm, biophys.glm, b2pa.glm, b2met.glm, tot.farm.glm, dom.farm.glm, intercept.only.glm)
+AIC(fullmod.glm, fullmod.covs.glm, ecol.mod.glm, social.mod.glm, bhs.glm, grizz.inc.cs.glm, social.glm, biophys.glm, b2pa.glm, b2met.glm, tot.farm.glm, dom.farm.glm, intercept.only.glm)
+
+# Model Selection with ANOVA ----------------------------------------------
+anova(fullmod.covs.glm) # major deviance with tot/dom farms, grizzinc.cs , & social
+anova(fullmod.glm, fullmod.covs.glm) # largest deviance with grizzinc.cs & social
+
+# The above deviances indicate that we should scale our predictors and then re-run the models
 
 # Adding an interaction to the model:
 glm_mod_interaction = glm(bears_presence ~ b2pa.distance + b2met.dist + total.farms + b2pa.distance:b2met.dist + total.farms:dom.farms, 
@@ -135,12 +142,6 @@ summary(glm_mod_interaction)
 
 # Bayesian takes more time, but you can fit better models with strong priors and can eliminate uncertainty by producing distributions for all
 # Frequentest has some model evaluation tools that can make these things a bit more straightforward
-
-# Model Selection with ANOVA ----------------------------------------------
-anova(fullmod.covs.glm) # major deviance with tot/dom farms, grizzinc.cs , & social
-anova(fullmod.glm, fullmod.covs.glm) # largest deviance with grizzinc.cs & social
-anova(glm_mod_interaction) # major deviance with the interaction term
-
 
 # K Fold Cross Validation: -----------------------------------------
 # Let's try this first with a mini chunk of the dataset:

@@ -86,6 +86,7 @@ crs(biophys.cum.curmap) # The same as above, just formatted differently - succes
 str(grizz.dens)
 res(biophys.cum.curmap)
 res(survey.resist)
+res(grizzinc.cum.curmap)
 
 # Need to make points a SpatVector:
 warp.sv <- vect(warp.reproj)
@@ -141,10 +142,10 @@ st_write(warp.reproj, "/Users/shannonspragg/ONA_GRIZZ/WARP Bears /updated.master
 warp.reproj <- st_read("/Users/shannonspragg/ONA_GRIZZ/WARP Bears /updated.master.df.shp")
 
 # Check for NA's: ---------------------------------------------------------
-which(is.na(warp.reproj$BiophysExtract)) # We have about 70 NA's here..
-which(is.na(warp.reproj$SurveyResistExtract)) # NO NA's
-which(is.na(warp.reproj$GrizzIncExtract)) # NO NA's
-which(is.na(warp.reproj$BHSExtract)) # We have about 57 NA's here..
+which(is.na(warp.reproj$BphysEx)) # We have about 70 NA's here..
+which(is.na(warp.reproj$SrvyRsE)) # NO NA's
+which(is.na(warp.reproj$GrzzInE)) # NO NA's
+which(is.na(warp.reproj$BHSExtr)) # We have about 57 NA's here..
 
 # NEED TO: figure out the cause of these different sets of NA's in Biophys and BHS...
 
@@ -163,10 +164,27 @@ warp.reproj[14968,]
 warp.reproj[8108,]
 
 
+# Drop the NA Rows: -------------------------------------------------------
+  # To make things easier, we are just going to remove the rows that contain NA values for both the boiphysical
+  # raster and the BHS raster - should be about 70 rows removed
+
+droprecords <- warp.reproj %>% drop_na(BphysEx)
+warp.dropped <- droprecords %>% drop_na(BHSExtr)
+
+# Check to see if the NA's we wanted removed are gone:
+which(is.na(warp.dropped$BphysEx)) # Nice, this removed the NA's
+which(is.na(warp.dropped$BHSExtr)) # This cleared the NA's
+which(is.na(warp.dropped$SrvyRsE))
+which(is.na(warp.dropped$GrzzInE)) # NO NA's
+which(is.na(warp.dropped$Dm_Fr_T)) # NO NA's
+which(is.na(warp.dropped$Ttl_F_C)) # NO NA's
+
+# Nice, now we are 69 rows fewer - not bad
+
 # Replace NA Values with Zero ---------------------------------------------
   # It seems like all the NA values on those two rasters result from a point being right on the edge, where
   # there isn't a current value to begin with. So if we replace them with zeros, I don't think this is a big deal.
-warp.reproj.no.na <- mutate_at(warp.reproj, c("BiophysExtract", "BHSExtract"), ~replace(., is.na(.), 0))
+# warp.reproj.no.na <- mutate_at(warp.reproj, c("BiophysExtract", "BHSExtract"), ~replace(., is.na(.), 0))
 
 which(is.na(warp.reproj.no.na$BiophysExtract)) # This made them all 0
 which(is.na(warp.reproj.no.na$BHSExtract)) # Same as above
@@ -184,16 +202,17 @@ which(is.na(warp.reproj.no.na$BHSExtract))
 # Nice, all of the above are good to go
 # NOTE: attractant column has some NA's, but that is only one in the DF
 
-st_write(warp.reproj.no.na, "/Users/shannonspragg/ONA_GRIZZ/WARP Bears /WARP All Sp Full - Produced/warp.master.na.rem.shp")
+# st_write(warp.reproj.no.na, "/Users/shannonspragg/ONA_GRIZZ/WARP Bears /WARP All Sp Full - Produced/warp.master.na.rem.shp")
+
 
 
 # Create & Save New Master DF ------------------------------------------------------
 # Now we should have a "master dataframe with these values, in the same projection:
-warp.master.complete <- warp.reproj
+warp.master.complete <- warp.dropped
 str(warp.master.complete)
 st_crs(warp.master.complete)
 head(warp.master.complete)
 
 # Let's save this to our folder as a new dataframe .shp:
 st_write(warp.master.complete, "/Users/shannonspragg/ONA_GRIZZ/WARP Bears /WARP Master DF (+CS resistance values)/WARP Master DF (+CS resist values).shp")
-
+warp.master.corrected <- st_read("/Users/shannonspragg/ONA_GRIZZ/WARP Bears /WARP Master DF (+CS resistance values)/WARP Master DF (+CS resist values).shp")

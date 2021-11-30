@@ -124,12 +124,15 @@ summary(dom.farm.glm) # p of .000579 *** (veg & melon), .001741 ** (cattle), .03
 # Running AIC for Model Comparison ----------------------------------------
 # Run AIC to Compare Models:
 AIC(fullmod.glm, fullmod.covs.glm, ecol.mod.glm, social.mod.glm, bhs.glm, grizz.inc.cs.glm, social.glm, biophys.glm, b2pa.glm, b2met.glm, tot.farm.glm, dom.farm.glm, intercept.only.glm)
+<<<<<<< HEAD
 
 # Model Selection with ANOVA ----------------------------------------------
 anova(fullmod.covs.glm) # major deviance with tot/dom farms, grizzinc.cs , & social
 anova(fullmod.glm, fullmod.covs.glm) # largest deviance with grizzinc.cs & social
 
 # The above deviances indicate that we should scale our predictors and then re-run the models
+=======
+>>>>>>> 716b7a329122412dd54245ef6b1750a9a347b5b6
 
 # Adding an interaction to the model:
 glm_mod_interaction = glm(bears_presence ~ b2pa.distance + b2met.dist + total.farms + b2pa.distance:b2met.dist + total.farms:dom.farms, 

@@ -35,7 +35,6 @@ social.test # Checked, this saved properly!
 
 
 # Bring in Grizz Density Raster -------------------------------------------
-# NOTE: Was not able to get this to work like I did with hucks... maybe use those
 # Bringing this in to check the dimensions and projection:
 grizz.density <- rast("/Users/shannonspragg/ONA_GRIZZ/Grizz Density rasters/v2.gpkg")
 grizz.density

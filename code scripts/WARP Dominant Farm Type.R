@@ -1,6 +1,6 @@
-# Creating the Farm Type Data Frame ---------------------------------------
+# Creating the Farm Type & Count Data Frames ---------------------------------------
 # This is just a consolidated version of the Ag Census Data manipulation done to
-# create a Farm Type data frame and then pull out the Dominant Farm Type by CCS
+# create a Farm Type data frame and then pull out the Dominant Farm Type and Total Farm Count by CCS
 
 # Load Packages -----------------------------------------------------------
 library("tidyverse")
@@ -45,7 +45,7 @@ bc.farm.2016.ccs<-bc.farm.filter.ccs %>%
 
 
 # Editing CCS Code into new column for join -------------------------------
-# Seperate out the CCS code into new column for join with CCS .shp:
+# Separate out the CCS code into new column for join with CCS .shp:
 bc.ccs$CCSUID.crop<- str_sub(bc.ccs$CCSUID,-5,-1) # There we go, now we have a matching 6 digits
 unique(bc.ccs$CCSUID.crop) #This is a 5 digit code
 str(bc.farm.2016.ccs)
@@ -60,11 +60,10 @@ unique(farm.ccs.join$GEO)
 str(bc.ccs) # Classes sf and data.table
 str(bc.farm.2016.ccs)
 # Got this to go through, now to view it!
-str(farm.ccs.join) # Here we have a dataframe with Multipolygon geometry - check!
+str(farm.ccs.join) # Here we have a data frame with Multipolygon geometry - check!
 
 # Trying to write these for easier use later
 st_write(farm.ccs.join,"farm_type_ccs.shp")
-write_csv(farm.ccs.join, "farm_type_ccs.csv") # There is something funky with this table.. ?
 
 # Selecting Dominant Ag Types By Region -----------------------------------
 # Going to pull out the top 2 farm count values for each of the CCS codes 
@@ -77,26 +76,17 @@ str(top.two.ccs.farm.types)
 
 # Subset the Farm Join & Print --------------------------------------------
 
-# Try putting this in the console: farm.ccs.join %>% group_by(GEO) %>% top_n(2,VALUE)[2,]
-
-# RUN THIS NEXT!! (Try with and without comma after bracket)
-top.two.ccs.farm.types<- farm.ccs.join %>% group_by(GEO) %>% top_n(2,VALUE)[2,]
-
-# TRY THIS: https://stackoverflow.com/questions/2453326/fastest-way-to-find-second-third-highest-lowest-value-in-vector-or-column
-library("Rfast")
-dominant.ccs.farm.type <- Rfast::nth(farm.ccs.join, 2, descending = T)
-
 # Extract Total Farm Counts by CCS: (Do this with the dominant farms too)
 total.farms.bc<- farm.ccs.join %>% group_by(GEO) %>% top_n(2,VALUE) %>% slice_min(., order_by = "VALUE")
 # This successfully gives us total farm count by CCS region
+
+# Do this to get our dominant (most frequent) farm ttpes by CCS region:
 dominant.farms.bc<- farm.ccs.join %>% group_by(GEO) %>% top_n(2,VALUE) %>% slice_tail()
 # YUSS! This gives us the dominant type WITHOUT the total farms :))
 
-
-write_csv(dominant.farms.bc, "Dominant Farm Types by CCS.csv")
+# Save these as .shp's for later:
 st_write(dominant.farms.bc,"Dominant Farm Types by CCS.shp")
 
-write_csv(total.farms.bc, "Total Farm Count by CCS.csv")
 st_write(total.farms.bc, "Total Farm Count by CCS.shp") #These map well!
 
 

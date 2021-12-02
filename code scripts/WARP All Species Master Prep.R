@@ -143,9 +143,6 @@ bears.reproj <- st_crop(bears.reproj, bc.bound.reproj)
 plot(st_geometry(bears.reproj))
 # Now the dataset can be picked up and used from here:
 
-# NEED TO: rasterize these points, buffer them, then use extract with the MODE (for categorical), to get a value for each point
-
-
 # Rasterize Farm Data & WARP Points ---------------------------------------
 
 # Make farm type a spatvector:
@@ -184,14 +181,6 @@ bears.total.farm.ext <- terra::extract(farm.count.rast, bears.sv.buf, mean, na.r
 bears.reproj$Dom_Farm_Type <- bears.farm.type.ext[,2]
 bears.reproj$Total_Farm_Count <- bears.total.farm.ext[,2]
 
-# WARP All Species Master Data Frame --------------------------------------
-# Since we did this progressively, our bears.reproj file is the new "all species master", so
-# let us write that into a .shp and a .csv here
-
-st_write(bears.reproj, "/Users/shannonspragg/ONA_GRIZZ/WARP Bears /WARP All Species Full Yr/ WARP All Species Master Data Frame.shp")
-write_csv(bears.reproj, "/Users/shannonspragg/ONA_GRIZZ/WARP Bears /WARP All Species Full Yr/ WARP All Species Master Data Frame.csv")
-
-warp.all.sp <- st_read("/Users/shannonspragg/ONA_GRIZZ/WARP Bears /WARP All Species Full Yr/ WARP All Species Master Data Frame.shp")
 
 # Checking for NA's: ------------------------------------------------------
 which(is.na(warp.all.sp$Ttl_F_C)) # Now only 2 NA's - good
@@ -224,11 +213,16 @@ which(is.na(warp.all.sp.master$Dm_Fr_T)) # Now zero NA's!
 which(is.na(warp.all.sp.master$ds__PA_)) # no NA's
 which(is.na(warp.all.sp.master$dstn___)) # no NA's
 
+# WARP All Species Master Data Frame --------------------------------------
+# Since we did this progressively, our bears.reproj file is the new "all species master", so
+# let us write that into a .shp here
 st_write(warp.all.sp.master, "/Users/shannonspragg/ONA_GRIZZ/WARP Bears /WARP All Species Full Yr/ WARP All Species Master Data Frame.shp")
+
+# Bring this back in to check it:
 warp.all.sp.final <- st_read("/Users/shannonspragg/ONA_GRIZZ/WARP Bears /WARP All Species Full Yr/ WARP All Species Master Data Frame.shp")
 
-
 is.na(warp.all.sp.master)
+
 # Creating a Mini DF for Examples: ----------------------------------------
 mini.warp.df <- warp.all.sp[1:5000,]
 plot(st_geometry(mini.warp.df))

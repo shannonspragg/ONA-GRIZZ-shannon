@@ -10,7 +10,7 @@ library(terra)
 # Import the Raster Data --------------------------------------------------
 # Here we import the already produced sociobio and combined resist rasters (from the ONA GRIZZ folder):
 sociobio <- rast("/Users/shannonspragg/ONA_GRIZZ/Sociobio, Resist, & Survey Rasters/sociobio_resist.tif")
-comb.resist <- rast("/Users/shannonspragg/ONA_GRIZZ/Sociobio, Resist, & Survey Rasters/combined_resist.tif")
+comb.resist <- rast("/Users/shannonspragg/ONA_GRIZZ/Sociobio, Resist, & Survey Rasters/bio_combined_resist.tif")
 plot(sociobio)
 plot(comb.resist)
 
@@ -18,7 +18,7 @@ plot(comb.resist)
 # Raster Math: Subtract to get Social Raster ------------------------------
 # Here I subtract the sociobio raster from the combined resistance raster to get social (grizzIncrease)
 social <- comb.resist - sociobio # This produces negative resistances... let's try to flip it
-social.2 <- sociobio - comb.resist
+social.2 <- sociobio - comb.resist # this gives us the difference - which is the + grizz inc
 social.2
 plot(social.2) # I think this shows us the difference - NICE!
 

@@ -26,13 +26,38 @@ bear.habitat.bhs <- warp.all.sp$BHSExtr
 social <- warp.all.sp$SrvyRsE
 biophys.cs <- warp.all.sp$BphysEx
 
-
 # Check for NA's ----------------------------------------------------------
 which(is.na(dom.farms)) # No more NA's
 which(is.na(total.farms)) # Ditto
 which(is.na(bear.habitat.bhs)) # NA's all gone
 which(is.na(biophys.cs)) # No NA's
 
+
+# Scaling Individual Predictors -------------------------------------------
+b2pa.dist.sc <- scale(b2pa.distance)
+dom.farms.sc <- scale(dom.farms) # won't scale bc is not numeric
+total.farms.sc <- scale(total.farms)
+b2met.dist.sc <- scale(b2met.dist)
+grizzinc.cs.sc <- scale(grizzinc.cs.social)
+bhs.sc <- scale(bear.habitat.bhs)
+social.sc <- scale(social)
+biophys.sc <- scale(biophys.cs)
+
+# Run models with scaled predictors:
+# Run Adam's model sets:
+fullmod.sc <- glm(bears_presence ~ bhs.sc + grizzinc.cs.sc + social.sc + biophys.sc, family = "binomial")
+ecol.mod.sc <- glm(bears_presence ~ bhs.sc + biophys.sc, family = "binomial") 
+social.mod.sc <- glm(bears_presence ~ social.sc + grizzinc.cs.sc, family = "binomial") 
+intercept.only.sc <- glm(bears_presence~1, family=binomial(link=logit))
+
+# Add in Covs to Full Mod:
+fullmod.covs.sc <- glm(bears_presence ~ bhs.sc + grizzinc.cs.sc + social.sc + biophys.sc + b2pa.dist.sc + b2met.dist.sc
+                        + total.farms.sc + dom.farms, family = "binomial")
+
+# Compare these to the unscaled glm's below:
+summary(fullmod.covs.glm)
+summary(fullmod.covs.sc) # see big difference in coefficent values
+summary(fullmod.covs.std) # similar results from standardize function used post model run
 
 # Prep Simulation to Match Data with Binomial Reg: ------------------------
 # Creating a simulation to see if it returns close to the intercept and slope we input initially 
@@ -123,9 +148,6 @@ summary(tot.farm.glm) # p of <2e-16 ***, AIC 43161
 summary(dom.farm.glm) # p of .000579 *** (veg & melon), .001741 ** (cattle), .038583 * (beef, feedlots), AIC 43225
 
 
-# Running AIC for Model Comparison ----------------------------------------
-# Run AIC to Compare Models:
-AIC(fullmod.glm, fullmod.covs.glm, ecol.mod.glm, social.mod.glm, bhs.glm, grizz.inc.cs.glm, social.glm, biophys.glm, b2pa.glm, b2met.glm, tot.farm.glm, dom.farm.glm, intercept.only.glm)
 
 # Standardize (scale) these Variables: ------------------------------------
 install.packages("arm")
@@ -143,9 +165,16 @@ grizz.inc.std <- arm::standardize(grizz.inc.cs.glm)
 social.std <- arm::standardize(social.glm)
 biophys.std <- arm::standardize(biophys.glm)
 b2pa.std <- arm::standardize(b2pa.glm)
-b2met.std <- arm::standardize(b2met.dist) # issue...
+b2met.std <- arm::standardize(b2met.glm) 
 tot.farm.std <- arm::standardize(tot.farm.glm)
 dom.farm.std <- arm::standardize(dom.farm.glm)
+
+# Running AIC for Model Comparison ----------------------------------------
+# Run AIC to Compare Raw (unscaled) Models:
+all.mod.aic <- AIC(fullmod.glm, fullmod.covs.glm, ecol.mod.glm, social.mod.glm, bhs.glm, grizz.inc.cs.glm, social.glm, biophys.glm, b2pa.glm, b2met.glm, tot.farm.glm, dom.farm.glm, intercept.only.glm)
+
+# Running AIC on Standardized Models:
+all.mod.std.aic <- AIC(fullmod.std, fullmod.covs.std, ecol.mod.std, social.mod.std, bhs.std, grizz.inc.std, social.std, biophys.std, b2pa.std, b2met.std, tot.farm.std, dom.farm.std, intercept.only.glm)
 
 
 # Model Selection with ANOVA ----------------------------------------------

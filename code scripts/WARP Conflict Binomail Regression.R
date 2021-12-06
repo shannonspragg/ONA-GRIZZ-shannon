@@ -89,6 +89,7 @@ intercept.only.glm <- glm(bears_presence~1, family=binomial(link=logit))
 fullmod.covs.glm <- glm(bears_presence ~ bear.habitat.bhs + grizzinc.cs.social + social + biophys.cs + b2pa.distance + b2met.dist
                         + total.farms + dom.farms, family = "binomial")
 
+
 # Individual covariate models:
 bhs.glm <- glm(bears_presence ~ bear.habitat.bhs, family = "binomial")
 grizz.inc.cs.glm <- glm(bears_presence ~ grizzinc.cs.social, family = "binomial")
@@ -100,7 +101,8 @@ b2met.glm <- glm(bears_presence ~ b2met.dist, family = "binomial")
 tot.farm.glm <- glm(bears_presence ~ total.farms, family = "binomial")
 dom.farm.glm <- glm(bears_presence ~ dom.farms, family = "binomial")
 
-# Check summaries (grouped models):
+
+# Check Summaries ---------------------------------------------------------
 summary(fullmod.glm) # AIC 43308
 summary(fullmod.glm)$coefficients # Pull up summary for coefficients
 summary(ecol.mod.glm) # AIC 43672
@@ -124,6 +126,27 @@ summary(dom.farm.glm) # p of .000579 *** (veg & melon), .001741 ** (cattle), .03
 # Running AIC for Model Comparison ----------------------------------------
 # Run AIC to Compare Models:
 AIC(fullmod.glm, fullmod.covs.glm, ecol.mod.glm, social.mod.glm, bhs.glm, grizz.inc.cs.glm, social.glm, biophys.glm, b2pa.glm, b2met.glm, tot.farm.glm, dom.farm.glm, intercept.only.glm)
+
+# Standardize (scale) these Variables: ------------------------------------
+install.packages("arm")
+library(arm)
+??arm::standardize #This function allows us to scale the predictors to a mean of 0 and sd of 0.5
+
+# Standardize our models:
+fullmod.std <- arm::standardize(fullmod.glm)
+ecol.mod.std <- arm::standardize(ecol.mod.glm)
+social.mod.std <- arm::standardize(social.mod.glm)
+fullmod.covs.std <- arm::standardize(fullmod.covs.glm)
+
+bhs.std <- arm::standardize(bhs.glm)
+grizz.inc.std <- arm::standardize(grizz.inc.cs.glm)
+social.std <- arm::standardize(social.glm)
+biophys.std <- arm::standardize(biophys.glm)
+b2pa.std <- arm::standardize(b2pa.glm)
+b2met.std <- arm::standardize(b2met.dist) # issue...
+tot.farm.std <- arm::standardize(tot.farm.glm)
+dom.farm.std <- arm::standardize(dom.farm.glm)
+
 
 # Model Selection with ANOVA ----------------------------------------------
 anova(fullmod.covs.glm) # major deviance with tot/dom farms, grizzinc.cs , & social

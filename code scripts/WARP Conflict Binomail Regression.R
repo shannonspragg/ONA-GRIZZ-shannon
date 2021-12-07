@@ -34,14 +34,15 @@ which(is.na(biophys.cs)) # No NA's
 
 
 # Scaling Individual Predictors -------------------------------------------
-b2pa.dist.sc <- scale(b2pa.distance)
+# We can use the scale function to center our predictors by subtracting the means (center= TRUE) and scaling by dividing by their standard deviation (scale=TRUE)
+b2pa.dist.sc <- scale(b2pa.distance, center = TRUE, scale = TRUE)
 dom.farms.sc <- scale(dom.farms) # won't scale bc is not numeric
-total.farms.sc <- scale(total.farms)
-b2met.dist.sc <- scale(b2met.dist)
-grizzinc.cs.sc <- scale(grizzinc.cs.social)
-bhs.sc <- scale(bear.habitat.bhs)
-social.sc <- scale(social)
-biophys.sc <- scale(biophys.cs)
+total.farms.sc <- scale(total.farms, center = TRUE, scale = TRUE)
+b2met.dist.sc <- scale(b2met.dist, center = TRUE, scale = TRUE)
+grizzinc.cs.sc <- scale(grizzinc.cs.social, center = TRUE, scale = TRUE)
+bhs.sc <- scale(bear.habitat.bhs, center = TRUE, scale = TRUE)
+social.sc <- scale(social, center = TRUE, scale = TRUE)
+biophys.sc <- scale(biophys.cs, center = TRUE, scale = TRUE)
 
 # Run models with scaled predictors:
 # Run Adam's model sets:
@@ -57,7 +58,18 @@ fullmod.covs.sc <- glm(bears_presence ~ bhs.sc + grizzinc.cs.sc + social.sc + bi
 # Compare these to the unscaled glm's below:
 summary(fullmod.covs.glm)
 summary(fullmod.covs.sc) # see big difference in coefficent values
-summary(fullmod.covs.std) # similar results from standardize function used post model run
+
+# Individual covariate models (SCALED):
+bhs.glm.sc <- glm(bears_presence ~ bhs.sc, family = "binomial")
+grizz.inc.cs.glm.sc <- glm(bears_presence ~ grizzinc.cs.sc, family = "binomial")
+social.glm.sc <- glm(bears_presence ~ social.sc, family = "binomial")
+biophys.glm.sc <- glm(bears_presence ~ biophys.sc, family = "binomial")
+
+b2pa.glm.sc <- glm(bears_presence ~ b2pa.dist.sc, family = "binomial")
+b2met.glm.sc <- glm(bears_presence ~ b2met.dist.sc, family = "binomial")
+tot.farm.glm.sc <- glm(bears_presence ~ total.farms.sc, family = "binomial")
+dom.farm.glm.sc <- glm(bears_presence ~ dom.farms, family = "binomial")
+
 
 # Prep Simulation to Match Data with Binomial Reg: ------------------------
 # Creating a simulation to see if it returns close to the intercept and slope we input initially 
@@ -149,32 +161,12 @@ summary(dom.farm.glm) # p of .000579 *** (veg & melon), .001741 ** (cattle), .03
 
 
 
-# Standardize (scale) these Variables: ------------------------------------
-install.packages("arm")
-library(arm)
-??arm::standardize #This function allows us to scale the predictors to a mean of 0 and sd of 0.5
-
-# Standardize our models:
-fullmod.std <- arm::standardize(fullmod.glm)
-ecol.mod.std <- arm::standardize(ecol.mod.glm)
-social.mod.std <- arm::standardize(social.mod.glm)
-fullmod.covs.std <- arm::standardize(fullmod.covs.glm)
-
-bhs.std <- arm::standardize(bhs.glm)
-grizz.inc.std <- arm::standardize(grizz.inc.cs.glm)
-social.std <- arm::standardize(social.glm)
-biophys.std <- arm::standardize(biophys.glm)
-b2pa.std <- arm::standardize(b2pa.glm)
-b2met.std <- arm::standardize(b2met.glm) 
-tot.farm.std <- arm::standardize(tot.farm.glm)
-dom.farm.std <- arm::standardize(dom.farm.glm)
-
 # Running AIC for Model Comparison ----------------------------------------
 # Run AIC to Compare Raw (unscaled) Models:
 all.mod.aic <- AIC(fullmod.glm, fullmod.covs.glm, ecol.mod.glm, social.mod.glm, bhs.glm, grizz.inc.cs.glm, social.glm, biophys.glm, b2pa.glm, b2met.glm, tot.farm.glm, dom.farm.glm, intercept.only.glm)
 
-# Running AIC on Standardized Models:
-all.mod.std.aic <- AIC(fullmod.std, fullmod.covs.std, ecol.mod.std, social.mod.std, bhs.std, grizz.inc.std, social.std, biophys.std, b2pa.std, b2met.std, tot.farm.std, dom.farm.std, intercept.only.glm)
+# Running AIC on Scaled Models:
+all.mod.scaled.aic <- AIC(fullmod.sc, fullmod.covs.sc, ecol.mod.sc, social.mod.sc, bhs.glm.sc, grizz.inc.cs.glm.sc, social.glm.sc, biophys.glm.sc, b2pa.glm.sc, b2met.glm.sc, tot.farm.glm.sc, dom.farm.glm.sc, intercept.only.glm)
 
 
 # Model Selection with ANOVA ----------------------------------------------

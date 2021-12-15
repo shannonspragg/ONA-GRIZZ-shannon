@@ -35,14 +35,28 @@ which(is.na(biophys.cs)) # No NA's
 
 # Scaling Individual Predictors -------------------------------------------
 # We can use the scale function to center our predictors by subtracting the means (center= TRUE) and scaling by dividing by their standard deviation (scale=TRUE)
-b2pa.dist.sc <- scale(b2pa.distance, center = TRUE, scale = TRUE)
-dom.farms.sc <- scale(dom.farms) # won't scale bc is not numeric
-total.farms.sc <- scale(total.farms, center = TRUE, scale = TRUE)
-b2met.dist.sc <- scale(b2met.dist, center = TRUE, scale = TRUE)
-grizzinc.cs.sc <- scale(grizzinc.cs.social, center = TRUE, scale = TRUE)
-bhs.sc <- scale(bear.habitat.bhs, center = TRUE, scale = TRUE)
-social.sc <- scale(social, center = TRUE, scale = TRUE)
-biophys.sc <- scale(biophys.cs, center = TRUE, scale = TRUE)
+# Here we create a function to scale by subtracting the mean and dividing by 2 standard deviations:
+scale2sd <-function(variable){(variable - mean(variable, na.rm=TRUE))/(2*sd(variable, na.rm=TRUE))}
+
+b2pa.dist.sc <- scale2sd(b2pa.distance)
+dom.farm.sc <- scale2sd(dom.farms) # Need to find how to scale categorical var
+total.farms.sc <- scale2sd(total.farms)
+b2met.dist.sc <- scale2sd(b2met.dist)
+grizzinc.cs.sc <- scale2sd(grizzinc.cs.social)
+bhs.sc <- scale2sd(bear.habitat.bhs)
+social.sc <- scale2sd(social)
+biophys.sc <- scale2sd(biophys.cs)
+
+# Below is scale by variable - mean / 1 SD:
+#b2pa.dist.sc <- scale(b2pa.distance, center = TRUE, scale = TRUE)
+#dom.farms.sc <- scale(dom.farms) # won't scale bc is not numeric
+#total.farms.sc <- scale(total.farms, center = TRUE, scale = TRUE)
+#b2met.dist.sc <- scale(b2met.dist, center = TRUE, scale = TRUE)
+#grizzinc.cs.sc <- scale(grizzinc.cs.social, center = TRUE, scale = TRUE)
+#bhs.sc <- scale(bear.habitat.bhs, center = TRUE, scale = TRUE)
+#social.sc <- scale(social, center = TRUE, scale = TRUE)
+#biophys.sc <- scale(biophys.cs, center = TRUE, scale = TRUE)
+
 
 # Run models with scaled predictors:
 # Run Adam's model sets:
@@ -57,7 +71,11 @@ fullmod.covs.sc <- glm(bears_presence ~ bhs.sc + grizzinc.cs.sc + social.sc + bi
 
 # Compare these to the unscaled glm's below:
 summary(fullmod.covs.glm)
-summary(fullmod.covs.sc) # see big difference in coefficent values
+summary(fullmod.covs.sc)# see big difference in coefficent values
+summary(fullmod.sc) 
+summary(ecol.mod.sc)
+summary(social.mod.sc)
+summary(intercept.only.sc)
 
 # Individual covariate models (SCALED):
 bhs.glm.sc <- glm(bears_presence ~ bhs.sc, family = "binomial")
@@ -110,11 +128,20 @@ confint(sim.glm, level = 0.95)
 # 2. Ecol mod: glm(bear_pres ~ BHS (grizz dens) + CS Biophys)
 # 3. Soc mod: glm(bear_pres ~ Social + CS Social (grizz inc))
 
+# Matt's model is the "full" model plus all added predictors:
+# Full model + covs: glm(bears_presence ~ bear.habitat.bhs + grizzinc.cs.social + social + biophys.cs + b2pa.distance + b2met.dist
+# + total.farms + dom.farms
+
 # Variables Described Below:
-# BHS - bear habitat suitability based on grizzly density estimate (from Clayton)
-# CS Social - Values from the CS of Social resistance (survey responses for Grizz Increase)
-# Social - resistance surface for survey responses for Grizz Increase
+# BHS - CS of bear habitat suitability based on grizzly density estimate (from Clayton)
+# Grizzinc CS Social - Values from the CS of Social resistance (survey responses supporting Grizz Increase)
+# Social - resistance values for survey responses supporting Grizz Increase (input for Grizzinc CS)
 # CS Biophys - Values from the CS of Biophysical only raster (Human Influence Index + topographic roughness)
+# b2pa.distance - Minimum distance of conflict report points to nearest protected area (PA)
+# b2met.dist - minimum distance of conflict report points to nearest metropolitan area 
+# total.farms - the total count of farms by CCS region, assigned to each conflict point
+# dom.farms - the dominant farm type (most popular type of agrictulture) by CCS region, assigned to each point
+
 
 # Run model sets:
 fullmod.glm <- glm(bears_presence ~ bear.habitat.bhs + grizzinc.cs.social + social + biophys.cs, family = "binomial")
@@ -171,7 +198,7 @@ all.mod.scaled.aic <- AIC(fullmod.sc, fullmod.covs.sc, ecol.mod.sc, social.mod.s
 
 # Model Selection with ANOVA ----------------------------------------------
 anova(fullmod.covs.glm) # major deviance with tot/dom farms, grizzinc.cs , & social
-anova(fullmod.glm, fullmod.covs.glm) # largest deviance with grizzinc.cs & social
+anova(fullmod.sc, fullmod.covs.sc) # largest deviance with grizzinc.cs & social
 
 # The above deviances indicate that we should scale our predictors and then re-run the models
 

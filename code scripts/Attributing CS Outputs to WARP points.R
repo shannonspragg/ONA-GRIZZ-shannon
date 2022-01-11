@@ -20,18 +20,18 @@ library(rgdal)
 
 # Bring in WARP Master df and CS Rasters ----------------------------------
 warp.all.sp <- st_read("/Users/shannonspragg/ONA_GRIZZ/WARP Bears /WARP All Species Full Yr/ WARP All Species Master Data Frame.shp")
-
+ 
 # CS's for grizz increase and biophysical:
-grizzinc.cum.curmap <- rast("/Users/shannonspragg/rasters/Social GrizzIncrease CS_1/grizzinc_cum_currmap.tif")
+#grizzinc.cum.curmap <- rast("/Users/shannonspragg/rasters/Social GrizzIncrease CS_1/grizzinc_cum_currmap.tif")
 biophys.cum.curmap <- rast("/Users/shannonspragg/rasters/biophys_normalized_cum_currmap.tif")
 
 # Just survey response layer (not CS):
-survey.resist <- rast("/Users/shannonspragg/rasters/GrizzIncrease (Social)_2.tif")
+grizzinc.raster <- rast("/Users/shannonspragg/rasters/GrizzIncrease Raster.tif")
 # BHS layer:
 grizz.dens <- rast("/Users/shannonspragg/ONA_GRIZZ/Grizz Density rasters/grizz_dens.tif")
 plot(grizz.dens)
 
-# Bring in Provinces and Filter to BC -------------------------------------
+# Bring in Provinces and Filter to BC (skip to read in) -------------------------------------
 can.prov <- st_read("/Users/shannonspragg/ONA_GRIZZ/CAN Spatial Data/CAN Province Boundaries/lpr_000b16a_e.shp")
 bc.boundary <- can.prov %>% 
   filter(., PRNAME == "British Columbia / Colombie-Britannique") %>% 
@@ -64,13 +64,10 @@ warp.all.sp.bc <- st_read("/Users/shannonspragg/ONA_GRIZZ/WARP Bears /WARP All S
     # Bear Density (BHS) Current Map:
 crs(grizz.dens) <- crs(biophys.cum.curmap) 
 crs(biophys.cum.curmap) == crs(grizz.dens) # Nice, this worked --> now in BC Albers EPSG 3005
-    # Survey Resistance Map:
-crs(survey.resist) <- crs(biophys.cum.curmap) 
-crs(survey.resist) == crs(biophys.cum.curmap) # Nice, this worked --> now in BC Albers EPSG 3005
-    # GrizzInc Survey Current Map:
-crs(grizzinc.cum.curmap) <- crs(biophys.cum.curmap) 
-crs(grizzinc.cum.curmap) == crs(biophys.cum.curmap) # Nice, this worked --> now in BC Albers EPSG 3005
-    
+    # Grizzinc Survey +1 Grizz Resistance Map:
+crs(grizzinc.raster) <- crs(biophys.cum.curmap) 
+crs(grizzinc.raster) == crs(biophys.cum.curmap) # Nice, this worked --> now in BC Albers EPSG 3005
+      
 # Match the projection and CRS of the WARP to the resistance map:
 st_crs(warp.all.sp) # This is in NAD83 BC Albers - EPSG 3005
 
@@ -85,8 +82,8 @@ crs(biophys.cum.curmap) # The same as above, just formatted differently - succes
 # Check Raster Resolutions:
 str(grizz.dens)
 res(biophys.cum.curmap)
-res(survey.resist)
-res(grizzinc.cum.curmap)
+res(grizzinc.raster)
+#res(grizzinc.cum.curmap)
 
 # Need to make points a SpatVector:
 warp.sv <- vect(warp.reproj)
@@ -100,10 +97,7 @@ plot(warp.sv, add = TRUE) # HECK YES
 plot(grizz.dens)
 plot(warp.sv, add = TRUE) # Sweet
 
-plot(survey.resist)
-plot(warp.sv, add = TRUE) # Nice
-
-plot(grizzinc.cum.curmap)
+plot(grizzinc.raster)
 plot(warp.sv, add = TRUE) # AGAIN FOR THE PEOPLE IN THE BACK
 
 # Buffer the WARP Points (Before Overlay) --------------------------------------------------
@@ -125,13 +119,13 @@ plot(warp.sv.buf)
 
 warp.biophys.b.ext <- terra::extract(biophys.cum.curmap, warp.sv.buf, mean, na.rm = TRUE) 
 # This gives us the mean value of each buffered area --> what we want!
-warp.social.resist.b.ext <- terra::extract(survey.resist, warp.sv.buf, mean, na.rm = TRUE) 
-warp.grizzinc.b.ext <- terra::extract(grizzinc.cum.curmap, warp.sv.buf, mean, na.rm = TRUE) 
+#warp.social.resist.b.ext <- terra::extract(survey.resist, warp.sv.buf, mean, na.rm = TRUE) 
+warp.grizzinc.b.ext <- terra::extract(grizzinc.raster, warp.sv.buf, mean, na.rm = TRUE) 
 warp.bhs.b.extract <- terra::extract(grizz.dens, warp.sv.buf, mean, na.rm = TRUE) 
 
 # Create New Column(s) for Extracted Values:
 warp.reproj$BiophysExtract <- warp.biophys.b.ext[,2]
-warp.reproj$SurveyResistExtract <- warp.social.resist.b.ext[,2]
+#warp.reproj$SurveyResistExtract <- warp.social.resist.b.ext[,2]
 warp.reproj$GrizzIncExtract <- warp.grizzinc.b.ext[,2]
 warp.reproj$BHSExtract <- warp.bhs.b.extract[,2]
 
@@ -143,7 +137,7 @@ warp.reproj <- st_read("/Users/shannonspragg/ONA_GRIZZ/WARP Bears /updated.maste
 
 # Check for NA's: ---------------------------------------------------------
 which(is.na(warp.reproj$BphysEx)) # We have about 70 NA's here..
-which(is.na(warp.reproj$SrvyRsE)) # NO NA's
+#which(is.na(warp.reproj$SrvyRsE)) # NO NA's
 which(is.na(warp.reproj$GrzzInE)) # NO NA's
 which(is.na(warp.reproj$BHSExtr)) # We have about 57 NA's here..
 
@@ -184,7 +178,7 @@ which(is.na(warp.dropped$Ttl_F_C)) # NO NA's
 # Replace NA Values with Zero ---------------------------------------------
   # It seems like all the NA values on those two rasters result from a point being right on the edge, where
   # there isn't a current value to begin with. So if we replace them with zeros, I don't think this is a big deal.
-# warp.reproj.no.na <- mutate_at(warp.reproj, c("BiophysExtract", "BHSExtract"), ~replace(., is.na(.), 0))
+warp.reproj.no.na <- mutate_at(warp.reproj, c("BphysEx", "BHSExtr"), ~replace(., is.na(.), 0))
 
 which(is.na(warp.reproj.no.na$BiophysExtract)) # This made them all 0
 which(is.na(warp.reproj.no.na$BHSExtract)) # Same as above
@@ -195,10 +189,10 @@ which(is.na(warp.reproj.no.na$ds__PA_))
 which(is.na(warp.reproj.no.na$dstn___)) 
 which(is.na(warp.reproj.no.na$Dm_Fr_T))
 which(is.na(warp.reproj.no.na$Ttl_F_C))
-which(is.na(warp.reproj.no.na$BiophysExtract))
-which(is.na(warp.reproj.no.na$SurveyResistExtract))
-which(is.na(warp.reproj.no.na$GrizzIncExtract))
-which(is.na(warp.reproj.no.na$BHSExtract)) 
+which(is.na(warp.reproj.no.na$BphysEx))
+#which(is.na(warp.reproj.no.na$SurveyResistExtract))
+which(is.na(warp.reproj.no.na$GrizzIncE))
+which(is.na(warp.reproj.no.na$BHSExtr)) 
 # Nice, all of the above are good to go
 # NOTE: attractant column has some NA's, but that is only one in the DF
 

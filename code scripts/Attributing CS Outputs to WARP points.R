@@ -4,10 +4,12 @@
 # then extracting the attributes from each raster to each WARP point by location. The result should
 # be the creation of three additional columns (one for each CS) in the master WARP df, representing these values.
 
-# UPDATE NOTE:
-# No need to even use the "combined resistance" cs or resistance raster (this was solely to derive the grizz inc raster from).
-# Should have: extracted values from BHS (not cs), a grizzinc CS (social), Biophysical CS (see biophys_norm_cum_current) in ONA folder, 
-# and plain Social survey resistance values (not cs, extracted from normal raster).
+##### NOTE: If we want to estimate the effects of opinions on conflict, we need to extract them directly from the resistance raster 
+# If we want to know how opinions might mix with biology to affect movement, we would want to extract from omniscape results 
+# based on the sociobio resistance surface
+
+# Should have: extracted values from BHS (not cs, just the grizz_density), a sociobio CS (social + biophys), Biophysical CS (see biophys_resist) in ONA folder, 
+# and plain griz_resist survey resistance values (not cs, extracted from normal raster).
 
 # Load Packages -----------------------------------------------------------
 library(sf)
@@ -21,12 +23,13 @@ library(rgdal)
 # Bring in WARP Master df and CS Rasters ----------------------------------
 warp.all.sp <- st_read("/Users/shannonspragg/ONA_GRIZZ/WARP Bears /WARP All Species Full Yr/ WARP All Species Master Data Frame.shp")
  
-# CS's for grizz increase and biophysical:
-#grizzinc.cum.curmap <- rast("/Users/shannonspragg/rasters/Social GrizzIncrease CS_1/grizzinc_cum_currmap.tif")
-biophys.cum.curmap <- rast("/Users/shannonspragg/rasters/biophys_normalized_cum_currmap.tif")
+# CS's for sociobio and biophysical:
+biophys.cum.curmap <- rast("/Users/shannonspragg/rasters/biophys_normalized_cum_currmap.tif") # NEED TO UPDATE
+sociobio.cum.curmap <- rast("") # NEED TO UPDATE
 
 # Just survey response layer (not CS):
-grizzinc.raster <- rast("/Users/shannonspragg/rasters/GrizzIncrease Raster.tif")
+grizz.resist.raster <- rast("/Users/shannonspragg/rasters/processed/griz_resist.tif") # grizz extent inverted
+
 # BHS layer:
 grizz.dens <- rast("/Users/shannonspragg/ONA_GRIZZ/Grizz Density rasters/grizz_dens.tif")
 plot(grizz.dens)
@@ -61,13 +64,17 @@ warp.all.sp.bc <- st_read("/Users/shannonspragg/ONA_GRIZZ/WARP Bears /WARP All S
  # Match the projection and CRS of the current map to the resistance maps:
  # Here we use the biophysical.cum.curmap to be the template crs
 
-    # Bear Density (BHS) Current Map:
+    # Bear Density (BHS) Resistance Map:
 crs(grizz.dens) <- crs(biophys.cum.curmap) 
 crs(biophys.cum.curmap) == crs(grizz.dens) # Nice, this worked --> now in BC Albers EPSG 3005
     # Grizzinc Survey +1 Grizz Resistance Map:
-crs(grizzinc.raster) <- crs(biophys.cum.curmap) 
-crs(grizzinc.raster) == crs(biophys.cum.curmap) # Nice, this worked --> now in BC Albers EPSG 3005
-      
+crs(grizz.resist.raster) <- crs(biophys.cum.curmap) 
+crs(grizz.resist.raster) == crs(biophys.cum.curmap) # Nice, this worked --> now in BC Albers EPSG 3005
+    
+# Sociobio Current Map:
+crs(sociobio.cum.curmap) <- crs(biophys.cum.curmap) 
+crs(sociobio.cum.curmap) == crs(biophys.cum.curmap) # Nice, this worked --> now in BC Albers EPSG 3005
+
 # Match the projection and CRS of the WARP to the resistance map:
 st_crs(warp.all.sp) # This is in NAD83 BC Albers - EPSG 3005
 
@@ -82,8 +89,8 @@ crs(biophys.cum.curmap) # The same as above, just formatted differently - succes
 # Check Raster Resolutions:
 str(grizz.dens)
 res(biophys.cum.curmap)
-res(grizzinc.raster)
-#res(grizzinc.cum.curmap)
+res(grizz.resist.raster)
+res(gsociobio.cum.curmap)
 
 # Need to make points a SpatVector:
 warp.sv <- vect(warp.reproj)
@@ -97,7 +104,10 @@ plot(warp.sv, add = TRUE) # HECK YES
 plot(grizz.dens)
 plot(warp.sv, add = TRUE) # Sweet
 
-plot(grizzinc.raster)
+plot(sociobio.cum.curmap)
+plot(warp.sv, add = TRUE) # Againnn
+
+plot(grizz.resist.raster)
 plot(warp.sv, add = TRUE) # AGAIN FOR THE PEOPLE IN THE BACK
 
 # Buffer the WARP Points (Before Overlay) --------------------------------------------------
@@ -119,14 +129,14 @@ plot(warp.sv.buf)
 
 warp.biophys.b.ext <- terra::extract(biophys.cum.curmap, warp.sv.buf, mean, na.rm = TRUE) 
 # This gives us the mean value of each buffered area --> what we want!
-#warp.social.resist.b.ext <- terra::extract(survey.resist, warp.sv.buf, mean, na.rm = TRUE) 
-warp.grizzinc.b.ext <- terra::extract(grizzinc.raster, warp.sv.buf, mean, na.rm = TRUE) 
+warp.sociobio.b.ext <- terra::extract(sociobio.cum.curmap, warp.sv.buf, mean, na.rm = TRUE) 
+warp.grizz.resist.b.ext <- terra::extract(grizz.resist.raster, warp.sv.buf, mean, na.rm = TRUE) 
 warp.bhs.b.extract <- terra::extract(grizz.dens, warp.sv.buf, mean, na.rm = TRUE) 
 
 # Create New Column(s) for Extracted Values:
 warp.reproj$BiophysExtract <- warp.biophys.b.ext[,2]
-#warp.reproj$SurveyResistExtract <- warp.social.resist.b.ext[,2]
-warp.reproj$GrizzIncExtract <- warp.grizzinc.b.ext[,2]
+warp.reproj$SociobioExtract <- warp.sociobio.b.ext[,2]
+warp.reproj$GrizzResistExtract <- warp.grizz.resist.b.ext[,2]
 warp.reproj$BHSExtract <- warp.bhs.b.extract[,2]
 
 

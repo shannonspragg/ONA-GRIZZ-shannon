@@ -63,7 +63,7 @@ str(bc.farm.2016.ccs)
 str(farm.ccs.join) # Here we have a data frame with Multipolygon geometry - check!
 
 # Trying to write these for easier use later
-st_write(farm.ccs.join,"farm_type_ccs.shp")
+#st_write(farm.ccs.join,"farm_type_ccs.shp")
 
 # Selecting Dominant Ag Types By Region -----------------------------------
 # Going to pull out the top 2 farm count values for each of the CCS codes 
@@ -85,9 +85,9 @@ dominant.farms.bc<- farm.ccs.join %>% group_by(GEO) %>% top_n(2,VALUE) %>% slice
 # YUSS! This gives us the dominant type WITHOUT the total farms :))
 
 # Save these as .shp's for later:
-st_write(dominant.farms.bc,"Dominant Farm Types by CCS.shp")
+st_write(dominant.farms.bc,"/Users/shannonspragg/ONA_GRIZZ/Ag census/farm type_32100403/Dominant Farm Types by CCS.shp")
 
-st_write(total.farms.bc, "Total Farm Count by CCS.shp") #These map well!
+st_write(total.farms.bc, "/Users/shannonspragg/ONA_GRIZZ/Ag census/farm type_32100403/Total Farm Count by CCS.shp") #These map well!
 
 
 

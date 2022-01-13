@@ -28,7 +28,7 @@ biophys.cum.curmap <- rast("/Users/shannonspragg/rasters/biophys_normalized_cum_
 sociobio.cum.curmap <- rast("") # NEED TO UPDATE
 
 # Just survey response layer (not CS):
-grizz.resist.raster <- rast("/Users/shannonspragg/rasters/processed/griz_resist.tif") # grizz extent inverted
+grizz.inc.raster <- rast("/Users/shannonspragg/rasters/processed/griz_resist.tif") # grizz extent inverted
 
 # BHS layer:
 grizz.dens <- rast("/Users/shannonspragg/ONA_GRIZZ/Grizz Density rasters/grizz_dens.tif")

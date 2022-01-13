@@ -58,17 +58,18 @@ hii.rescale[is.nan(hii.rescale)] <- 1
 
 griz.resist.proj <- terra::project(griz.resist, griz.ext, method="bilinear")
 griz.resist.crop <- elev.crop <- crop(griz.resist.proj, griz.ext)
-griz.resist.1m <- 1-griz.resist.crop
-griz.resist.1m[is.nan(griz.resist.1m)] <- 1
+griz.resist.1m <- 1-griz.resist.crop # NEED THIS ONE 
+griz.resist.1m[is.nan(griz.resist.1m)] <- 1 # NEED THIS ONE - this represents the proportion of people that DON'T like grizzlies increasing
+  # this gets added to the sociobio stuff 
 
 griz.ext.min <-global(griz.ext, "min", na.rm=TRUE)[1,]
 griz.ext.max <- global(griz.ext, "max", na.rm=TRUE)[1,] 
-griz.ext.invert <- ((griz.ext - griz.ext.max)*-1) + griz.ext.min
+griz.ext.invert <- ((griz.ext - griz.ext.max)*-1) + griz.ext.min # inverting a raster
 griz.ext.invert[griz.ext.invert == 0] <- 0.000000001
 
 griz.ext.nozero <- griz.ext
 griz.ext.nozero[griz.ext.nozero==0] <- 0.0000000001
-griz.ext.inv <- (griz.ext.nozero)^-1
+griz.ext.inv <- (griz.ext.nozero)^-1 # taking reciprocal of resistance which is conductance 
 
 
 # Create Combined Bio and Sociobio Layers: --------------------------------

@@ -57,7 +57,10 @@ hii.rescale[hii.rescale == 0] <- 0.000000001
 hii.rescale[is.nan(hii.rescale)] <- 1
 
 griz.resist.proj <- terra::project(griz.resist, griz.ext, method="bilinear")
-griz.resist.crop <- elev.crop <- crop(griz.resist.proj, griz.ext)
+griz.resist.crop <- crop(griz.resist.proj, griz.ext)
+# save this for use in other scripts:
+writeRaster(griz.resist.crop, filename=here("/Users/shannonspragg/ONA_grizz_Matt/data/processed/grizz_inc_BC.tif"), overwrite=TRUE)
+
 griz.resist.1m <- 1-griz.resist.crop # NEED THIS ONE 
 griz.resist.1m[is.nan(griz.resist.1m)] <- 1 # NEED THIS ONE - this represents the proportion of people that DON'T like grizzlies increasing
   # this gets added to the sociobio stuff 

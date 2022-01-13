@@ -24,11 +24,18 @@ library(rgdal)
 warp.all.sp <- st_read("/Users/shannonspragg/ONA_GRIZZ/WARP Bears /WARP All Species Full Yr/ WARP All Species Master Data Frame.shp")
  
 # CS's for sociobio and biophysical:
-biophys.cum.curmap <- rast("/Users/shannonspragg/rasters/biophys_normalized_cum_currmap.tif") # NEED TO UPDATE
-sociobio.cum.curmap <- rast("") # NEED TO UPDATE
+biophys.cum.curmap <- rast("/Users/shannonspragg/ONA_grizz_Matt/data/processed/output/biophys_CS/cum_currmap.tif") # use this one
+# Cumulative current flow shows the total current for each landscape pixel
+
+biophys.norm.cum.curmap <- rast("/Users/shannonspragg/ONA_grizz_Matt/data/processed/output/biophys_CS/normalized_cum_currmap.tif") 
+# Normalized shows the degree to which a pixel has more or less current than expected under resistance-free conditions (cumulative current flow divided by flow potential)
+
+#sociobio.cum.curmap <- rast("") # NEED TO UPDATE (later)
 
 # Just survey response layer (not CS):
-grizz.inc.raster <- rast("/Users/shannonspragg/rasters/processed/griz_resist.tif") # grizz extent inverted
+grizz.inc.raster <- rast("/Users/shannonspragg/rasters/grizz_inc_BC.tif") #  the proportion of people within statscan census that 
+# responded “I would like to see grizzlies increase or increase substantially” in response to “how would you like to see grizzly 
+# populations respond in the next several years?” 
 
 # BHS layer:
 grizz.dens <- rast("/Users/shannonspragg/ONA_GRIZZ/Grizz Density rasters/grizz_dens.tif")
@@ -62,35 +69,39 @@ warp.all.sp.bc <- st_read("/Users/shannonspragg/ONA_GRIZZ/WARP Bears /WARP All S
 
 # Check / Set CRS for Raster and Points -----------------------------------
  # Match the projection and CRS of the current map to the resistance maps:
- # Here we use the biophysical.cum.curmap to be the template crs
+ # Here we use the grizz.inc raster to be the template crs
 
     # Bear Density (BHS) Resistance Map:
-crs(grizz.dens) <- crs(biophys.cum.curmap) 
-crs(biophys.cum.curmap) == crs(grizz.dens) # Nice, this worked --> now in BC Albers EPSG 3005
+crs(grizz.dens) <- crs(grizz.inc.raster) 
+crs(grizz.inc.raster) == crs(grizz.dens) # Nice, this worked --> now in BC Albers EPSG 3005
     # Grizzinc Survey +1 Grizz Resistance Map:
-crs(grizz.resist.raster) <- crs(biophys.cum.curmap) 
-crs(grizz.resist.raster) == crs(biophys.cum.curmap) # Nice, this worked --> now in BC Albers EPSG 3005
+crs(biophys.cum.curmap) <- crs(grizz.inc.raster) 
+crs(biophys.cum.curmap) == crs(grizz.inc.raster) # Nice, this worked --> now in BC Albers EPSG 3005
     
-# Sociobio Current Map:
-crs(sociobio.cum.curmap) <- crs(biophys.cum.curmap) 
-crs(sociobio.cum.curmap) == crs(biophys.cum.curmap) # Nice, this worked --> now in BC Albers EPSG 3005
+# Sociobio Current Map: (skip for now)
+#crs(sociobio.cum.curmap) <- crs(biophys.cum.curmap) 
+#crs(sociobio.cum.curmap) == crs(biophys.cum.curmap) # Nice, this worked --> now in BC Albers EPSG 3005
+
+# Project BC boundary:
+bc.reproj <- st_make_valid(bc.reproj) %>% 
+  st_transform(crs=crs(grizz.inc.raster))
 
 # Match the projection and CRS of the WARP to the resistance map:
 st_crs(warp.all.sp) # This is in NAD83 BC Albers - EPSG 3005
 
 # Match the sf points CRS directly to the resistance raster:
 warp.reproj <- st_make_valid(warp.all.sp) %>% 
-  st_transform(crs=crs(biophys.cum.curmap))
+  st_transform(crs=crs(grizz.inc.raster))
   
 plot(st_geometry(warp.reproj))
 st_crs(warp.reproj)
-crs(biophys.cum.curmap) # The same as above, just formatted differently - success!
+crs(grizz.inc.crop) # The same as above, just formatted differently - success!
 
 # Check Raster Resolutions:
 str(grizz.dens)
 res(biophys.cum.curmap)
-res(grizz.resist.raster)
-res(gsociobio.cum.curmap)
+res(grizz.inc.raster)
+#res(sociobio.cum.curmap)
 
 # Need to make points a SpatVector:
 warp.sv <- vect(warp.reproj)
@@ -98,20 +109,20 @@ str(warp.sv)
 crs(warp.sv)
 
 # Plot them together to see if projection is same:
-plot(biophys.cum.curmap)
+plot(grizz.inc.raster)
 plot(warp.sv, add = TRUE) # HECK YES
 
 plot(grizz.dens)
 plot(warp.sv, add = TRUE) # Sweet
 
-plot(sociobio.cum.curmap)
-plot(warp.sv, add = TRUE) # Againnn
+#plot(sociobio.cum.curmap)
+#plot(warp.sv, add = TRUE) # Againnn
 
-plot(grizz.resist.raster)
+plot(biophys.cum.curmap)
 plot(warp.sv, add = TRUE) # AGAIN FOR THE PEOPLE IN THE BACK
 
 # Buffer the WARP Points (Before Overlay) --------------------------------------------------
-# Here we buffer the WARP points by 500m before extracting the attributes from the current maps
+# Here we buffer the WARP points by 5km before extracting the attributes from the current maps
 warp.all.buf <- warp.reproj %>% 
   st_buffer(., 5000)
 plot(st_geometry(warp.all.buf)) # Check the buffers
@@ -129,14 +140,14 @@ plot(warp.sv.buf)
 
 warp.biophys.b.ext <- terra::extract(biophys.cum.curmap, warp.sv.buf, mean, na.rm = TRUE) 
 # This gives us the mean value of each buffered area --> what we want!
-warp.sociobio.b.ext <- terra::extract(sociobio.cum.curmap, warp.sv.buf, mean, na.rm = TRUE) 
-warp.grizz.resist.b.ext <- terra::extract(grizz.resist.raster, warp.sv.buf, mean, na.rm = TRUE) 
+#warp.sociobio.b.ext <- terra::extract(sociobio.cum.curmap, warp.sv.buf, mean, na.rm = TRUE) 
+warp.grizz.inc.b.ext <- terra::extract(grizz.inc.raster, warp.sv.buf, mean, na.rm = TRUE) 
 warp.bhs.b.extract <- terra::extract(grizz.dens, warp.sv.buf, mean, na.rm = TRUE) 
 
 # Create New Column(s) for Extracted Values:
 warp.reproj$BiophysExtract <- warp.biophys.b.ext[,2]
-warp.reproj$SociobioExtract <- warp.sociobio.b.ext[,2]
-warp.reproj$GrizzResistExtract <- warp.grizz.resist.b.ext[,2]
+#warp.reproj$SociobioExtract <- warp.sociobio.b.ext[,2]
+warp.reproj$GrizzIncExtract <- warp.grizz.inc.b.ext[,2]
 warp.reproj$BHSExtract <- warp.bhs.b.extract[,2]
 
 
@@ -172,8 +183,10 @@ warp.reproj[8108,]
   # To make things easier, we are just going to remove the rows that contain NA values for both the boiphysical
   # raster and the BHS raster - should be about 70 rows removed
 
-droprecords <- warp.reproj %>% drop_na(BphysEx)
-warp.dropped <- droprecords %>% drop_na(BHSExtr)
+droprecords <- warp.reproj %>% drop_na(BphysEx) %>% drop_na(GrzzInE)
+warp.dropped <- droprecords %>% drop_na(BHSExtr) %>% drop_na(GrzzInE)
+warp.dropped <- droprecords %>% drop_na(GrzzInE)
+
 
 # Check to see if the NA's we wanted removed are gone:
 which(is.na(warp.dropped$BphysEx)) # Nice, this removed the NA's
@@ -183,7 +196,7 @@ which(is.na(warp.dropped$GrzzInE)) # NO NA's
 which(is.na(warp.dropped$Dm_Fr_T)) # NO NA's
 which(is.na(warp.dropped$Ttl_F_C)) # NO NA's
 
-# Nice, now we are 69 rows fewer - not bad
+# Nice, now we are 76 rows fewer - not bad
 
 # Replace NA Values with Zero ---------------------------------------------
   # It seems like all the NA values on those two rasters result from a point being right on the edge, where

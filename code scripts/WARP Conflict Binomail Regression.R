@@ -14,6 +14,9 @@ library(terra)
 
 warp.all.sp <- st_read("/Users/shannonspragg/ONA_GRIZZ/WARP Bears /WARP Master DF (+CS resistance values)/WARP Master DF (+CS resist values).shp")
 
+mini.warp.df <- warp.all.sp[1:15,]
+st_write(mini.warp.df, "/Users/shannonspragg/Desktop/Boise State/BSU Research Lab/Grizzly Project/ONA_GRIZZ_ss/Census Ag QGIS/mini.warp.df.shp")
+
 # Create Binomial GLM -- Bring in All Covariates -----------------------------------------------------
 bears_presence <- warp.all.sp$bears # Binomial bears
 b2pa.distance <- scale(warp.all.sp$ds__PA_) # Dist to PA covariate
@@ -31,6 +34,7 @@ which(is.na(dom.farms)) # No more NA's
 which(is.na(total.farms)) # Ditto
 which(is.na(bear.habitat.bhs)) # NA's all gone
 which(is.na(biophys.cs)) # No NA's
+which(is.na(grizzinc.social)) # No NA's
 
 
 # Scaling Individual Predictors -------------------------------------------
@@ -42,7 +46,7 @@ b2pa.dist.sc <- scale2sd(b2pa.distance)
 dom.farm.sc <- scale2sd(dom.farms) # Need to find how to scale categorical var (or not)??
 total.farms.sc <- scale2sd(total.farms)
 b2met.dist.sc <- scale2sd(b2met.dist)
-grizzinc.sc <- scale2sd(grizzinc.cs.social)
+grizzinc.sc <- scale2sd(grizzinc.social)
 bhs.sc <- scale2sd(bear.habitat.bhs)
 #social.sc <- scale2sd(social)
 biophys.sc <- scale2sd(biophys.cs)
@@ -134,7 +138,8 @@ confint(sim.glm, level = 0.95)
 
 # Variables Described Below:
 # BHS - CS of bear habitat suitability based on grizzly density estimate (from Clayton)
-# Grizzinc Social - resistance values for survey responses supporting Grizz Increase (result of sociobio - biophys = social)
+# Grizzinc Social - resistance values for survey responses supporting Grizz Increase (the proportion of people within statscan-like census that 
+# responded “I would like to see grizzlies increase or increase substantially")
 # CS Biophys - Values from the CS of Biophysical only raster (Human Influence Index + topographic roughness)
 # b2pa.distance - Minimum distance of conflict report points to nearest protected area (PA)
 # b2met.dist - minimum distance of conflict report points to nearest metropolitan area 
@@ -192,7 +197,7 @@ summary(dom.farm.glm) # p of .000579 *** (veg & melon), .001741 ** (cattle), .03
 all.mod.aic <- AIC(fullmod.glm, fullmod.covs.glm, ecol.mod.glm, social.mod.glm, bhs.glm, grizz.inc.cs.glm, social.glm, biophys.glm, b2pa.glm, b2met.glm, tot.farm.glm, dom.farm.glm, intercept.only.glm)
 
 # Running AIC on Scaled Models:
-all.mod.scaled.aic <- AIC(fullmod.sc, fullmod.covs.sc, ecol.mod.sc, social.mod.sc, bhs.glm.sc, grizz.inc.glm.sc, biophys.glm.sc, b2pa.glm.sc, b2met.glm.sc, tot.farm.glm.sc, dom.farm.glm.sc, intercept.only.glm)
+all.mod.scaled.aic <- AIC(fullmod.sc, fullmod.covs.sc, ecol.mod.sc, social.mod.sc, bhs.glm.sc, grizz.inc.glm.sc, biophys.glm.sc, b2pa.glm.sc, b2met.glm.sc, tot.farm.glm.sc, dom.farm.glm.sc, intercept.only.sc)
 
 
 # Model Selection with ANOVA ----------------------------------------------

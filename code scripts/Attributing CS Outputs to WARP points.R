@@ -159,7 +159,7 @@ warp.reproj <- st_read("/Users/shannonspragg/ONA_GRIZZ/WARP Bears /updated.maste
 # Check for NA's: ---------------------------------------------------------
 which(is.na(warp.reproj$BphysEx)) # We have about 70 NA's here..
 #which(is.na(warp.reproj$SrvyRsE)) # NO NA's
-which(is.na(warp.reproj$GrzzInE)) # NO NA's
+which(is.na(warp.reproj$GrzzInE)) # 20 NA's
 which(is.na(warp.reproj$BHSExtr)) # We have about 57 NA's here..
 
 # NEED TO: figure out the cause of these different sets of NA's in Biophys and BHS...

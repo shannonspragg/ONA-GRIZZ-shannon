@@ -43,7 +43,7 @@ which(is.na(grizzinc.social)) # No NA's
 scale2sd <-function(variable){(variable - mean(variable, na.rm=TRUE))/(2*sd(variable, na.rm=TRUE))}
 
 b2pa.dist.sc <- scale2sd(b2pa.distance)
-dom.farm.sc <- scale2sd(dom.farms) # Need to find how to scale categorical var (or not)??
+#dom.farm.sc <- scale2sd(dom.farms) # dont scale
 total.farms.sc <- scale2sd(total.farms)
 b2met.dist.sc <- scale2sd(b2met.dist)
 grizzinc.sc <- scale2sd(grizzinc.social)
@@ -201,7 +201,7 @@ all.mod.scaled.aic <- AIC(fullmod.sc, fullmod.covs.sc, ecol.mod.sc, social.mod.s
 
 
 # Model Selection with ANOVA ----------------------------------------------
-anova(fullmod.covs.glm) # major deviance with tot/dom farms, grizzinc.cs , & social
+anova(fullmod.covs.sc) # major deviance with tot/dom farms, biophis.cs & grizzinc 
 anova(fullmod.sc, fullmod.covs.sc) # largest deviance with grizzinc.cs & social
 
 # The above deviances indicate that we should scale our predictors and then re-run the models

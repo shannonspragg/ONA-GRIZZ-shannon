@@ -147,10 +147,23 @@ title("Grizzly Bear KDE w/ 50km Bandwidth for Southern Interior")
 
 # Make these into rasters: ------------------------------------------------
 K1.bb.raster <- raster(K1.bb)
-K2.bb.rastr <- raster(K2.bb)
+K2.bb.raster <- raster(K2.bb)
 K1.gb.raster <- raster(K1.gb)
 K2.gb.raster <- raster(K2.gb)
 
+
+# Calculate the Correlation: ----------------------------------------------
+install.packages("spatialEco")
+library(spatialEco)
+
+bears.kde.corr <- rasterCorrelation(K1.bb.raster, K1.gb.raster, type = "pearson")
+plot(bears.kde.corr)
+contour(bears.kde.corr, add=TRUE)
+title("Grizzly & Black Bear KDE Correlation for Southern Interior") 
+
+
+bears.kde.50km.corr <- rasterCorrelation(K2.bb.raster, K2.gb.raster, type = "pearson")
+plot(bears.kde.50km.corr)
 
 # Write as .tif files: ----------------------------------------------------
 raster::writeRaster(K1.bb.raster, "/Users/shannonspragg/ONA_GRIZZ/Bears KDE/black_bear_kde.tif")

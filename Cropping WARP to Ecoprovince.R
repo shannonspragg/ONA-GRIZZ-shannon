@@ -20,6 +20,7 @@ warp.all.sp <- st_read("/Users/shannonspragg/ONA_GRIZZ/WARP Bears /WARP Master D
 # Here we select for just the southern interior province
 south.interior.ep <- bc.ecoprovs %>% filter(bc.ecoprovs$CPRVNCNM == "SOUTHERN INTERIOR")
 
+st_write(south.interior.ep, "/Users/shannonspragg/ONA_GRIZZ/CAN Spatial Data/BC Ecoprovinces/south.interior.shp")
 
 # Check Projections: ------------------------------------------------------
 st_crs(warp.all.sp) == st_crs(south.interior.ep) #TRUE

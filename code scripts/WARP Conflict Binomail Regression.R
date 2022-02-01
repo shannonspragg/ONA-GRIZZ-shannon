@@ -10,24 +10,26 @@ library(tidyverse)
 library(dplyr)
 library(raster)
 library(terra)
-# Import the All Species Master df ----------------------------------------
 
-warp.all.sp <- st_read("/Users/shannonspragg/ONA_GRIZZ/WARP Bears /WARP Master DF (+CS resistance values)/WARP Master DF (+CS resist values).shp")
+# Import the All Species Master df for our Southern Interior EcoProvince ----------------------------------------
 
-mini.warp.df <- warp.all.sp[1:15,]
-st_write(mini.warp.df, "/Users/shannonspragg/Desktop/Boise State/BSU Research Lab/Grizzly Project/ONA_GRIZZ_ss/Census Ag QGIS/mini.warp.df.shp")
+#warp.all.sp <- st_read("/Users/shannonspragg/ONA_GRIZZ/WARP Bears /WARP Master DF (+CS resistance values)/WARP Master DF (+CS resist values).shp")
+
+warp.crop.10km.b <- st_read("/Users/shannonspragg/ONA_GRIZZ/WARP Bears /WARP Cropped - SIP/warp_crop_10km_buf.shp")
+
+#mini.warp.df <- warp.all.sp[1:15,]
+#st_write(mini.warp.df, "/Users/shannonspragg/Desktop/Boise State/BSU Research Lab/Grizzly Project/ONA_GRIZZ_ss/Census Ag QGIS/mini.warp.df.shp")
 
 # Create Binomial GLM -- Bring in All Covariates -----------------------------------------------------
-bears_presence <- warp.all.sp$bears # Binomial bears
-b2pa.distance <- scale(warp.all.sp$ds__PA_) # Dist to PA covariate
-dom.farms <- warp.all.sp$Dm_Fr_T # Dominant farm type covariate -- non numeric
-dom.farms <- as.factor(warp.all.sp$Dm_Fr_T) # Making this work as a factor
-total.farms <- warp.all.sp$Ttl_F_C # Total farm count covariate
-b2met.dist <- warp.all.sp$dstn___ # Dist to metro covariate
-grizzinc.social <- warp.all.sp$GrzzInE
-bear.habitat.bhs <- warp.all.sp$BHSExtr
-#social <- warp.all.sp$SrvyRsE
-biophys.cs <- warp.all.sp$BphysEx
+bears_presence <- warp.crop.10km.b$bears # Binomial bears
+b2pa.distance <- scale(warp.crop.10km.b$ds__PA_) # Dist to PA covariate
+dom.farms <- warp.crop.10km.b$Dm_Fr_T # Dominant farm type covariate -- non numeric
+dom.farms <- as.factor(warp.crop.10km.b$Dm_Fr_T) # Making this work as a factor
+total.farms <- warp.crop.10km.b$Ttl_F_C # Total farm count covariate
+b2met.dist <- warp.crop.10km.b$dstn___ # Dist to metro covariate
+grizzinc.social <- warp.crop.10km.b$GrzzInE
+bear.habitat.bhs <- warp.crop.10km.b$BHSExtr
+biophys.cs <- warp.crop.10km.b$BphysEx
 
 # Check for NA's ----------------------------------------------------------
 which(is.na(dom.farms)) # No more NA's
@@ -43,26 +45,34 @@ which(is.na(grizzinc.social)) # No NA's
 scale2sd <-function(variable){(variable - mean(variable, na.rm=TRUE))/(2*sd(variable, na.rm=TRUE))}
 
 b2pa.dist.sc <- scale2sd(b2pa.distance)
-#dom.farm.sc <- scale2sd(dom.farms) # dont scale
 total.farms.sc <- scale2sd(total.farms)
 b2met.dist.sc <- scale2sd(b2met.dist)
 grizzinc.sc <- scale2sd(grizzinc.social)
 bhs.sc <- scale2sd(bear.habitat.bhs)
-#social.sc <- scale2sd(social)
 biophys.sc <- scale2sd(biophys.cs)
 
-# Below is scale by variable - mean / 1 SD:
-#b2pa.dist.sc <- scale(b2pa.distance, center = TRUE, scale = TRUE)
-#dom.farms.sc <- scale(dom.farms) # won't scale bc is not numeric
-#total.farms.sc <- scale(total.farms, center = TRUE, scale = TRUE)
-#b2met.dist.sc <- scale(b2met.dist, center = TRUE, scale = TRUE)
-#grizzinc.cs.sc <- scale(grizzinc.cs.social, center = TRUE, scale = TRUE)
-#bhs.sc <- scale(bear.habitat.bhs, center = TRUE, scale = TRUE)
-#social.sc <- scale(social, center = TRUE, scale = TRUE)
-#biophys.sc <- scale(biophys.cs, center = TRUE, scale = TRUE)
 
 
-# Run models with scaled predictors:
+# Run Model Regressions: --------------------------------------
+# Here I will be running the three models Adam requested:
+# 1. Full model: glm(bear_pres ~ BHS (grizz dens) + Social (Grizzinc) + Biophys CS)
+# 2. Ecol mod: glm(bear_pres ~ BHS (grizz dens) + CS Biophys)
+# 3. Soc mod: glm(bear_pres ~ Social (+1 Survey for Grizzly increase))
+
+# Matt's model is the "full" model plus all added predictors:
+# Full model + covs: glm(bears_presence ~ bear.habitat.bhs + grizzinc.cs.social + social + biophys.cs + b2pa.distance + b2met.dist
+# + total.farms + dom.farms
+
+# Variables Described Below:
+# BHS - CS of bear habitat suitability based on grizzly density estimate (from Clayton)
+# Grizzinc Social - resistance values for survey responses supporting Grizz Increase (the proportion of people within statscan-like census that 
+# responded “I would like to see grizzlies increase or increase substantially")
+# CS Biophys - Values from the CS of Biophysical only raster (Human Influence Index + topographic roughness)
+# b2pa.distance - Minimum distance of conflict report points to nearest protected area (PA)
+# b2met.dist - minimum distance of conflict report points to nearest metropolitan area 
+# total.farms - the total count of farms by CCS region, assigned to each conflict point
+# dom.farms - the dominant farm type (most popular type of agrictulture) by CCS region, assigned to each point
+
 # Run Adam's model sets:
 fullmod.sc <- glm(bears_presence ~ bhs.sc + grizzinc.sc + biophys.sc, family = "binomial")
 ecol.mod.sc <- glm(bears_presence ~ bhs.sc + biophys.sc, family = "binomial") 
@@ -73,18 +83,10 @@ intercept.only.sc <- glm(bears_presence~1, family=binomial(link=logit))
 fullmod.covs.sc <- glm(bears_presence ~ bhs.sc + grizzinc.sc + biophys.sc + b2pa.dist.sc + b2met.dist.sc
                         + total.farms.sc + dom.farms, family = "binomial")
 
-# Compare these to the unscaled glm's below:
-summary(fullmod.covs.glm)
-summary(fullmod.covs.sc)# see big difference in coefficent values
-summary(fullmod.sc) 
-summary(ecol.mod.sc)
-summary(social.mod.sc)
-summary(intercept.only.sc)
 
 # Individual covariate models (SCALED):
 bhs.glm.sc <- glm(bears_presence ~ bhs.sc, family = "binomial")
 grizz.inc.glm.sc <- glm(bears_presence ~ grizzinc.sc, family = "binomial")
-#social.glm.sc <- glm(bears_presence ~ social.sc, family = "binomial")
 biophys.glm.sc <- glm(bears_presence ~ biophys.sc, family = "binomial")
 
 b2pa.glm.sc <- glm(bears_presence ~ b2pa.dist.sc, family = "binomial")
@@ -126,28 +128,9 @@ confint(sim.glm, level = 0.95)
 
 
 
-# Running Linear Regressions ----------------------------------------------
-# Here I will be running the three models Adam requested:
-# 1. Full model: glm(bear_pres ~ BHS (grizz dens) + Social (Grizzinc) + Biophys CS)
-# 2. Ecol mod: glm(bear_pres ~ BHS (grizz dens) + CS Biophys)
-# 3. Soc mod: glm(bear_pres ~ Social (+1 Survey for Grizzly increase))
+# Running UNSCALED Linear Regressions ----------------------------------------------
 
-# Matt's model is the "full" model plus all added predictors:
-# Full model + covs: glm(bears_presence ~ bear.habitat.bhs + grizzinc.cs.social + social + biophys.cs + b2pa.distance + b2met.dist
-# + total.farms + dom.farms
-
-# Variables Described Below:
-# BHS - CS of bear habitat suitability based on grizzly density estimate (from Clayton)
-# Grizzinc Social - resistance values for survey responses supporting Grizz Increase (the proportion of people within statscan-like census that 
-# responded “I would like to see grizzlies increase or increase substantially")
-# CS Biophys - Values from the CS of Biophysical only raster (Human Influence Index + topographic roughness)
-# b2pa.distance - Minimum distance of conflict report points to nearest protected area (PA)
-# b2met.dist - minimum distance of conflict report points to nearest metropolitan area 
-# total.farms - the total count of farms by CCS region, assigned to each conflict point
-# dom.farms - the dominant farm type (most popular type of agrictulture) by CCS region, assigned to each point
-
-
-# Run model sets:
+# Run unscaled model sets:
 fullmod.glm <- glm(bears_presence ~ bear.habitat.bhs + grizzinc.social + biophys.cs, family = "binomial")
 ecol.mod.glm <- glm(bears_presence ~ bear.habitat.bhs + biophys.cs, family = "binomial") 
 social.mod.glm <- glm(bears_presence ~ social + grizzinc.social, family = "binomial") 
@@ -170,25 +153,25 @@ tot.farm.glm <- glm(bears_presence ~ total.farms, family = "binomial")
 dom.farm.glm <- glm(bears_presence ~ dom.farms, family = "binomial")
 
 
-# Check Summaries ---------------------------------------------------------
-summary(fullmod.glm) # AIC 43308
-summary(fullmod.glm)$coefficients # Pull up summary for coefficients
-summary(ecol.mod.glm) # AIC 43672
-summary(social.mod.glm) # AIC 43412
 
-summary(fullmod.covs.glm) # AIC 41177
+# Check Model Summaries ---------------------------------------------------------
+summary(fullmod.sc) # AIC 7231
+summary(fullmod.sc)$coefficients # Pull up summary for coefficients
+summary(ecol.mod.sc) # AIC 7262.3
+summary(social.mod.sc) # AIC 7341
+
+summary(fullmod.covs.sc) # AIC 7131.3
 # INTERESTING: lowest AIC is in the full model + covs, pretty significantly
 
 # Summaries for individual models
-summary(bhs.glm) # p of 0.0264 *, AIC 44108
-summary(grizz.inc.glm) # p of <2e-16 *** , AIC 44114
-#summary(social.glm) # p of <2e-16 *** , AIC 43994
-summary(biophys.glm) # p of <2e-16 *** , AIC 43778
+summary(bhs.glm.sc) # p of <2e-16 *, AIC 7361
+summary(grizz.inc.glm.sc) # p of <2e-08 *** , AIC 7341
+summary(biophys.glm.sc) # p of <2e-16 *** , AIC 7274
 
-summary(b2pa.glm) # p of 2.25e-14 *** , AIC 44143
-summary(b2met.glm) # p of <2e-16 *** , AIC 44000
-summary(tot.farm.glm) # p of <2e-16 ***, AIC 43161
-summary(dom.farm.glm) # p of .000579 *** (veg & melon), .001741 ** (cattle), .038583 * (beef, feedlots), AIC 43225
+summary(b2pa.glm.sc) # p of 6.5e-05 *** , AIC 7362
+summary(b2met.glm.sc) # p of 5.78e-15 *** , AIC 7318
+summary(tot.farm.glm.sc) # p of 8.05e-11 ***, AIC 7335.6
+summary(dom.farm.glm.sc) # p of 2.42e-11 *** (veg & melon), 1.91e-05 *** (cattle ranching), 2.46e-05 * (other crop farming), AIC 7253.6
 
 
 
@@ -196,7 +179,7 @@ summary(dom.farm.glm) # p of .000579 *** (veg & melon), .001741 ** (cattle), .03
 # Run AIC to Compare Raw (unscaled) Models:
 all.mod.aic <- AIC(fullmod.glm, fullmod.covs.glm, ecol.mod.glm, social.mod.glm, bhs.glm, grizz.inc.cs.glm, social.glm, biophys.glm, b2pa.glm, b2met.glm, tot.farm.glm, dom.farm.glm, intercept.only.glm)
 
-# Running AIC on Scaled Models:
+# Running AIC on SCALED Models:
 all.mod.scaled.aic <- AIC(fullmod.sc, fullmod.covs.sc, ecol.mod.sc, social.mod.sc, bhs.glm.sc, grizz.inc.glm.sc, biophys.glm.sc, b2pa.glm.sc, b2met.glm.sc, tot.farm.glm.sc, dom.farm.glm.sc, intercept.only.sc)
 
 

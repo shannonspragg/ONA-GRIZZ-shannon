@@ -73,3 +73,18 @@ plot(st_geometry(south.interior.ep))
 plot(st_geometry(warp.crop.50k), add= TRUE) # Here we see them within a 50k buffer
 
 
+# Remove Extra Columns: ---------------------------------------------------
+warp.crop.10k$CPRVNCCD <- NULL
+warp.crop.10k$FTRCD <- NULL
+warp.crop.10k$PRNTCDVSNC <- NULL
+warp.crop.10k$FFCTVDT <- NULL
+warp.crop.10k$CPRVNCNM <- NULL
+warp.crop.10k$XPRDT <- NULL
+warp.crop.10k$OBJECTID <- NULL
+warp.crop.10k$AREA_SQM <- NULL
+warp.crop.10k$FEAT_LEN <- NULL
+
+
+# Save our Cropped WARP DF ------------------------------------------------
+st_write(warp.crop.10k, "/Users/shannonspragg/ONA_GRIZZ/WARP Bears /WARP Cropped - SIP/warp_crop_10km_buf.shp")
+warp_crop10 <- st_read("/Users/shannonspragg/ONA_GRIZZ/WARP Bears /WARP Cropped - SIP/warp_crop_10km_buf.shp")

@@ -15,6 +15,7 @@ library(tidyverse)
 library(sp)
 #install.packages("spatialEco")
 library(spatialEco)
+library(terra)
 
 # Bring in Data: ----------------------------------------------------------
 warp.crop.10km <- st_read("/Users/shannonspragg/ONA_GRIZZ/WARP Bears /WARP Cropped - SIP/warp_crop_10km_buf.shp")
@@ -35,6 +36,9 @@ grizz.bears <- warp.crop.10km %>%
 
 head(black.bears)
 head(grizz.bears)
+
+b.bears.rast <- raster(black.bears)
+g.bears.rast <- raster(grizz.bears)
 
 # Format all Data: --------------------------------------------------------
     # First, our boundary shapefile:
@@ -156,6 +160,36 @@ bears.kde.corr[bears.kde.corr < 0.69] <- 0
 plot(bears.kde.corr)
 contour(bears.kde.corr, add=TRUE)
 title("Grizzly & Black Bear KDE Correlation for Southern Interior") 
+
+# Make sure our points and rasters match crs:
+crs(bears.kde.corr)
+
+b.bears.vect <- as(black.bears, "SpatVector")
+g.bears.vect <- as(grizz.bears, "SpatVector")
+
+b.bears.sp <- as(black.bears, "Spatial")
+g.bears.sp <- as(grizz.bears, "Spatial")
+
+b.bears.reproj <- st_make_valid(black.bears) %>% 
+  st_transform(crs=crs(bears.kde.corr))
+b.bears.vect <- vect(b.bears.reproj)
+
+
+crs(bears.kde.corr.sr) <- crs(b.bears.vect) 
+
+b.bears.rsmple <- resample(b.bears.vect, bears.kde.corr.sr, method='bilinear')
+
+plot(bears.kde.corr)
+plot(b.bears.vect, add=TRUE)
+
+# Plot this with points overlapping:
+plot(bears.kde.corr)
+contour(bears.kde.corr, add=TRUE)
+plot(b.bears.vect, pch=2, col = "red", add=TRUE)
+
+plot(st_geometry(black.bears), pch=2, col = "red", add=TRUE)
+title("Grizzly & Black Bear KDE Correlation for Southern Interior") 
+
 
 
 

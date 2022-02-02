@@ -161,36 +161,34 @@ plot(bears.kde.corr)
 contour(bears.kde.corr, add=TRUE)
 title("Grizzly & Black Bear KDE Correlation for Southern Interior") 
 
-# Make sure our points and rasters match crs:
-crs(bears.kde.corr)
 
-b.bears.vect <- as(black.bears, "SpatVector")
-g.bears.vect <- as(grizz.bears, "SpatVector")
+# Plotting the Correlation: -----------------------------------------------
 
-b.bears.sp <- as(black.bears, "Spatial")
-g.bears.sp <- as(grizz.bears, "Spatial")
-
+# Reproject the vector data:
 b.bears.reproj <- st_make_valid(black.bears) %>% 
   st_transform(crs=crs(bears.kde.corr))
+g.bears.reproj <- st_make_valid(grizz.bears) %>% 
+  st_transform(crs=crs(bears.kde.corr))
+
+# Make these spatvectors & rasters:
+g.bears.vect <- vect(g.bears.reproj)
 b.bears.vect <- vect(b.bears.reproj)
 
+bears.kde.corr.sr <- as(bears.kde.corr, "SpatRaster")
 
-crs(bears.kde.corr.sr) <- crs(b.bears.vect) 
+#match the extents
+ext(bears.kde.corr.sr) <- ext(b.bears.vect) 
 
-b.bears.rsmple <- resample(b.bears.vect, bears.kde.corr.sr, method='bilinear')
-
-plot(bears.kde.corr)
-plot(b.bears.vect, add=TRUE)
-
-# Plot this with points overlapping:
-plot(bears.kde.corr)
-contour(bears.kde.corr, add=TRUE)
-plot(b.bears.vect, pch=2, col = "red", add=TRUE)
-
-plot(st_geometry(black.bears), pch=2, col = "red", add=TRUE)
+#plot all together:
+plot(bears.kde.corr.sr)
+plot(b.bears.vect, pch=2, col = "red", add=TRUE) #this works...
+plot(g.bears.vect, pch=19, col = "black",add=TRUE)
 title("Grizzly & Black Bear KDE Correlation for Southern Interior") 
-
-
+legend("topright",   # set position
+       inset = 0.05, # Distance from the margin as a fraction of the plot region
+       legend = c("Black Bears", "Grizzly Bears"),
+       pch = c(2, 19),
+       col = c("red","black"))
 
 
 # Write as .tif files: ----------------------------------------------------

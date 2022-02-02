@@ -13,16 +13,15 @@ library(raster)
 library(spatstat)
 library(tidyverse)
 library(sp)
-install.packages("stars")
-library(stars)
-
+#install.packages("spatialEco")
+library(spatialEco)
 
 # Bring in Data: ----------------------------------------------------------
 warp.crop.10km <- st_read("/Users/shannonspragg/ONA_GRIZZ/WARP Bears /WARP Cropped - SIP/warp_crop_10km_buf.shp")
 southern.int.boundary <- st_read("/Users/shannonspragg/ONA_GRIZZ/CAN Spatial Data/BC Ecoprovinces/south.interior.shp")
 
 # Buffer our Boundary to Match Points:
-south.int.10k.buf <- st_buffer(south.interior.ep, 10000)
+south.int.10k.buf <- st_buffer(southern.int.boundary, 10000)
 
 # Filter Our Data: --------------------------------------------------------
 
@@ -36,20 +35,6 @@ grizz.bears <- warp.crop.10km %>%
 
 head(black.bears)
 head(grizz.bears)
-
-
-# Rasterize our Data --------------------------------------- NOT SURE WE NEED THIS...
-# Write these as stars rasters
-bb.raster <-st_rasterize(black.bears %>% dplyr::select( geometry))
-write_stars(bb.raster, "/Users/shannonspragg/ONA_GRIZZ/Bears KDE/black_bears_warp.tif")
-
-gb.raster <- st_rasterize(grizz.bears %>% dplyr::select( geometry))
-write_stars(gb.raster, "/Users/shannonspragg/ONA_GRIZZ/Bears KDE/grizz_bears_warp.tif")
-
-# Bring these back in as rasters
-bbears.raster <- raster("/Users/shannonspragg/ONA_GRIZZ/Bears KDE/black_bears_warp.tif")
-gbears.raster <- raster("/Users/shannonspragg/ONA_GRIZZ/Bears KDE/grizz_bears_warp.tif")
-
 
 # Format all Data: --------------------------------------------------------
     # First, our boundary shapefile:
@@ -153,7 +138,7 @@ K2.gb.raster <- raster(K2.gb)
 
 
 # Calculate the Correlation: ----------------------------------------------
-install.packages("spatialEco")
+#install.packages("spatialEco")
 library(spatialEco)
 
 bears.kde.corr <- rasterCorrelation(K1.bb.raster, K1.gb.raster, type = "pearson")
@@ -161,15 +146,26 @@ plot(bears.kde.corr)
 contour(bears.kde.corr, add=TRUE)
 title("Grizzly & Black Bear KDE Correlation for Southern Interior") 
 
-
 bears.kde.50km.corr <- rasterCorrelation(K2.bb.raster, K2.gb.raster, type = "pearson")
 plot(bears.kde.50km.corr)
+
+# Filter these for values less than 0.7:
+bears.kde.corr[bears.kde.corr > 0.7] <- 1
+bears.kde.corr[bears.kde.corr < 0.69] <- 0
+
+plot(bears.kde.corr)
+contour(bears.kde.corr, add=TRUE)
+title("Grizzly & Black Bear KDE Correlation for Southern Interior") 
+
+
 
 # Write as .tif files: ----------------------------------------------------
 raster::writeRaster(K1.bb.raster, "/Users/shannonspragg/ONA_GRIZZ/Bears KDE/black_bear_kde.tif")
 raster::writeRaster(K2.bb.rastr, "/Users/shannonspragg/ONA_GRIZZ/Bears KDE/black_bear_kde_50km.tif")
 raster::writeRaster(K1.gb.raster, "/Users/shannonspragg/ONA_GRIZZ/Bears KDE/grizz_bear_kde.tif")
 raster::writeRaster(K2.gb.raster, "/Users/shannonspragg/ONA_GRIZZ/Bears KDE/grizz_bear_kde_50km.tif")
+
+raster::writeRaster(bears.kde.corr, "/Users/shannonspragg/ONA_GRIZZ/Bears KDE/gbears_kde_correlation.tif")
 
 # Test this:
 test.bb.kde <- raster("/Users/shannonspragg/ONA_GRIZZ/Bears KDE/grizz_bear_kde_50km.tif")

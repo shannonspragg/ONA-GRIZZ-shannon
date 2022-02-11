@@ -83,6 +83,8 @@ intercept.only.sc <- glm(bears_presence~1, family=binomial(link=logit))
 fullmod.covs.sc <- glm(bears_presence ~ bhs.sc + grizzinc.sc + biophys.sc + b2pa.dist.sc + b2met.dist.sc
                         + total.farms.sc + dom.farms, family = "binomial")
 
+fullmod.covs.lm <- lm(bears_presence ~ bhs.sc + grizzinc.sc + biophys.sc + b2pa.dist.sc + b2met.dist.sc
+                       + total.farms.sc + dom.farms)
 
 # Individual covariate models (SCALED):
 bhs.glm.sc <- glm(bears_presence ~ bhs.sc, family = "binomial")
@@ -182,14 +184,23 @@ all.mod.aic <- AIC(fullmod.glm, fullmod.covs.glm, ecol.mod.glm, social.mod.glm, 
 # Running AIC on SCALED Models:
 all.mod.scaled.aic <- AIC(fullmod.sc, fullmod.covs.sc, ecol.mod.sc, social.mod.sc, bhs.glm.sc, grizz.inc.glm.sc, biophys.glm.sc, b2pa.glm.sc, b2met.glm.sc, tot.farm.glm.sc, dom.farm.glm.sc, intercept.only.sc)
 
+# Calculate AIC Weights:
+
+for(i in 1:dim(all.mod.scaled.aic)[1]){
+  all.mod.scaled.aic$diff[i]<-all.mod.scaled.aic$AIC[1]-all.mod.scaled.aic$AIC[i]}
+all.mod.scaled.aic$wi<-2.71828182845904523536^(-0.5*all.mod.scaled.aic$diff)
+all.mod.scaled.aic$aic.weights<-all.mod.scaled.aic$wi/sum(all.mod.scaled.aic$wi)
+
 
 # Plotting Effect Sizes ---------------------------------------------------
 #install.packages("sjPlot")
 library(sjPlot)
-install.packages("nloptr")
+#install.packages("nloptr")
 library(nloptr)
 #install.packages("sjmisc")
 library(sjmisc)
+#install.packages("rsq")
+library(rsq)
 
 # Basic Mixed Effect Plot:
 sjPlot::plot_model(fullmod.covs.sc)
@@ -210,10 +221,14 @@ sjPlot::tab_model(fullmod.covs.sc)
 # Notes: predictor labels (pred.labels) should be listed from top to bottom; dv.labels= the name of the response variable that will be at the top of the table.
 
 sjPlot::tab_model(fullmod.covs.sc, 
-                  show.re.var= TRUE, 
+                  show.re.var= TRUE, show.se = TRUE , show.p = TRUE , show.r2 = TRUE, show.aic = TRUE , 
                   pred.labels =c("(Intercept)" , "Bear Habitat Suitability" , "Grizz Increase", "CS Biophysical (HII + topo ruggedness)" , "Distance to Protected Area (km)" , "Distance to Metro Area (km)" ,
                                  "Total Farm Count" , "Cattly Ranching & Farming" , "Fruit & Tree Nut Farming" , "Other Animal Production (bees & honey, equine, fur-bearers)" , "Other Crop Farming (tobacco, peanut, sugar-cane, hay, herbs & spices)", "Vegetable & Melon Farming" ),
                   dv.labels= "Effects of Social & Environmental Variables on Bear Conflict")
+rsq(fullmod.covs.sc, type = "v") # Variance function based R2 is 0.05017
+
+  # R2 Tjur : Tjur's R2 is the distance (absolute value of the difference) between the two means.  A R2 Tjur value approaching 1 indicates that there is clear separation between the predicted values for the 0's and 1's
+
 
 
 # Model Selection with ANOVA ----------------------------------------------

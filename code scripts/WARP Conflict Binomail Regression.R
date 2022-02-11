@@ -65,7 +65,7 @@ biophys.sc <- scale2sd(biophys.cs)
 
 # Variables Described Below:
 # BHS - CS of bear habitat suitability based on grizzly density estimate (from Clayton)
-# Grizzinc Social - resistance values for survey responses supporting Grizz Increase (the proportion of people within statscan-like census that 
+# Grizzinc - values for survey responses supporting Grizz Increase (the proportion of people within statscan-like census that 
 # responded “I would like to see grizzlies increase or increase substantially")
 # CS Biophys - Values from the CS of Biophysical only raster (Human Influence Index + topographic roughness)
 # b2pa.distance - Minimum distance of conflict report points to nearest protected area (PA)
@@ -181,6 +181,39 @@ all.mod.aic <- AIC(fullmod.glm, fullmod.covs.glm, ecol.mod.glm, social.mod.glm, 
 
 # Running AIC on SCALED Models:
 all.mod.scaled.aic <- AIC(fullmod.sc, fullmod.covs.sc, ecol.mod.sc, social.mod.sc, bhs.glm.sc, grizz.inc.glm.sc, biophys.glm.sc, b2pa.glm.sc, b2met.glm.sc, tot.farm.glm.sc, dom.farm.glm.sc, intercept.only.sc)
+
+
+# Plotting Effect Sizes ---------------------------------------------------
+#install.packages("sjPlot")
+library(sjPlot)
+install.packages("nloptr")
+library(nloptr)
+#install.packages("sjmisc")
+library(sjmisc)
+
+# Basic Mixed Effect Plot:
+sjPlot::plot_model(fullmod.covs.sc)
+
+# Labeled Effect Plot:
+# Notes: axis labels should be in order from bottom to top. 
+# To see the values of the effect size and p-value, set show.values and show.p= TRUE
+sjPlot::plot_model(fullmod.covs.sc, 
+                   axis.labels=c("Vegetable & Melon Farming", "Other Crop Farming (tobacco, peanut, sugar-cane, hay, herbs & spices) ", "Other Animal Production (bees & honey, equine, fur-bearers)" , "Fruit & Tree Nut Farming" , "Cattly Ranching & Farming" ,
+                                 "Total Farm Count" , "Distance to Metro Area (km)" , "Distance to Protected Area (km)" , "CS Biophysical (HII + topo ruggedness)" , "Grizz Increase", "Bear Habitat Suitability"),
+                   show.values=TRUE, show.p=FALSE,
+                   title="Effects of Social & Environmental Variables on Bear Conflict")
+
+##### Model Table of Effect Size:
+sjPlot::tab_model(fullmod.covs.sc)
+
+# Formatted Table (with labels):
+# Notes: predictor labels (pred.labels) should be listed from top to bottom; dv.labels= the name of the response variable that will be at the top of the table.
+
+sjPlot::tab_model(fullmod.covs.sc, 
+                  show.re.var= TRUE, 
+                  pred.labels =c("(Intercept)" , "Bear Habitat Suitability" , "Grizz Increase", "CS Biophysical (HII + topo ruggedness)" , "Distance to Protected Area (km)" , "Distance to Metro Area (km)" ,
+                                 "Total Farm Count" , "Cattly Ranching & Farming" , "Fruit & Tree Nut Farming" , "Other Animal Production (bees & honey, equine, fur-bearers)" , "Other Crop Farming (tobacco, peanut, sugar-cane, hay, herbs & spices)", "Vegetable & Melon Farming" ),
+                  dv.labels= "Effects of Social & Environmental Variables on Bear Conflict")
 
 
 # Model Selection with ANOVA ----------------------------------------------

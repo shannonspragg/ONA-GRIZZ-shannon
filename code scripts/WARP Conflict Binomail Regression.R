@@ -184,7 +184,9 @@ all.mod.aic <- AIC(fullmod.glm, fullmod.covs.glm, ecol.mod.glm, social.mod.glm, 
 # Running AIC on SCALED Models:
 all.mod.scaled.aic <- AIC(fullmod.sc, fullmod.covs.sc, ecol.mod.sc, social.mod.sc, bhs.glm.sc, grizz.inc.glm.sc, biophys.glm.sc, b2pa.glm.sc, b2met.glm.sc, tot.farm.glm.sc, dom.farm.glm.sc, intercept.only.sc)
 
-# Calculate AIC Weights:
+# Calculate AIC Weights: should be using the delta AIC values 
+# exp(0.5 * delta AIC) / exp(sum)
+# https://cran.r-project.org/web/packages/MuMIn/MuMIn.pdf
 
 for(i in 1:dim(all.mod.scaled.aic)[1]){
   all.mod.scaled.aic$diff[i]<-all.mod.scaled.aic$AIC[1]-all.mod.scaled.aic$AIC[i]}
@@ -209,7 +211,7 @@ sjPlot::plot_model(fullmod.covs.sc)
 # Notes: axis labels should be in order from bottom to top. 
 # To see the values of the effect size and p-value, set show.values and show.p= TRUE
 sjPlot::plot_model(fullmod.covs.sc, 
-                   axis.labels=c("Vegetable & Melon Farming", "Other Crop Farming (tobacco, peanut, sugar-cane, hay, herbs & spices) ", "Other Animal Production (bees & honey, equine, fur-bearers)" , "Fruit & Tree Nut Farming" , "Cattly Ranching & Farming" ,
+                   axis.labels=c("Vegetable & Melon Farming", "Other Crop Farming (tobacco, peanut, sugar-cane, hay, herbs & spices) ", "Other Animal Production (bees & honey, equine, fur-bearers)" , "Fruit & Tree Nut Farming" , "Cattle Ranching & Farming" ,
                                  "Total Farm Count" , "Distance to Metro Area (km)" , "Distance to Protected Area (km)" , "CS Biophysical (HII + topo ruggedness)" , "Grizz Increase", "Bear Habitat Suitability"),
                    show.values=TRUE, show.p=FALSE,
                    title="Effects of Social & Environmental Variables on Bear Conflict")
@@ -223,7 +225,7 @@ sjPlot::tab_model(fullmod.covs.sc)
 sjPlot::tab_model(fullmod.covs.sc, 
                   show.re.var= TRUE, show.se = TRUE , show.p = TRUE , show.r2 = TRUE, show.aic = TRUE , 
                   pred.labels =c("(Intercept)" , "Bear Habitat Suitability" , "Grizz Increase", "CS Biophysical (HII + topo ruggedness)" , "Distance to Protected Area (km)" , "Distance to Metro Area (km)" ,
-                                 "Total Farm Count" , "Cattly Ranching & Farming" , "Fruit & Tree Nut Farming" , "Other Animal Production (bees & honey, equine, fur-bearers)" , "Other Crop Farming (tobacco, peanut, sugar-cane, hay, herbs & spices)", "Vegetable & Melon Farming" ),
+                                 "Total Farm Count" , "Cattle Ranching & Farming" , "Fruit & Tree Nut Farming" , "Other Animal Production (bees & honey, equine, fur-bearers)" , "Other Crop Farming (tobacco, peanut, sugar-cane, hay, herbs & spices)", "Vegetable & Melon Farming" ),
                   dv.labels= "Effects of Social & Environmental Variables on Bear Conflict")
 rsq(fullmod.covs.sc, type = "v") # Variance function based R2 is 0.05017
 

@@ -39,11 +39,6 @@ which(is.na(biophys.cs)) # No NA's
 which(is.na(grizzinc.social)) # No NA's
 
 
-# Add an QUADRATIC term for Farm Count: -----------------------------------
-  # We want to add a quadratic term to farm count so that we can better interpret it against P(conflict)
-total.farm.sq <- poly(total.farms, 2)
-
-
 
 # Scaling Individual Predictors -------------------------------------------
 # We can use the scale function to center our predictors by subtracting the means (center= TRUE) and scaling by dividing by their standard deviation (scale=TRUE)
@@ -52,11 +47,14 @@ scale2sd <-function(variable){(variable - mean(variable, na.rm=TRUE))/(2*sd(vari
 
 b2pa.dist.sc <- scale2sd(b2pa.distance)
 total.farms.sc <- scale2sd(total.farms)
-total.farms.sq.sc <- scale2sd(total.farm.sq)
 b2met.dist.sc <- scale2sd(b2met.dist)
 grizzinc.sc <- scale2sd(grizzinc.social)
 bhs.sc <- scale2sd(bear.habitat.bhs)
 biophys.sc <- scale2sd(biophys.cs)
+
+# Add an QUADRATIC term for Farm Count: -----------------------------------
+# We want to add a quadratic term to farm count so that we can better interpret it against P(conflict)
+total.farms.sq <- total.farms.sc*total.farms.sc
 
 
 
@@ -89,7 +87,7 @@ intercept.only.sc <- glm(bears_presence~1, family=binomial(link=logit))
 
 # Run Full P(conflict) model:
 fullmod.covs.sc <- glm(bears_presence ~ bhs.sc + grizzinc.sc + biophys.sc + b2pa.dist.sc + b2met.dist.sc
-                        + total.farms.sc + total.farms.sq.sc + dom.farms, family = "binomial")
+                        + total.farms.sc + total.farms.sq + dom.farms, family = "binomial")
 
 #fullmod.covs.lm <- lm(bears_presence ~ bhs.sc + grizzinc.sc + biophys.sc + b2pa.dist.sc + b2met.dist.sc
 #                       + total.farms.sc + dom.farms)
@@ -101,6 +99,7 @@ biophys.glm.sc <- glm(bears_presence ~ biophys.sc, family = "binomial")
 
 b2pa.glm.sc <- glm(bears_presence ~ b2pa.dist.sc, family = "binomial")
 b2met.glm.sc <- glm(bears_presence ~ b2met.dist.sc, family = "binomial")
+tot.farm.glm.sc <- glm(bears_presence ~ total.farms.sc, family = "binomial")
 tot.farm.glm.sq.sc <- glm(bears_presence ~ total.farms.sc + total.farms.sq.sc, family = "binomial")
 dom.farm.glm.sc <- glm(bears_presence ~ dom.farms, family = "binomial")
 
@@ -180,6 +179,7 @@ summary(biophys.glm.sc) # p of <2e-16 *** , AIC 7274
 
 summary(b2pa.glm.sc) # p of 6.5e-05 *** , AIC 7362
 summary(b2met.glm.sc) # p of 5.78e-15 *** , AIC 7318
+summary(tot.farm.glm.sc) # AIC of 7335.6
 summary(tot.farm.glm.sq.sc) # p of 8.05e-11 ***, AIC 7247.5
 summary(dom.farm.glm.sc) # p of 2.42e-11 *** (veg & melon), 1.91e-05 *** (cattle ranching), 2.46e-05 * (other crop farming), AIC 7253.6
 
@@ -192,15 +192,58 @@ all.mod.aic <- AIC(fullmod.glm, fullmod.covs.glm, ecol.mod.glm, social.mod.glm, 
 # Running AIC on SCALED Models:
 all.mod.scaled.aic <- AIC(fullmod.sc, fullmod.covs.sc, ecol.mod.sc, social.mod.sc, bhs.glm.sc, grizz.inc.glm.sc, biophys.glm.sc, b2pa.glm.sc, b2met.glm.sc, tot.farm.glm.sc, dom.farm.glm.sc, intercept.only.sc)
 
-# Calculate AIC Weights: should be using the delta AIC values 
-# exp(0.5 * delta AIC) / exp(sum)
-# https://cran.r-project.org/web/packages/MuMIn/MuMIn.pdf
 
-for(i in 1:dim(all.mod.scaled.aic)[1]){
-  all.mod.scaled.aic$diff[i]<-all.mod.scaled.aic$AIC[1]-all.mod.scaled.aic$AIC[i]}
-all.mod.scaled.aic$wi<-2.71828182845904523536^(-0.5*all.mod.scaled.aic$diff)
-all.mod.scaled.aic$aic.weights<-all.mod.scaled.aic$wi/sum(all.mod.scaled.aic$wi)
 
+# Calculate AIC ,  deltaAIC,  and AIC weight: -----------------------------
+#install.packages("AICcmodavg")
+library(AICcmodavg)
+
+# Define a list of our models
+full.model.list <- list( fullmod.covs.sc, bhs.glm.sc, grizz.inc.glm.sc, biophys.glm.sc, b2pa.glm.sc, b2met.glm.sc, tot.farm.glm.sc, tot.farm.glm.sq.sc, dom.farm.glm.sc, intercept.only.sc)
+comb.mod.list <- list(fullmod.sc , ecol.mod.sc , social.mod.sc, intercept.only.sc)
+
+# Specify the model names:
+full.mod.names <- c('Full Model', 'Bear Habitat Suitability', 'GrizzInc', 'Biophysical' , 'Distance to PA', 'Distance to Metro', 'Total Farms', '(Total Farms)^2', 'Dominant Farm Type', 'Intercept Only')
+comb.mod.names <- c('Combined Model', 'Ecological', 'Social', 'Intercept only')
+
+# Calculate AIC of each model:
+full.mod.aic.table <- aictab(cand.set = full.model.list , modnames = full.mod.names)
+comb.mod.aic.table <- aictab(cand.set = comb.mod.list , modnames = comb.mod.names)
+
+# We get a table with our df , AICc , deltaAIC, and AICwt
+
+# K: The number of parameters in the model.
+# AICc: The AIC value of the model. The lowercase ‘c’ indicates that the AIC has been calculated from the AIC corrected for small sample sizes.
+# Delta_AICc: The difference between the AIC of the best model compared to the current model being compared.
+# AICcWt: The proportion of the total predictive power that can be found in the model.
+# Cum.Wt: The cumulative sum of the AIC weights.
+# LL: The log-likelihood of the model. This tells us how likely the model is, given the data we used.
+
+
+# Run Correlation Plot: ---------------------------------------------------
+install.packages("corrplot")
+library(corrplot)
+??corrplot
+
+# Make a correlation matrix for our data dn predictors:
+cor.matrix.df <- data.frame(b2pa.dist.sc, b2met.dist.sc, total.farm.sq, grizzinc.sc, bhs.sc, biophys.sc)
+
+cor.matrix <- cor(cor.matrix.df)
+round(cor.matrix, 2)
+# Simple correlation plots:
+corrplot(cor.matrix, method = 'number', ) # colorful number
+corrplot(cor.matrix, addCoef.col = 'black')
+
+# Make a plot with proportional circles on a diagonal, coefficent numbers, and legend at the bottom:
+predictor.cor.plot <- corrplot(cor.matrix, type = 'lower', order = 'hclust', tl.col = 'black',addCoef.col = 'grey',
+         cl.ratio = 0.2, tl.srt = 45, col = COL2('PuOr', 10))
+
+
+# Detecting Multicolinearity: ---------------------------------------------
+install.packages("car")
+library(car)
+
+car::vif(fullmod.covs.sc)
 
 # Plotting Effect Sizes ---------------------------------------------------
 #install.packages("sjPlot")
@@ -220,7 +263,7 @@ sjPlot::plot_model(fullmod.covs.sc)
 # To see the values of the effect size and p-value, set show.values and show.p= TRUE
 sjPlot::plot_model(fullmod.covs.sc, 
                    axis.labels=c("Vegetable & Melon Farming", "Other Crop Farming (tobacco, peanut, sugar-cane, hay, herbs & spices) ", "Other Animal Production (bees & honey, equine, fur-bearers)" , "Fruit & Tree Nut Farming" , "Cattle Ranching & Farming" ,
-                                 "Total Farm Count" , "Distance to Metro Area (km)" , "Distance to Protected Area (km)" , "CS Biophysical (HII + topo ruggedness)" , "Grizz Increase", "Bear Habitat Suitability"),
+                                 "Total Farm Count ^2" , "Total Farm Count" , "Distance to Metro Area (km)" , "Distance to Protected Area (km)" , "CS Biophysical (HII + topo ruggedness)" , "Grizz Increase", "Bear Habitat Suitability"),
                    show.values=TRUE, show.p=FALSE,
                    title="Effects of Social & Environmental Variables on Bear Conflict")
 
@@ -233,12 +276,11 @@ sjPlot::tab_model(fullmod.covs.sc)
 sjPlot::tab_model(fullmod.covs.sc, 
                   show.re.var= TRUE, show.se = TRUE , show.p = TRUE , show.r2 = TRUE, show.aic = TRUE , 
                   pred.labels =c("(Intercept)" , "Bear Habitat Suitability" , "Grizz Increase", "CS Biophysical (HII + topo ruggedness)" , "Distance to Protected Area (km)" , "Distance to Metro Area (km)" ,
-                                 "Total Farm Count" , "Cattle Ranching & Farming" , "Fruit & Tree Nut Farming" , "Other Animal Production (bees & honey, equine, fur-bearers)" , "Other Crop Farming (tobacco, peanut, sugar-cane, hay, herbs & spices)", "Vegetable & Melon Farming" ),
+                                 "Total Farm Count" , "Total Farm Count ^2", "Cattle Ranching & Farming" , "Fruit & Tree Nut Farming" , "Other Animal Production (bees & honey, equine, fur-bearers)" , "Other Crop Farming (tobacco, peanut, sugar-cane, hay, herbs & spices)", "Vegetable & Melon Farming" ),
                   dv.labels= "Effects of Social & Environmental Variables on Bear Conflict")
 rsq(fullmod.covs.sc, type = "v") # Variance function based R2 is 0.05017
 
   # R2 Tjur : Tjur's R2 is the distance (absolute value of the difference) between the two means.  A R2 Tjur value approaching 1 indicates that there is clear separation between the predicted values for the 0's and 1's
-
 
 
 # Model Selection with ANOVA ----------------------------------------------

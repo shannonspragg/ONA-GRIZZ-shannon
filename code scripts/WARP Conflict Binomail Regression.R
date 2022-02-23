@@ -39,6 +39,12 @@ which(is.na(biophys.cs)) # No NA's
 which(is.na(grizzinc.social)) # No NA's
 
 
+# Add an QUADRATIC term for Farm Count: -----------------------------------
+  # We want to add a quadratic term to farm count so that we can better interpret it against P(conflict)
+total.farm.sq <- poly(total.farms, 2)
+
+
+
 # Scaling Individual Predictors -------------------------------------------
 # We can use the scale function to center our predictors by subtracting the means (center= TRUE) and scaling by dividing by their standard deviation (scale=TRUE)
 # Here we create a function to scale by subtracting the mean and dividing by 2 standard deviations:
@@ -46,6 +52,7 @@ scale2sd <-function(variable){(variable - mean(variable, na.rm=TRUE))/(2*sd(vari
 
 b2pa.dist.sc <- scale2sd(b2pa.distance)
 total.farms.sc <- scale2sd(total.farms)
+total.farms.sq.sc <- scale2sd(total.farm.sq)
 b2met.dist.sc <- scale2sd(b2met.dist)
 grizzinc.sc <- scale2sd(grizzinc.social)
 bhs.sc <- scale2sd(bear.habitat.bhs)
@@ -54,12 +61,13 @@ biophys.sc <- scale2sd(biophys.cs)
 
 
 # Run Model Regressions: --------------------------------------
-# Here I will be running the three models Adam requested:
+# QUESTION: What best predicts what drives conflict - models with social factors, ecological factors, or a mix of both?
+
 # 1. Full model: glm(bear_pres ~ BHS (grizz dens) + Social (Grizzinc) + Biophys CS)
 # 2. Ecol mod: glm(bear_pres ~ BHS (grizz dens) + CS Biophys)
 # 3. Soc mod: glm(bear_pres ~ Social (+1 Survey for Grizzly increase))
 
-# Matt's model is the "full" model plus all added predictors:
+# QUESTION: How does knowing what covariates predict probability of conflict affect aspects of the landscape and where we do conservation?
 # Full model + covs: glm(bears_presence ~ bear.habitat.bhs + grizzinc.cs.social + social + biophys.cs + b2pa.distance + b2met.dist
 # + total.farms + dom.farms
 
@@ -73,18 +81,18 @@ biophys.sc <- scale2sd(biophys.cs)
 # total.farms - the total count of farms by CCS region, assigned to each conflict point
 # dom.farms - the dominant farm type (most popular type of agrictulture) by CCS region, assigned to each point
 
-# Run Adam's model sets:
+# Run Conflict Driver Models:
 fullmod.sc <- glm(bears_presence ~ bhs.sc + grizzinc.sc + biophys.sc, family = "binomial")
 ecol.mod.sc <- glm(bears_presence ~ bhs.sc + biophys.sc, family = "binomial") 
 social.mod.sc <- glm(bears_presence ~ grizzinc.sc, family = "binomial") 
 intercept.only.sc <- glm(bears_presence~1, family=binomial(link=logit))
 
-# Add in Covs to Full Mod:
+# Run Full P(conflict) model:
 fullmod.covs.sc <- glm(bears_presence ~ bhs.sc + grizzinc.sc + biophys.sc + b2pa.dist.sc + b2met.dist.sc
-                        + total.farms.sc + dom.farms, family = "binomial")
+                        + total.farms.sc + total.farms.sq.sc + dom.farms, family = "binomial")
 
-fullmod.covs.lm <- lm(bears_presence ~ bhs.sc + grizzinc.sc + biophys.sc + b2pa.dist.sc + b2met.dist.sc
-                       + total.farms.sc + dom.farms)
+#fullmod.covs.lm <- lm(bears_presence ~ bhs.sc + grizzinc.sc + biophys.sc + b2pa.dist.sc + b2met.dist.sc
+#                       + total.farms.sc + dom.farms)
 
 # Individual covariate models (SCALED):
 bhs.glm.sc <- glm(bears_presence ~ bhs.sc, family = "binomial")
@@ -93,7 +101,7 @@ biophys.glm.sc <- glm(bears_presence ~ biophys.sc, family = "binomial")
 
 b2pa.glm.sc <- glm(bears_presence ~ b2pa.dist.sc, family = "binomial")
 b2met.glm.sc <- glm(bears_presence ~ b2met.dist.sc, family = "binomial")
-tot.farm.glm.sc <- glm(bears_presence ~ total.farms.sc, family = "binomial")
+tot.farm.glm.sq.sc <- glm(bears_presence ~ total.farms.sc + total.farms.sq.sc, family = "binomial")
 dom.farm.glm.sc <- glm(bears_presence ~ dom.farms, family = "binomial")
 
 
@@ -162,7 +170,7 @@ summary(fullmod.sc)$coefficients # Pull up summary for coefficients
 summary(ecol.mod.sc) # AIC 7262.3
 summary(social.mod.sc) # AIC 7341
 
-summary(fullmod.covs.sc) # AIC 7131.3
+summary(fullmod.covs.sc) # AIC 7102.5
 # INTERESTING: lowest AIC is in the full model + covs, pretty significantly
 
 # Summaries for individual models
@@ -172,7 +180,7 @@ summary(biophys.glm.sc) # p of <2e-16 *** , AIC 7274
 
 summary(b2pa.glm.sc) # p of 6.5e-05 *** , AIC 7362
 summary(b2met.glm.sc) # p of 5.78e-15 *** , AIC 7318
-summary(tot.farm.glm.sc) # p of 8.05e-11 ***, AIC 7335.6
+summary(tot.farm.glm.sq.sc) # p of 8.05e-11 ***, AIC 7247.5
 summary(dom.farm.glm.sc) # p of 2.42e-11 *** (veg & melon), 1.91e-05 *** (cattle ranching), 2.46e-05 * (other crop farming), AIC 7253.6
 
 

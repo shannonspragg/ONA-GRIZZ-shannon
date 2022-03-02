@@ -1,6 +1,6 @@
 # WARP Conflict Bayesian Logistic Regression ------------------------------------------------
-# This script will be where I import the WARP data and do a mixed affects logistic regression with lme4
-# Important Questions -- NA
+# This script will be where I import the WARP data and do a mixed affects logistic regression with rstanarm
+# Important Questions -- Is it ok to use the student-t prior? 
 
 
 # Load Packages -----------------------------------------------------------
@@ -10,16 +10,31 @@ library(dplyr)
 library(raster)
 library(terra)
 
-library(ggplot2)
-#install.packages("GGally")
+library(tidyverse)
+#install.packages("caret")
+library(caret)
 library(GGally)
-#install.packages("reshape2")
-library(reshape2)
-library(lme4)
-library(compiler)
-library(parallel)
-library(boot)
-library(lattice)
+library(ggplot2)
+library(corrplot)
+library(bayesplot)
+theme_set(bayesplot::theme_default(base_family = "sans"))
+#install.packages("rstanarm")
+library(rstanarm)
+options(mc.cores = 1)
+library(loo)
+#install.packages("projpred")
+library(projpred)
+SEED=14124869
+
+#install.packages("sjPlot")
+library(sjPlot)
+#install.packages("nloptr")
+library(nloptr)
+#install.packages("sjmisc")
+library(sjmisc)
+#install.packages("rsq")
+library(rsq)
+
 
 # Import the All Species Master df for our Southern Interior EcoProvince ----------------------------------------
 
@@ -56,117 +71,15 @@ boxplot(grizzinc.sc ~ dom.farms, data = warp.df)
 boxplot(b2pa.dist.sc ~ dom.farms, data = warp.df)
 
 
-
-# Fit Model with lme4: ----------------------------------------------------
-library(lme4)
-#install.packages("lmerTest")
-library(lmerTest)
-
-#fit a model with random effects and add random intercepts:
-  # NOTE: random effects are typically used for our categorical variable - meaning the intercept or slope varies by category
-full.mod.1 <- glmer(bears_presence ~ b2pa.dist.sc + b2met.dist.sc + total.farms.sc + total.farms.sq + dom.farms + grizzinc.sc
-                   + bhs.sc + biophys.sc + (1|dom.farms), family = binomial, data=warp.df) #without interaction
-
-
-# Sub Models:
-ecol.mod <- glmer(bears_presence ~ biophys.sc + bhs.sc , family = binomial, data = warp.df)
-
-summary(full.mod.1)
-plot(full.mod.1)
-
-
-# Adding Interaction Terms ------------------------------------------------
-# Add some interaction terms - just to see:
-full.mod.int <- glmer(bears_presence ~ b2pa.dist.sc * b2met.dist.sc + total.farms.sc + total.farms.sq + dom.farms + grizzinc.sc
-                      + bhs.sc + biophys.sc + (1|dom.farms),family = binomial, data=warp.df) #with interaction for PA's 
-full.mod.int2 <- glmer(bears_presence ~ b2pa.dist.sc * b2met.dist.sc + total.farms.sq + total.farms.sc * dom.farms + grizzinc.sc
-                       + bhs.sc + biophys.sc + (1|dom.farms),family = binomial, data=warp.df) #with interaction for PA's AND farms
-
-
-# Compare the two models:
-anova(full.mod.1, full.mod.int) # the model with interaction IS slightly lower than that without one
-anova(full.mod.int, full.mod.int2) # looks like model with both interaction terms is best AIC --> could just be due to added terms
-
-
-# Try adding a random slope to the model:
-mod.int.r <- lmer(bears_presence ~ b2pa.dist.sc * b2met.dist.sc + total.farms.sq + total.farms.sc * dom.farms + grizzinc.sc
-                  + bhs.sc + biophys.sc + (biophys.sc|total.farms.sc),data=warp.df)
-anova(full.mod.int2,mod.int.r) # don't really need this random slope, makes AIC increase
-
-# Back to our better model with random intercepts:
-anova(full.mod.int2) # analysis of variance table
-# we can see the effects of most of our variables are "significant", and our interaction terms
-
-
-
-
-# Visualize our Model: ----------------------------------------------------
-#install.packages("sjPlot")
-library(sjPlot)
-#install.packages("nloptr")
-library(nloptr)
-#install.packages("sjmisc")
-library(sjmisc)
-#install.packages("rsq")
-library(rsq)
-
-# Basic Mixed Effect Plot:
-sjPlot::plot_model(full.mod.int2)
-
-
-##### Model Table of Effect Size:
-sjPlot::tab_model(full.mod.int2)
-
-
-
-# Bootstrapping to Resample: ----------------------------------------------
-  # Let's get predictions for all values of bear conflict report presence
-newdat <- subset(warp.df,dom.farms=="Vegetable and melon farming [1112]")
-bb <- bootMer(full.mod.int2, FUN=function(x)predict(x, newdat, re.form=NA),
-              nsim=999)
-
-#extract the quantiles and the fitted values.
-lci <- apply(bb$t, 2, quantile, 0.025)   
-uci <- apply(bb$t, 2, quantile, 0.975)   
-pred <- predict(full.mod.int2,newdat,re.form=NA)
-
-# Plot our confidence intervals:
-library(scales)
-palette(alpha(c("blue","red","forestgreen","darkorange"),0.5))
-plot(grizzinc.sc~jitter(total.farms.sc),col=dom.farms,data=warp.df[warp.df$Dm_Fr_T=="Vegetable and melon farming [1112]",],pch=16)
-lines(pred~grizzinc.sc,newdat,lwd=2,col="orange",alpha=0.5)
-lines(lci~grizzinc.sc,newdat,lty=2,col="orange")
-lines(uci~grizzinc.sc,newdat,lty=2,col="orange")
-
-
-
-
-
-
 # Fit Model with Rstanarm: ------------------------------------------------
-library(tidyverse)
-install.packages("caret")
-library(caret)
-library(GGally)
-library(ggplot2)
-library(corrplot)
-library(bayesplot)
-theme_set(bayesplot::theme_default(base_family = "sans"))
-install.packages("rstanarm")
-library(rstanarm)
-options(mc.cores = 1)
-library(loo)
-install.packages("projpred")
-library(projpred)
-SEED=14124869
 
 # Take a look at our data:
 summary(warp.df)
 mini.warp.df <-  data.frame(bears_presence, b2pa.dist.sc, b2met.dist.sc, total.farms.sq, total.farms.sc, dom.farms, grizzinc.sc, bhs.sc, biophys.sc)
 
 
-# Make a correlation plot of predictors and outcome:
-cor.matrix.df <- data.frame(bears_presence, b2pa.dist.sc, b2met.dist.sc, total.farms.sq, grizzinc.sc, bhs.sc, biophys.sc)
+############ Make a correlation plot of predictors and outcome:
+cor.matrix.df <- data.frame(bears_presence, b2pa.dist.sc, b2met.dist.sc, total.farms.sc , total.farms.sq, grizzinc.sc, bhs.sc, biophys.sc)
 
 cor.matrix <- cor(cor.matrix.df)
 round(cor.matrix, 2)
@@ -174,8 +87,11 @@ round(cor.matrix, 2)
 corrplot(cor.matrix, method = 'number', ) # colorful number
 corrplot(cor.matrix, addCoef.col = 'black')
 
+# Make a plot with proportional circles on a diagonal, coefficent numbers, and legend at the bottom:
+predictor.cor.plot <- corrplot(cor.matrix, type = 'lower', order = 'hclust', tl.col = 'black',addCoef.col = 'dark grey',
+                               cl.ratio = 0.2, tl.srt = 45, col = COL2('PuOr', 10))
 
-# Make our outcome to be factor type and create x and y variables:
+############# Make our outcome to be factor type and create x and y variables:
 mini.warp.df$bears_presence <- factor(mini.warp.df$bears_presence)
 
 # preparing the inputs
@@ -187,7 +103,7 @@ y <-formula(bears_presence ~ b2pa.dist.sc + b2met.dist.sc + dom.farms + total.fa
 n=dim(mini.warp.df)[1]
 p=dim(mini.warp.df)[2]
 
-######## Bayesian logistic regression model:
+########## Bayesian logistic regression model:
   # tutorial here: https://avehtari.github.io/modelselection/diabetes.html 
 # Set our initial priors to students t with df of 7, and a scale of 2.5 (reasonable default fir prior when coefficients should be close to zero but have some chance of being large:
 t_prior <- student_t(df = 7, location = 0, scale = 2.5)
@@ -198,29 +114,37 @@ post1 <- stan_glm(bears_presence ~ b2pa.dist.sc + b2met.dist.sc + dom.farms + to
                   prior = t_prior, prior_intercept = t_prior, QR=TRUE,
                   seed = SEED, refresh=0) # we add seed for reproducability
 
-# Plot the posterior for our different variables:
+
+############# Plot the posterior for our different variables:
 pplot<-plot(post1, "areas", prob = 0.95, prob_outer = 1)
 pplot+ geom_vline(xintercept = 0)
 
 
+############## Posterior Coefficients & Intervals:
 # Extract the posterior median estimates with the coef function (to get a sense of uncertainty in our estimate):
 round(coef(post1), 2)
+
+# Make a table with coefficients:
+sjPlot::tab_model(post1)
+summ(post1)
+(coef(post1))
 
 # Use posterior_interval to get our Bayesian uncertainty intervals
 round(posterior_interval(post1, prob = 0.9), 2) # comnpute median and 90% intervals
 # interpret this as: we believe that after seeing the data, there is a 0.90 probability that b2pa.dist is between ci90[1,1] and ci90[1,2]
 
 
-
 # Leave-one-out Cross_validation: -----------------------------------------
 
+############## Run a Leave-One-Out (LOO):
 # Loo package implements fast Pareto smoothed leave-one-out-cross-val (PSIS-LOO) to compute expected log predictive density:
 (loo1 <- loo(post1, save_psis = TRUE))
 # Above we see that PSIS-LOO result is reliable as all Pareto k estimates are small (k< 0.5) Vehtari, Gelman and Gabry (2017a).
 
+plot(loo1, label_points = TRUE)
+loo1 # get the summary of our test
 
-
-# Comparison to Baseline Model: -------------------------------------------
+############## Comparison to Baseline Model: -------------------------------------------
 
 # Compute our baseline result without covariates:
 post0 <- update(post1, formula = bears_presence ~ 1, QR = FALSE, refresh=0)
@@ -231,7 +155,7 @@ post0 <- update(post1, formula = bears_presence ~ 1, QR = FALSE, refresh=0)
 loo_compare(loo0, loo1) # this high negative value for post0 shows us the covariates contain clearly useful information for predictions
 
 
-# Other predictive preformance measures: ----------------------------------
+############## Other predictive performance measures: ----------------------------------
 
 # For more easily interpretable predictive performance measures, 
 # we next compute posterior predictive probabilities and use them to compute classification error
@@ -258,11 +182,36 @@ round(mean(xor(ploo>0.5,as.integer(y==0))),2) # 0.11 result
 # LOO balanced classification accuracy
 round((mean(xor(ploo[y==0]>0.5,as.integer(y[y==0])))+mean(xor(ploo[y==1]<0.5,as.integer(y[y==1]))))/2,2)
 
-# We can see the small difference in posterior predictive probabilities and LOO probabilities:
+############# Plot Differences -- posterior predictive probs vs LOO probs:
+# We can see the very small difference in posterior predictive probabilities and LOO probabilities:
 qplot(pred, ploo)
 
 
-########## Calibration of Predictions:
+# Plotting our Posterior & Chains: ----------------------------------------
+
+############### Let's look at all our parameters together in a paiwise plot:
+color_scheme_set("pink")
+mcmc_pairs(as.matrix(post1), pars = c("(Intercept)", "b2pa.dist.sc","b2met.dist.sc","bhs.sc","biophys.sc", "grizzinc.sc","total.farms.sq" ),
+           off_diag_args = list(size= 1.5)) # look at dist2PA and dist2Met
+
+############### Plot our MCMC chains mixing:
+color_scheme_set("mix-blue-red")
+mcmc_trace(post1, pars = c("b2pa.dist.sc","b2met.dist.sc","bhs.sc","biophys.sc", "grizzinc.sc","total.farms.sq"), 
+           facet_args = list(ncol = 1, strip.position = "left"))
+
+# One with just the ag variables:
+mcmc_trace(post1, pars = c("dom.farmsVegetable and melon farming [1112]" , "dom.farmsCattle ranching and farming [1121]", "dom.farmsOther crop farming [1119]" ,"total.farms.sq"), 
+           facet_args = list(ncol = 1, strip.position = "left"))
+
+############### Plot MCMC posterior areas:
+mcmc_areas(as.matrix(post1), prob = 0.95, prob_outer = 1)
+
+# Posterior parameter histograms:
+mcmc_hist(post2)
+mcmc_hist_by_chain(post2, pars = c("dom.farmsVegetable and melon farming [1112]"))
+
+
+# Calibration of Predictions: ---------------------------------------------
 
 # change y to factor:
 y <- as.character(y)
@@ -287,6 +236,7 @@ ggplot(data = data.frame(pred=pred,loopred=ploo,y=as.numeric(y)-1), aes(x=loopre
 
 # Alternative horseshoe prior on weights: ---------------------------------
 
+################## Using a Horseshoe Prior:
 # In this example, with n>>p the difference is small, and thus we don’t expect much difference with a 
 # different prior and regularized horseshoe prior (Piironen and Vehtari, 2017) is usually more useful for n<p. 
 
@@ -310,12 +260,15 @@ pplot + geom_vline(xintercept = 0)
 round(coef(post2), 2)
 round(posterior_interval(post2, prob = 0.9), 2)
 
+############# Run a LOO for our new posterior:
 # We compute LOO also for the model with the regularized horseshoe prior. 
 # Expected log predictive density is higher, but not significantly. This is not surprising as this is a easy data with n>>p.
 (loo2 <- loo(post2))
 
 loo_compare(loo1, loo2) # our negative value for post2 again shows the predictive value of post1
 
+
+############### Plot out MCMC Pairwise Parameters:
 # Looking at the pairwise posteriors we can see that, for example, IF posteriors for two variable effects are correlating 
 # THEN we can’t rely on inferring variable relevance by looking at the marginal distributions.
 
@@ -324,24 +277,56 @@ mcmc_pairs(as.matrix(post2), pars = c("grizzinc.sc","total.farms.sq")) # look at
 mcmc_pairs(as.matrix(post2), pars = c("bhs.sc","biophys.sc")) # look at BHS and biophys
 # These two actually DO appear slightly negatively correlated --> can't rely on inferring variable relevance by looking at their marginal distributions
 
-mcmc_pairs(as.matrix(post2), pars = c("b2pa.dist.sc","b2met.dist.sc")) # look at dist2PA and dist2Met
+
+############### Let's plot all our parameters together:
+color_scheme_set("pink")
+mcmc_pairs(as.matrix(post2), pars = c("(Intercept)", "b2pa.dist.sc","b2met.dist.sc","bhs.sc","biophys.sc", "grizzinc.sc","total.farms.sq" ),
+           off_diag_args = list(size= 1.5)) # look at dist2PA and dist2Met
+
+############## Plot our MCMC chains mixing:
+color_scheme_set("mix-blue-red")
+mcmc_trace(post2, pars = c("b2pa.dist.sc","b2met.dist.sc","bhs.sc","biophys.sc", "grizzinc.sc","total.farms.sq"), 
+           facet_args = list(ncol = 1, strip.position = "left"))
+
+mcmc_trace(post2, pars = c("dom.farmsVegetable and melon farming [1112]" , "dom.farmsCattle ranching and farming [1121]", "dom.farmsOther crop farming [1119]" ,"total.farms.sq"), 
+           facet_args = list(ncol = 1, strip.position = "left"))
+
+############## Let's see our posterior areas:
+mcmc_areas(as.matrix(post2), prob = 0.95, prob_outer = 1)
+
+# Posterior parameter histograms:
+mcmc_hist(post2)
+mcmc_hist_by_chain(post2, pars = c("dom.farmsVegetable and melon farming [1112]"))
 
 
-########### START HERE #####################
 # Projection predictive variable selection: -------------------------------
   # Next we do variable selection using projection predictive variable selection
 
-varsel2 <- cv_varsel(post2, method='forward', cv_method='loo', nloo = n)
+varsel2 <- cv_varsel(post1, method='forward', cv_method='loo', nloo = n)
 
 # We get a LOO based recommendation for the model size and the selected variables
 (nsel<-suggest_size(varsel2))
 
-(vsel<-solution_terms(varsel2)[1:nsel])
+(vsel<-solution_terms(varsel2)[1:nsel]) # this shows us the recommended variables
 
 # We can now look at the estimated predictive performance of smaller models compared to the full model:
 
 plot(varsel2, stats = c('elpd', 'pctcorr'), deltas=FALSE)
 
+# Next we form the projected posterior for the chosen model.
+
+proj2 <- project(varsel2, nv = nsel, ns = 4000)
+proj2draws <- as.matrix(proj2)
+colnames(proj2draws) <- c("Intercept",vsel)
+round(colMeans(proj2draws),1) # this gives us the means for our variables
+
+# Pull up the interval for our posterior:
+round(posterior_interval(proj2draws),1)
+
+# Plot our mcmc areas: The projected posterior can be used to make predictions in the future (with no need to measure the left out variables).
+
+mcmc_areas(proj2draws, prob = 0.95, prob_outer = 1,
+           pars = c('Intercept', vsel))
 
 
 

@@ -210,6 +210,33 @@ mcmc_areas(as.matrix(post1), prob = 0.95, prob_outer = 1)
 mcmc_hist(post2)
 mcmc_hist_by_chain(post2, pars = c("dom.farmsVegetable and melon farming [1112]"))
 
+############## Plot Posterior Mixed Effects:
+# Basic Mixed Effect Plot:
+sjPlot::plot_model(post1)
+
+# Labeled Effect Plot:
+# Notes: axis labels should be in order from bottom to top. 
+# To see the values of the effect size and p-value, set show.values and show.p= TRUE
+post1.effects.plot <- sjPlot::plot_model(post1, 
+                   axis.labels=c("CS Biophysical (HII + topo ruggedness)","Bear Habitat Suitability", "Grizz Increase", "Total Farm Count ^2" ,"Total Farm Count" ,"Vegetable & Melon Farming" ,
+                                 "Other Crop Farming (tobacco, peanut, sugar-cane, hay, herbs & spices) ", "Other Animal Production (bees & honey, equine, fur-bearers)" , "Fruit & Tree Nut Farming" , "Cattle Ranching & Farming" ,
+                                   "Distance to Metro Area (km)" , "Distance to Protected Area (km)"),
+                   show.values=TRUE, show.p=FALSE,
+                   title="Effects of Social & Environmental Variables on Bear Conflict")
+
+##### Model Table of Effect Size:
+sjPlot::tab_model(post1)
+
+# Formatted Table (with labels):
+# Notes: predictor labels (pred.labels) should be listed from top to bottom; dv.labels= the name of the response variable that will be at the top of the table.
+
+post1.effects.tab <- sjPlot::tab_model(post1, 
+                  show.re.var= TRUE, show.se = TRUE , show.p = TRUE , show.r2 = TRUE, show.aic = TRUE , 
+                  pred.labels =c("(Intercept)" , "Distance to Protected Area (km)", "Distance to Metro Area (km)", "Cattle Ranching & Farming" , "Fruit & Tree Nut Farming" ,"Other Animal Production (bees & honey, equine, fur-bearers)" ,
+                                 "Other Crop Farming (tobacco, peanut, sugar-cane, hay, herbs & spices) ", "Vegetable & Melon Farming" , "Total Farm Count" , "Total Farm Count ^2" , "Grizz Increase", "Bear Habitat Suitability", "CS Biophysical (HII + topo ruggedness)"),
+                                 dv.labels= "Effects of Social & Environmental Variables on Bear Conflict")
+
+
 
 # Calibration of Predictions: ---------------------------------------------
 
@@ -234,7 +261,7 @@ ggplot(data = data.frame(pred=pred,loopred=ploo,y=as.numeric(y)-1), aes(x=loopre
 
 
 
-# Alternative horseshoe prior on weights: ---------------------------------
+# Alternative horseshoe prior on weights: --------------------------------------------------------
 
 ################## Using a Horseshoe Prior:
 # In this example, with n>>p the difference is small, and thus we don’t expect much difference with a 
@@ -299,7 +326,7 @@ mcmc_hist(post2)
 mcmc_hist_by_chain(post2, pars = c("dom.farmsVegetable and melon farming [1112]"))
 
 
-# Projection predictive variable selection: -------------------------------
+############## Projection predictive variable selection: -------------------------------
   # Next we do variable selection using projection predictive variable selection
 
 varsel2 <- cv_varsel(post1, method='forward', cv_method='loo', nloo = n)

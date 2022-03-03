@@ -114,10 +114,19 @@ post1 <- stan_glm(bears_presence ~ b2pa.dist.sc + b2met.dist.sc + dom.farms + to
                   prior = t_prior, prior_intercept = t_prior, QR=TRUE,
                   seed = SEED, refresh=0) # we add seed for reproducability
 
-
+stan.glm.fit <- stan_glm(bears_presence ~ b2pa.dist.sc + b2met.dist.sc + dom.farms + total.farms.sc + total.farms.sq + grizzinc.sc + bhs.sc + biophys.sc, data = mini.warp.df,
+                         family = binomial(link = "logit"))
+                         
+                         
 ############# Plot the posterior for our different variables:
 pplot<-plot(post1, "areas", prob = 0.95, prob_outer = 1)
 pplot+ geom_vline(xintercept = 0)
+
+############# Extract the median estimate 
+install.packages("EbayesThresh")
+library(EbayesThresh)
+
+
 
 
 ############## Posterior Coefficients & Intervals:
@@ -166,8 +175,75 @@ preds <- posterior_epred(post1)
 pred <- colMeans(preds)
 pr <- as.integer(pred >= 0.5)
 
-# posterior classification accuracy
+med.preds <- apply(preds, 2, median)
+pr.1 <- median(pred) # extract the median estimate of our posterior probabilites
+
+############## Find area under the curve:
+install.packages("pROC")
+library(pROC)
+library(bayestestR)
+install.packages("randomForest")
+library(randomForest)
+
+area_under_curve(med.preds, linpred, method = "trapezoid")
+
+# Running example -- obese = bears_pres
+stan.glm.fit
+glm.fit <- glm(bears_presence ~ b2pa.dist.sc , family = binomial)
+plot(x=b2pa.dist.sc, y=bears_presence)
+lines(b2pa.dist.sc, glm.fit$fitted.values)
+
+# Plot ROC:
+par(pty="s") # sets our graph to square
+roc(bears_presence, stan.glm.fit$fitted.values, plot=TRUE, legacy.axes=TRUE, percent=TRUE ,
+    xlab= "False Positive Percentage", ylab= "True Positive Percentage",
+    col="#377eb8", lwd=4, print.auc=TRUE) # this gives us the ROC curve , in 3544 conrols (bears 0) < 2062 cases (bears 1), Area under curve = 0.6547
+
+# Calculate partial AUC on graph:
+roc(bears_presence, stan.glm.fit$fitted.values, plot=TRUE, legacy.axes=TRUE, percent=TRUE ,
+    xlab= "False Positive Percentage", ylab= "True Positive Percentage",
+    col="#377eb8", lwd=4, print.auc=TRUE, 
+    print.auc.x=45 ,  # specify where on x axis we want AUC to be printed (so as not to block anything)
+    partial.auc=c(100,80),  # 0-20% false positive -- the range of specificity values we want to focus on (100% specificity = 0% on our 1-Specificity axis)
+    auc.polygon = TRUE,   # draw the partial auc
+    auc.polygon.col = "#377eb822") # adding 22 makes it semi-transparent
+
+############### Overlap 2 ROC curves:
+
+# Make random forest model with regression:
+rf.model <- randomForest(factor(bears_presence) ~ b2pa.dist.sc + b2met.dist.sc + dom.farms + total.farms.sc + total.farms.sq + grizzinc.sc + bhs.sc + biophys.sc)
+
+# Plot ROC curve for our regression:
+roc(bears_presence, stan.glm.fit$fitted.values, plot=TRUE, legacy.axes=TRUE, percent=TRUE ,
+    xlab= "False Positive Percentage", ylab= "True Positive Percentage",
+    col="#377eb8", lwd=4, print.auc=TRUE) # this gives us the ROC curve , in 3544 conrols (bears 0) < 2062 cases (bears 1), Area under curve = 0.6547
+
+# Add ROC curve for random forest
+plot.roc(bears_presence, rf.model$votes[,1], percent=TRUE, col='#4daf4a', lwd=4, print.auc=TRUE, add=TRUE, print.auc.y=40)
+
+legend("bottomright", legend=c("Bayes Logistic Regression", "Random Forest"),
+       col=c("#377eb8", "#4daf4a", ldw=4))
+
+
+# Look at range of thresholds for section of curve:
+roc.info <- roc(bears_presence, stan.glm.fit$fitted.values, legacy.axes=TRUE)
+roc.df <- data.frame(     # make a df with our roc values
+  tpp= roc.info$sensitivities*100,  # include all our true positive percentages (by multiplying by 100)
+  fpp=(1 - roc.info$specificities)*100,  # and all our false positive percentages (by multiplying 1- specificity by 100)
+  thresholds= roc.info$thresholds)
+
+head(roc.df) # we see when threshold is -INF , the true positive % (tpp) is 100 (bc all samples that were bears were correctly classified)
+# this first row in the df corresponds to the uppermost right corner of the curve
+tail(roc.df) # this last row corresponds to the bottom left corner of the curve
+
+# Select the range of values when the true positive rate is between 60-80%
+roc.df[roc.df$tpp > 60 & roc.df$tpp < 80,]
+
+# compute posterior classification error
 round(mean(xor(pr,as.integer(y==0))),2) # gives us 0.11
+
+# 
+
 
 # posterior balanced classification accuracy
 round((mean(xor(pr[y==0]>0.5,as.integer(y[y==0])))+mean(xor(pr[y==1]<0.5,as.integer(y[y==1]))))/2,2) # gives NAn??
@@ -176,7 +252,8 @@ round((mean(xor(pr[y==0]>0.5,as.integer(y[y==0])))+mean(xor(pr[y==1]<0.5,as.inte
 
 # LOO predictive probabilities
 ploo=E_loo(preds, loo1$psis_object, type="mean", log_ratios = -log_lik(post1))$value
-# LOO classification accuracy
+
+# compute LOO classification error
 round(mean(xor(ploo>0.5,as.integer(y==0))),2) # 0.11 result
 
 # LOO balanced classification accuracy
@@ -186,6 +263,25 @@ round((mean(xor(ploo[y==0]>0.5,as.integer(y[y==0])))+mean(xor(ploo[y==1]<0.5,as.
 # We can see the very small difference in posterior predictive probabilities and LOO probabilities:
 qplot(pred, ploo)
 
+
+###################### Posterior Predictive Check:
+
+# posterior predictive check
+yrep_stan <- round(colMeans(posterior_predict(post1)))
+table("stan_glm" = yrep_stan, "y_true" = mini.warp.df$bears_presence)
+
+# how do the predictions compare with new data realized from the prior predicitive distribution
+new_beta <- c(rnorm(1, prior_mu[1], prior_sd[1]),
+              rnorm(1, prior_mu[2], prior_sd[2]),
+              rnorm(1, prior_mu[3], prior_sd[3]))
+
+new_dat <- generate_logistic_data(mini.warp.df, X, cons = TRUE)
+yrep_new_stan <- round(colMeans(posterior_predict(fit1, newdata = new_dat)))
+table("stan_glm" = yrep_new_stan, "y_true" = new_dat$y)
+
+pp_check(post1)
+
+??pp_check
 
 # Plotting our Posterior & Chains: ----------------------------------------
 

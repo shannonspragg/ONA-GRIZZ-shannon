@@ -38,8 +38,9 @@ library(rsq)
 
 # Import the All Species Master df for our Southern Interior EcoProvince ----------------------------------------
 
-warp.df <- st_read("/Users/shannonspragg/ONA_GRIZZ/WARP Bears /WARP Cropped - SIP/warp_crop_10km_buf.shp")
-
+#warp.df <- st_read("/Users/shannonspragg/ONA_GRIZZ/WARP Bears /WARP Cropped - SIP/warp_crop_10km_buf.shp")
+warp.df <- st_read("/Users/shannonspragg/ONA_GRIZZ/WARP Bears /WARP Cropped - SIP/warp_crom_10_ccs.shp")
+str(warp.df)
 
 # Scale the Variables: ----------------------------------------------------------
 
@@ -58,6 +59,11 @@ bears_presence <- warp.df$bears # Binomial bears
 dom.farms <- warp.df$Dm_Fr_T # Dominant farm type covariate -- non numeric
 dom.farms <- as.factor(warp.df$Dm_Fr_T) # Making this work as a factor
 
+warp.df$CCSNAME <- as.factor(warp.df$CCSNAME)
+warp.df$CCSUID <- as.factor(warp.df$CCSUID)
+
+CCSUID <- warp.df$CCSUID
+CCSNAME <- warp.df$CCSNAME
 # Add an QUADRATIC term for Farm Count: -----------------------------------
 # We want to add a quadratic term to farm count so that we can better interpret it against P(conflict)
 total.farms.sq <- total.farms.sc*total.farms.sc
@@ -75,8 +81,7 @@ boxplot(b2pa.dist.sc ~ dom.farms, data = warp.df)
 
 # Take a look at our data:
 summary(warp.df)
-mini.warp.df <-  data.frame(bears_presence, b2pa.dist.sc, b2met.dist.sc, total.farms.sq, total.farms.sc, dom.farms, grizzinc.sc, bhs.sc, biophys.sc)
-
+mini.warp.df <-  data.frame(bears_presence, b2pa.dist.sc, b2met.dist.sc, total.farms.sq, total.farms.sc, dom.farms, grizzinc.sc, bhs.sc, biophys.sc, CCSUID, CCSNAME)
 
 ############ Make a correlation plot of predictors and outcome:
 cor.matrix.df <- data.frame(bears_presence, b2pa.dist.sc, b2met.dist.sc, total.farms.sc , total.farms.sq, grizzinc.sc, bhs.sc, biophys.sc)
@@ -103,8 +108,10 @@ y <-formula(bears_presence ~ b2pa.dist.sc + b2met.dist.sc + dom.farms + total.fa
 n=dim(mini.warp.df)[1]
 p=dim(mini.warp.df)[2]
 
-########## Bayesian logistic regression model:
+
+# Fitting our Posterior Regression: ---------------------------------------
   # tutorial here: https://avehtari.github.io/modelselection/diabetes.html 
+
 # Set our initial priors to students t with df of 7, and a scale of 2.5 (reasonable default fir prior when coefficients should be close to zero but have some chance of being large:
 t_prior <- student_t(df = 7, location = 0, scale = 2.5)
 
@@ -114,24 +121,28 @@ post1 <- stan_glm(bears_presence ~ b2pa.dist.sc + b2met.dist.sc + dom.farms + to
                   prior = t_prior, prior_intercept = t_prior, QR=TRUE,
                   seed = SEED, refresh=0) # we add seed for reproducability
 
-stan.glm.fit <- stan_glm(bears_presence ~ b2pa.dist.sc + b2met.dist.sc + dom.farms + total.farms.sc + total.farms.sq + grizzinc.sc + bhs.sc + biophys.sc, data = mini.warp.df,
-                         family = binomial(link = "logit"))
-                         
-                         
+##### Add in a Varying Intercept for SOI CCS Region:
+post1.var.int <- stan_glmer(bears_presence ~ b2pa.dist.sc + b2met.dist.sc + dom.farms + total.farms.sc + total.farms.sq + grizzinc.sc + bhs.sc + biophys.sc + (1 | CCSNAME), data = mini.warp.df,
+                  family = binomial(link = "logit"), # define our binomial glm
+                  prior = t_prior, prior_intercept = t_prior, QR=TRUE,
+                  seed = SEED, refresh=0) # we add seed for reproducability
+
+
+
+
 ############# Plot the posterior for our different variables:
 pplot<-plot(post1, "areas", prob = 0.95, prob_outer = 1)
 pplot+ geom_vline(xintercept = 0)
 
-############# Extract the median estimate 
-install.packages("EbayesThresh")
-library(EbayesThresh)
-
-
+# Try this with the random intercept:
+pplot<-plot(post1.var.int, "areas", prob = 0.95, prob_outer = 1)
+pplot+ geom_vline(xintercept = 0)
 
 
 ############## Posterior Coefficients & Intervals:
 # Extract the posterior median estimates with the coef function (to get a sense of uncertainty in our estimate):
 round(coef(post1), 2)
+
 
 # Make a table with coefficients:
 sjPlot::tab_model(post1)
@@ -178,29 +189,57 @@ pr <- as.integer(pred >= 0.5)
 med.preds <- apply(preds, 2, median)
 pr.1 <- median(pred) # extract the median estimate of our posterior probabilites
 
-############## Find area under the curve:
-install.packages("pROC")
+# Let's better estimate the predictive performance for new not yet seen data we next use leave-one-out cross-validation:
+
+# LOO predictive probabilities
+ploo=E_loo(preds, loo1$psis_object, type="mean", log_ratios = -log_lik(post1))$value
+
+# compute LOO classification error
+round(mean(xor(ploo>0.5,as.integer(y==0))),2) # 0.11 result
+
+# LOO balanced classification accuracy
+round((mean(xor(ploo[y==0]>0.5,as.integer(y[y==0])))+mean(xor(ploo[y==1]<0.5,as.integer(y[y==1]))))/2,2)
+
+
+#### Plot Differences -- posterior predictive probs vs LOO probs:
+# We can see the very small difference in posterior predictive probabilities and LOO probabilities:
+qplot(pred, ploo)
+
+
+#  Find area under the curve & Compare Posterior Predictions: ---------------------------------------------
+#install.packages("pROC")
 library(pROC)
 library(bayestestR)
-install.packages("randomForest")
+#install.packages("randomForest")
 library(randomForest)
 
 area_under_curve(med.preds, linpred, method = "trapezoid")
 
 # Running example -- obese = bears_pres
-stan.glm.fit
-glm.fit <- glm(bears_presence ~ b2pa.dist.sc , family = binomial)
-plot(x=b2pa.dist.sc, y=bears_presence)
-lines(b2pa.dist.sc, glm.fit$fitted.values)
+# Make glm model for the regression
+stan.glm.fit <- stan_glm(bears_presence ~ b2pa.dist.sc + b2met.dist.sc + dom.farms + total.farms.sc + total.farms.sq + grizzinc.sc + bhs.sc + biophys.sc, data = mini.warp.df,
+                         family = binomial(link = "logit"))
+
+# Model for the posterior1
+stan.glm.fit1 <- stan_glm(bears_presence ~ b2pa.dist.sc + b2met.dist.sc + dom.farms + total.farms.sc + total.farms.sq + grizzinc.sc + bhs.sc + biophys.sc, data = mini.warp.df,
+                             family = binomial(link = "logit"), # define our binomial glm
+                             prior = t_prior, prior_intercept = t_prior, QR=TRUE,
+                             seed = SEED, refresh=0) # we add seed for reproducability
+
+post.var.int.fit <- stan_glm(bears_presence ~ b2pa.dist.sc + b2met.dist.sc + dom.farms + total.farms.sc + total.farms.sq + grizzinc.sc + bhs.sc + biophys.sc + (1 | CCSNAME), 
+                               data = mini.warp.df,
+                               family = binomial(link = "logit"), # define our binomial glm
+                               prior = t_prior, prior_intercept = t_prior, QR=TRUE,
+                               seed = SEED, refresh=0) # we add seed for reproducability
 
 # Plot ROC:
 par(pty="s") # sets our graph to square
-roc(bears_presence, stan.glm.fit$fitted.values, plot=TRUE, legacy.axes=TRUE, percent=TRUE ,
+roc(bears_presence, stan.glm.fit1$fitted.values, plot=TRUE, legacy.axes=TRUE, percent=TRUE ,
     xlab= "False Positive Percentage", ylab= "True Positive Percentage",
     col="#377eb8", lwd=4, print.auc=TRUE) # this gives us the ROC curve , in 3544 conrols (bears 0) < 2062 cases (bears 1), Area under curve = 0.6547
 
 # Calculate partial AUC on graph:
-roc(bears_presence, stan.glm.fit$fitted.values, plot=TRUE, legacy.axes=TRUE, percent=TRUE ,
+roc(bears_presence, stan.glm.fit1$fitted.values, plot=TRUE, legacy.axes=TRUE, percent=TRUE ,
     xlab= "False Positive Percentage", ylab= "True Positive Percentage",
     col="#377eb8", lwd=4, print.auc=TRUE, 
     print.auc.x=45 ,  # specify where on x axis we want AUC to be printed (so as not to block anything)
@@ -208,13 +247,21 @@ roc(bears_presence, stan.glm.fit$fitted.values, plot=TRUE, legacy.axes=TRUE, per
     auc.polygon = TRUE,   # draw the partial auc
     auc.polygon.col = "#377eb822") # adding 22 makes it semi-transparent
 
+# Plot ROC for our Random Intercept Model:
+par(pty="s") # sets our graph to square
+roc(bears_presence, post.var.int.fit$fitted.values, plot=TRUE, legacy.axes=TRUE, percent=TRUE ,
+    xlab= "False Positive Percentage", ylab= "True Positive Percentage",
+    col="#377eb8", lwd=4, print.auc=TRUE) # this gives us the ROC curve , in 3544 conrols (bears 0) < 2062 cases (bears 1), Area under curve = 0.6547
+
+
+
 ############### Overlap 2 ROC curves:
 
 # Make random forest model with regression:
 rf.model <- randomForest(factor(bears_presence) ~ b2pa.dist.sc + b2met.dist.sc + dom.farms + total.farms.sc + total.farms.sq + grizzinc.sc + bhs.sc + biophys.sc)
 
 # Plot ROC curve for our regression:
-roc(bears_presence, stan.glm.fit$fitted.values, plot=TRUE, legacy.axes=TRUE, percent=TRUE ,
+roc(bears_presence, stan.glm.fit1$fitted.values, plot=TRUE, legacy.axes=TRUE, percent=TRUE ,
     xlab= "False Positive Percentage", ylab= "True Positive Percentage",
     col="#377eb8", lwd=4, print.auc=TRUE) # this gives us the ROC curve , in 3544 conrols (bears 0) < 2062 cases (bears 1), Area under curve = 0.6547
 
@@ -222,10 +269,12 @@ roc(bears_presence, stan.glm.fit$fitted.values, plot=TRUE, legacy.axes=TRUE, per
 plot.roc(bears_presence, rf.model$votes[,1], percent=TRUE, col='#4daf4a', lwd=4, print.auc=TRUE, add=TRUE, print.auc.y=40)
 
 legend("bottomright", legend=c("Bayes Logistic Regression", "Random Forest"),
-       col=c("#377eb8", "#4daf4a", ldw=4))
+       col=c("#377eb8", "#4daf4a"), lwd = 4)
+#******* What this tells us: a 65% discrimination (model predictions are correct 65% of the time) is not great. (50% = no discrimination).
+#* So we want to shoot for a better model --> one with 75-90% discrimination if we can get it.
 
 
-# Look at range of thresholds for section of curve:
+############### Look at range of thresholds for section of curve:
 roc.info <- roc(bears_presence, stan.glm.fit$fitted.values, legacy.axes=TRUE)
 roc.df <- data.frame(     # make a df with our roc values
   tpp= roc.info$sensitivities*100,  # include all our true positive percentages (by multiplying by 100)
@@ -242,46 +291,8 @@ roc.df[roc.df$tpp > 60 & roc.df$tpp < 80,]
 # compute posterior classification error
 round(mean(xor(pr,as.integer(y==0))),2) # gives us 0.11
 
-# 
-
-
 # posterior balanced classification accuracy
 round((mean(xor(pr[y==0]>0.5,as.integer(y[y==0])))+mean(xor(pr[y==1]<0.5,as.integer(y[y==1]))))/2,2) # gives NAn??
-
-# Let's better estimate the predictive performance for new not yet seen data we next use leave-one-out cross-validation:
-
-# LOO predictive probabilities
-ploo=E_loo(preds, loo1$psis_object, type="mean", log_ratios = -log_lik(post1))$value
-
-# compute LOO classification error
-round(mean(xor(ploo>0.5,as.integer(y==0))),2) # 0.11 result
-
-# LOO balanced classification accuracy
-round((mean(xor(ploo[y==0]>0.5,as.integer(y[y==0])))+mean(xor(ploo[y==1]<0.5,as.integer(y[y==1]))))/2,2)
-
-############# Plot Differences -- posterior predictive probs vs LOO probs:
-# We can see the very small difference in posterior predictive probabilities and LOO probabilities:
-qplot(pred, ploo)
-
-
-###################### Posterior Predictive Check:
-
-# posterior predictive check
-yrep_stan <- round(colMeans(posterior_predict(post1)))
-table("stan_glm" = yrep_stan, "y_true" = mini.warp.df$bears_presence)
-
-# how do the predictions compare with new data realized from the prior predicitive distribution
-new_beta <- c(rnorm(1, prior_mu[1], prior_sd[1]),
-              rnorm(1, prior_mu[2], prior_sd[2]),
-              rnorm(1, prior_mu[3], prior_sd[3]))
-
-new_dat <- generate_logistic_data(mini.warp.df, X, cons = TRUE)
-yrep_new_stan <- round(colMeans(posterior_predict(fit1, newdata = new_dat)))
-table("stan_glm" = yrep_new_stan, "y_true" = new_dat$y)
-
-pp_check(post1)
-
-??pp_check
 
 # Plotting our Posterior & Chains: ----------------------------------------
 
@@ -334,6 +345,7 @@ post1.effects.tab <- sjPlot::tab_model(post1,
 
 
 
+
 # Calibration of Predictions: ---------------------------------------------
 
 # change y to factor:
@@ -354,6 +366,7 @@ ggplot(data = data.frame(pred=pred,loopred=ploo,y=as.numeric(y)-1), aes(x=loopre
   geom_jitter(height=0.02, width=0, alpha=0.3) +
   scale_y_continuous(breaks=seq(0,1,by=0.1)) +
   xlim(c(0,1))
+
 
 
 
@@ -420,6 +433,7 @@ mcmc_areas(as.matrix(post2), prob = 0.95, prob_outer = 1)
 # Posterior parameter histograms:
 mcmc_hist(post2)
 mcmc_hist_by_chain(post2, pars = c("dom.farmsVegetable and melon farming [1112]"))
+
 
 
 ############## Projection predictive variable selection: -------------------------------

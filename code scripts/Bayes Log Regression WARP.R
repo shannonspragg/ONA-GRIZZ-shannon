@@ -34,7 +34,13 @@ library(nloptr)
 library(sjmisc)
 #install.packages("rsq")
 library(rsq)
-
+#install.packages("tidybayes")
+library(tidybayes)
+#install.packages("pROC")
+library(pROC)
+library(bayestestR)
+#install.packages("randomForest")
+library(randomForest)
 
 # Import the All Species Master df for our Southern Interior EcoProvince ----------------------------------------
 
@@ -64,6 +70,10 @@ warp.df$CCSUID <- as.factor(warp.df$CCSUID)
 
 CCSUID <- warp.df$CCSUID
 CCSNAME <- warp.df$CCSNAME
+
+which(is.na(mini.warp.df$CCSNAME)) # Like 200 NA's!!
+which(is.na(mini.warp.df$CCSUID)) # Like 200 NA's!!
+
 # Add an QUADRATIC term for Farm Count: -----------------------------------
 # We want to add a quadratic term to farm count so that we can better interpret it against P(conflict)
 total.farms.sq <- total.farms.sc*total.farms.sc
@@ -82,6 +92,7 @@ boxplot(b2pa.dist.sc ~ dom.farms, data = warp.df)
 # Take a look at our data:
 summary(warp.df)
 mini.warp.df <-  data.frame(bears_presence, b2pa.dist.sc, b2met.dist.sc, total.farms.sq, total.farms.sc, dom.farms, grizzinc.sc, bhs.sc, biophys.sc, CCSUID, CCSNAME)
+str(mini.warp.df)
 
 ############ Make a correlation plot of predictors and outcome:
 cor.matrix.df <- data.frame(bears_presence, b2pa.dist.sc, b2met.dist.sc, total.farms.sc , total.farms.sq, grizzinc.sc, bhs.sc, biophys.sc)
@@ -98,6 +109,7 @@ predictor.cor.plot <- corrplot(cor.matrix, type = 'lower', order = 'hclust', tl.
 
 ############# Make our outcome to be factor type and create x and y variables:
 mini.warp.df$bears_presence <- factor(mini.warp.df$bears_presence)
+str(mini.warp.df)
 
 # preparing the inputs
 x <- model.matrix(bears_presence ~ . - 1, data = mini.warp.df)
@@ -116,18 +128,18 @@ p=dim(mini.warp.df)[2]
 t_prior <- student_t(df = 7, location = 0, scale = 2.5)
 
 # Build our posterior distribution: stan_glm returns the posterior dist for parameters describing the uncertainty related to unknown parameter values
-post1 <- stan_glm(bears_presence ~ b2pa.dist.sc + b2met.dist.sc + dom.farms + total.farms.sc + total.farms.sq + grizzinc.sc + bhs.sc + biophys.sc, data = mini.warp.df,
+post1 <- stan_glm(bears_presence ~ b2pa.dist.sc + b2met.dist.sc + dom.farms + total.farms.sc + total.farms.sq + grizzinc.sc + bhs.sc + biophys.sc, 
+                  data = mini.warp.df,
                   family = binomial(link = "logit"), # define our binomial glm
                   prior = t_prior, prior_intercept = t_prior, QR=TRUE,
                   seed = SEED, refresh=0) # we add seed for reproducability
 
 ##### Add in a Varying Intercept for SOI CCS Region:
-post1.var.int <- stan_glmer(bears_presence ~ b2pa.dist.sc + b2met.dist.sc + dom.farms + total.farms.sc + total.farms.sq + grizzinc.sc + bhs.sc + biophys.sc + (1 | CCSNAME), data = mini.warp.df,
+post1.var.int <- stan_glmer(bears_presence ~ b2pa.dist.sc + b2met.dist.sc + dom.farms + total.farms.sc + total.farms.sq + grizzinc.sc + bhs.sc + biophys.sc + (1 | CCSNAME), 
+                  data = mini.warp.df,
                   family = binomial(link = "logit"), # define our binomial glm
                   prior = t_prior, prior_intercept = t_prior, QR=TRUE,
                   seed = SEED, refresh=0) # we add seed for reproducability
-
-
 
 
 ############# Plot the posterior for our different variables:
@@ -200,6 +212,14 @@ round(mean(xor(ploo>0.5,as.integer(y==0))),2) # 0.11 result
 # LOO balanced classification accuracy
 round((mean(xor(ploo[y==0]>0.5,as.integer(y[y==0])))+mean(xor(ploo[y==1]<0.5,as.integer(y[y==1]))))/2,2)
 
+##### Do this for our other posterior:
+linpred.int <- posterior_linpred(post1.var.int)
+preds.int <- posterior_epred(post1.var.int)
+pred.int <- colMeans(preds.int) # here are our mean predictions for the posterior
+med.preds.int <- apply(preds.int, 2, median)
+pr.2 <- median(pred.int) # extract the median estimate of our posterior probabilities
+
+
 
 #### Plot Differences -- posterior predictive probs vs LOO probs:
 # We can see the very small difference in posterior predictive probabilities and LOO probabilities:
@@ -207,13 +227,8 @@ qplot(pred, ploo)
 
 
 #  Find area under the curve & Compare Posterior Predictions: ---------------------------------------------
-#install.packages("pROC")
-library(pROC)
-library(bayestestR)
-#install.packages("randomForest")
-library(randomForest)
 
-area_under_curve(med.preds, linpred, method = "trapezoid")
+area_under_curve(med.preds.int, linpred.int, method = "trapezoid")
 
 # Running example -- obese = bears_pres
 # Make glm model for the regression
@@ -226,11 +241,13 @@ stan.glm.fit1 <- stan_glm(bears_presence ~ b2pa.dist.sc + b2met.dist.sc + dom.fa
                              prior = t_prior, prior_intercept = t_prior, QR=TRUE,
                              seed = SEED, refresh=0) # we add seed for reproducability
 
-post.var.int.fit <- stan_glm(bears_presence ~ b2pa.dist.sc + b2met.dist.sc + dom.farms + total.farms.sc + total.farms.sq + grizzinc.sc + bhs.sc + biophys.sc + (1 | CCSNAME), 
+post.var.int.fit <- stan_glmer(bears_presence ~ b2pa.dist.sc + b2met.dist.sc + dom.farms + total.farms.sc + total.farms.sq + grizzinc.sc + bhs.sc + biophys.sc + (1 | CCSNAME), 
                                data = mini.warp.df,
                                family = binomial(link = "logit"), # define our binomial glm
                                prior = t_prior, prior_intercept = t_prior, QR=TRUE,
                                seed = SEED, refresh=0) # we add seed for reproducability
+
+
 
 # Plot ROC:
 par(pty="s") # sets our graph to square
@@ -249,9 +266,11 @@ roc(bears_presence, stan.glm.fit1$fitted.values, plot=TRUE, legacy.axes=TRUE, pe
 
 # Plot ROC for our Random Intercept Model:
 par(pty="s") # sets our graph to square
-roc(bears_presence, post.var.int.fit$fitted.values, plot=TRUE, legacy.axes=TRUE, percent=TRUE ,
+roc(bears_presence, post1.var.int$fitted.values, plot=TRUE, legacy.axes=TRUE, percent=TRUE ,
     xlab= "False Positive Percentage", ylab= "True Positive Percentage",
     col="#377eb8", lwd=4, print.auc=TRUE) # this gives us the ROC curve , in 3544 conrols (bears 0) < 2062 cases (bears 1), Area under curve = 0.6547
+
+roc(bears_presence, med.preds.int, plot=TRUE)
 
 
 

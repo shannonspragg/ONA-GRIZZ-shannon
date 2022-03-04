@@ -41,29 +41,39 @@ plot(st_geometry(bc.ccs.reproj))
 plot(st_geometry(soi.region), add=TRUE)
 
 
-# Crop CCS Down to SOI Extent: --------------------------------------------
-soi.crop <- st_intersection(bc.ccs.reproj, soi.region)
+# Buffer our SOI Region by 10km to match WARP df: -------------------------
+
+# Buffer our Boundary to Match Points:
+soi.10k.buf <- st_buffer(soi.region, 10000)
+
+st_write(soi.10k.buf, "/Users/shannonspragg/ONA_GRIZZ/CAN Spatial Data/SOI Ecoprovince Boundary/SOI_10km_buf.shp")
+
+# Crop CCS Down to SOI 10km Extent: --------------------------------------------
+soi.crop <- st_intersection(bc.ccs.reproj, soi.10k.buf)
 
 # Write this as a .shp for later: -----------------------------------------
 
-st_write(soi.crop, "/Users/shannonspragg/ONA_GRIZZ/CAN Spatial Data/SOI CCS regions/SOI_CCS.shp")
-soi.crop <- st_read( "/Users/shannonspragg/ONA_GRIZZ/CAN Spatial Data/SOI CCS regions/SOI_CCS.shp")
+st_write(soi.crop, "/Users/shannonspragg/ONA_GRIZZ/CAN Spatial Data/SOI CCS regions/SOI_CCS_10km.shp")
+soi.crop <- st_read( "/Users/shannonspragg/ONA_GRIZZ/CAN Spatial Data/SOI CCS regions/SOI_CCS_10km.shp")
 
 # Assign the WARP Points to a CCS Region: ---------------------------------
 ### Here we want to overlay the points with the regions, adding a column in the warp data that is CCS region ID, 
 #   make sure this is a factor, to fit this as a varying intercept
 
 # Check to see if our projections match:
-st_crs(warp.df) == st_crs(soi.ccs) # [TRUE] = These ARE the same
+st_crs(warp.df) == st_crs(soi.crop) # [TRUE] = These ARE the same
+
+# Plot these together:
+plot(st_geometry(soi.crop))
+plot(st_geometry(warp.df), add=)
 
 # Assign our points to a CCS category:
-warp.ccs.join <- st_join(warp.df, left = TRUE, soi.ccs) # join points
+warp.ccs.join <- st_join(warp.df, left = TRUE, soi.crop) # join points
 warp.ccs.join.2 <- st_join(warp.df, soi.ccs, join= st_within)
 
 head(warp.ccs.join) # HECK TO THE YES - we successfully assigned points to a farm type category
 
 # Delete the columns we don't want:
-warp.ccs.join[,- c("PRUID","PRNAME", "CDUID", "CDNAME", "CDTYPE", "CPRVNCCD", "FTRCD", "CPRVNCNM", "PRNTCDVSNC", "FFCTVDT", "XPRDT", "OBJECTID", "AREA_SQM", "FEAT_LEN")]
 warp.ccs.join$PRNAME <- NULL
 warp.ccs.join$PRNTCDVSNC <- NULL
 warp.ccs.join$PRUID <- NULL
@@ -81,12 +91,15 @@ warp.ccs.join$CDNAME <- NULL
 warp.ccs.join$CDTYPE <- NULL
 warp.ccs.join$CPRVNCNM <- NULL
 
+head(warp.ccs.join)
 
 # Check for NA's!!! -------------------------------------------------------
 
+which(is.na(warp.ccs.join$CCSNAME)) # no NAs
+which(is.na(warp.ccs.join$CCSUID)) # yay!!
 
 
 
 # Save this new df for future purposes:
-st_write(warp.ccs.join, "/Users/shannonspragg/ONA_GRIZZ/WARP Bears /WARP Cropped - SIP/warp_crom_10_ccs.shp")
+st_write(warp.ccs.join, "/Users/shannonspragg/ONA_GRIZZ/WARP Bears /WARP Cropped - SIP/warp_crop_10_ccs.shp")
 

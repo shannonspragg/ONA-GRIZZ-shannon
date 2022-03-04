@@ -45,7 +45,7 @@ library(randomForest)
 # Import the All Species Master df for our Southern Interior EcoProvince ----------------------------------------
 
 #warp.df <- st_read("/Users/shannonspragg/ONA_GRIZZ/WARP Bears /WARP Cropped - SIP/warp_crop_10km_buf.shp")
-warp.df <- st_read("/Users/shannonspragg/ONA_GRIZZ/WARP Bears /WARP Cropped - SIP/warp_crom_10_ccs.shp")
+warp.df <- st_read("/Users/shannonspragg/ONA_GRIZZ/WARP Bears /WARP Cropped - SIP/warp_crop_10_ccs.shp")
 str(warp.df)
 
 # Scale the Variables: ----------------------------------------------------------
@@ -71,8 +71,8 @@ warp.df$CCSUID <- as.factor(warp.df$CCSUID)
 CCSUID <- warp.df$CCSUID
 CCSNAME <- warp.df$CCSNAME
 
-which(is.na(mini.warp.df$CCSNAME)) # Like 200 NA's!!
-which(is.na(mini.warp.df$CCSUID)) # Like 200 NA's!!
+which(is.na(warp.df$CCSNAME)) # Like 200 NA's!!
+which(is.na(warp.df$CCSUID)) # Like 200 NA's!!
 
 # Add an QUADRATIC term for Farm Count: -----------------------------------
 # We want to add a quadratic term to farm count so that we can better interpret it against P(conflict)
@@ -270,8 +270,6 @@ roc(bears_presence, post1.var.int$fitted.values, plot=TRUE, legacy.axes=TRUE, pe
     xlab= "False Positive Percentage", ylab= "True Positive Percentage",
     col="#377eb8", lwd=4, print.auc=TRUE) # this gives us the ROC curve , in 3544 conrols (bears 0) < 2062 cases (bears 1), Area under curve = 0.6547
 
-roc(bears_presence, med.preds.int, plot=TRUE)
-
 
 
 ############### Overlap 2 ROC curves:
@@ -291,6 +289,19 @@ legend("bottomright", legend=c("Bayes Logistic Regression", "Random Forest"),
        col=c("#377eb8", "#4daf4a"), lwd = 4)
 #******* What this tells us: a 65% discrimination (model predictions are correct 65% of the time) is not great. (50% = no discrimination).
 #* So we want to shoot for a better model --> one with 75-90% discrimination if we can get it.
+
+##### Compare our curves for varying intercept model:
+
+# Plot ROC curve for our regression:
+roc(bears_presence, post1.var.int$fitted.values, plot=TRUE, legacy.axes=TRUE, percent=TRUE ,
+    xlab= "False Positive Percentage", ylab= "True Positive Percentage",
+    col="#377eb8", lwd=4, print.auc=TRUE) # this gives us the ROC curve , in 3544 conrols (bears 0) < 2062 cases (bears 1), Area under curve = 0.6547
+
+# Add ROC curve for random forest
+plot.roc(bears_presence, rf.model$votes[,1], percent=TRUE, col='#4daf4a', lwd=4, print.auc=TRUE, add=TRUE, print.auc.y=40)
+
+legend("bottomright", legend=c("Bayes Logistic Regression", "Random Forest"),
+       col=c("#377eb8", "#4daf4a"), lwd = 4)
 
 
 ############### Look at range of thresholds for section of curve:

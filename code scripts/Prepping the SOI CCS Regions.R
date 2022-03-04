@@ -47,7 +47,7 @@ soi.crop <- st_intersection(bc.ccs.reproj, soi.region)
 # Write this as a .shp for later: -----------------------------------------
 
 st_write(soi.crop, "/Users/shannonspragg/ONA_GRIZZ/CAN Spatial Data/SOI CCS regions/SOI_CCS.shp")
-
+soi.crop <- st_read( "/Users/shannonspragg/ONA_GRIZZ/CAN Spatial Data/SOI CCS regions/SOI_CCS.shp")
 
 # Assign the WARP Points to a CCS Region: ---------------------------------
 ### Here we want to overlay the points with the regions, adding a column in the warp data that is CCS region ID, 

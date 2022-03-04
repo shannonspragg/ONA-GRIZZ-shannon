@@ -18,6 +18,7 @@ library("dplyr")
 
 
 # Bring in Data: ----------------------------------------------------------
+warp.df <- st_read("/Users/shannonspragg/ONA_GRIZZ/WARP Bears /WARP Cropped - SIP/warp_crop_10km_buf.shp")
 
 soi.region <- st_read("/Users/shannonspragg/ONA_GRIZZ/CAN Spatial Data/BC Ecoprovinces/south.interior.shp")
 str(soi.region)
@@ -46,4 +47,46 @@ soi.crop <- st_intersection(bc.ccs.reproj, soi.region)
 # Write this as a .shp for later: -----------------------------------------
 
 st_write(soi.crop, "/Users/shannonspragg/ONA_GRIZZ/CAN Spatial Data/SOI CCS regions/SOI_CCS.shp")
+
+
+# Assign the WARP Points to a CCS Region: ---------------------------------
+### Here we want to overlay the points with the regions, adding a column in the warp data that is CCS region ID, 
+#   make sure this is a factor, to fit this as a varying intercept
+
+# Check to see if our projections match:
+st_crs(warp.df) == st_crs(soi.ccs) # [TRUE] = These ARE the same
+
+# Assign our points to a CCS category:
+warp.ccs.join <- st_join(warp.df, left = TRUE, soi.ccs) # join points
+warp.ccs.join.2 <- st_join(warp.df, soi.ccs, join= st_within)
+
+head(warp.ccs.join) # HECK TO THE YES - we successfully assigned points to a farm type category
+
+# Delete the columns we don't want:
+warp.ccs.join[,- c("PRUID","PRNAME", "CDUID", "CDNAME", "CDTYPE", "CPRVNCCD", "FTRCD", "CPRVNCNM", "PRNTCDVSNC", "FFCTVDT", "XPRDT", "OBJECTID", "AREA_SQM", "FEAT_LEN")]
+warp.ccs.join$PRNAME <- NULL
+warp.ccs.join$PRNTCDVSNC <- NULL
+warp.ccs.join$PRUID <- NULL
+warp.ccs.join$CDUID <- NULL
+warp.ccs.join$CPRVNCCD <- NULL
+warp.ccs.join$FTRCD <- NULL
+warp.ccs.join$CPRVNCCD <- NULL
+warp.ccs.join$PRNTCDVSNC <- NULL
+warp.ccs.join$FFCTVDT <- NULL
+warp.ccs.join$XPRDT <- NULL
+warp.ccs.join$OBJECTID <- NULL
+warp.ccs.join$AREA_SQM <- NULL
+warp.ccs.join$FEAT_LEN <- NULL 
+warp.ccs.join$CDNAME <- NULL
+warp.ccs.join$CDTYPE <- NULL
+warp.ccs.join$CPRVNCNM <- NULL
+
+
+# Check for NA's!!! -------------------------------------------------------
+
+
+
+
+# Save this new df for future purposes:
+st_write(warp.ccs.join, "/Users/shannonspragg/ONA_GRIZZ/WARP Bears /WARP Cropped - SIP/warp_crom_10_ccs.shp")
 

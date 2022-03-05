@@ -58,9 +58,9 @@ bears.reps <- warp.ccs.df %>% filter(warp.ccs.df$bears == "1")
 
 # Join our bear points with the absence points:
 
-bear.pts.w.abs <- dplyr::full_join(bears.reps, abs.pts.sf)
+bear.pts.w.abs <- rbind(bears.reps, abs.pts.sf, deparse.level = 1)
 
-
+??rbind
 
 
 

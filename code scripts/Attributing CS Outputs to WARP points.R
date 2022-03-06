@@ -21,7 +21,8 @@ library(terra)
 library(rgdal)
 
 # Bring in WARP Master df and CS Rasters ----------------------------------
-warp.all.sp <- st_read("/Users/shannonspragg/ONA_GRIZZ/WARP Bears /WARP All Species Full Yr/ WARP All Species Master Data Frame.shp")
+warp.all.sp <- st_read("/Users/shannonspragg/ONA_GRIZZ/WARP Bears /warp.abs.need.extr.shp")
+
  
 # CS's for sociobio and biophysical:
 biophys.cum.curmap <- rast("/Users/shannonspragg/ONA_grizz_Matt/data/processed/output/biophys_CS/cum_currmap.tif") # use this one
@@ -41,6 +42,8 @@ grizz.inc.raster <- rast("/Users/shannonspragg/rasters/grizz_inc_BC.tif") #  the
 grizz.dens <- rast("/Users/shannonspragg/ONA_GRIZZ/Grizz Density rasters/grizz_dens.tif")
 plot(grizz.dens)
 
+soi.10k.boundary <- st_read("/Users/shannonspragg/ONA_GRIZZ/CAN Spatial Data/SOI Ecoprovince Boundary/SOI_10km_buf.shp")
+
 # Bring in Provinces and Filter to BC (skip to read in) -------------------------------------
 can.prov <- st_read("/Users/shannonspragg/ONA_GRIZZ/CAN Spatial Data/CAN Province Boundaries/lpr_000b16a_e.shp")
 bc.boundary <- can.prov %>% 
@@ -54,6 +57,7 @@ st_write(bc.reproj, "/Users/shannonspragg/ONA_GRIZZ/CAN Spatial Data/BC Boundary
 bc.reproj <- st_read("/Users/shannonspragg/ONA_GRIZZ/CAN Spatial Data/BC Boundary.shp")
 
 
+
 # Crop WARP Points to within the BC Boundary (skip this) ------------------------------
 plot(st_geometry(warp.all.sp))
 warp.all.sp.bc <- st_crop(warp.all.sp, bc.reproj)
@@ -65,6 +69,7 @@ st_write(warp.all.sp.bc, "/Users/shannonspragg/ONA_GRIZZ/WARP Bears /WARP All Sp
 
 # Read this in for future runs:
 warp.all.sp.bc <- st_read("/Users/shannonspragg/ONA_GRIZZ/WARP Bears /WARP All Species Full Yr/ WARP All Sp Full Yr BC.shp")
+
 
 
 # Check / Set CRS for Raster and Points -----------------------------------
@@ -83,7 +88,7 @@ crs(biophys.cum.curmap) == crs(grizz.inc.raster) # Nice, this worked --> now in 
 #crs(sociobio.cum.curmap) == crs(biophys.cum.curmap) # Nice, this worked --> now in BC Albers EPSG 3005
 
 # Project BC boundary:
-bc.reproj <- st_make_valid(bc.reproj) %>% 
+soi.reproj <- st_make_valid(soi.10k.boundary) %>% 
   st_transform(crs=crs(grizz.inc.raster))
 
 # Match the projection and CRS of the WARP to the resistance map:
@@ -95,12 +100,12 @@ warp.reproj <- st_make_valid(warp.all.sp) %>%
   
 plot(st_geometry(warp.reproj))
 st_crs(warp.reproj)
-crs(grizz.inc.crop) # The same as above, just formatted differently - success!
+crs(grizz.inc.raster) # The same as above, just formatted differently - success!
 
 # Check Raster Resolutions:
 str(grizz.dens)
-res(biophys.cum.curmap)
-res(grizz.inc.raster)
+res(biophys.cum.curmap) # 1000 x 1000
+res(grizz.inc.raster) # 1000 x 1000
 #res(sociobio.cum.curmap)
 
 # Need to make points a SpatVector:
@@ -145,15 +150,20 @@ warp.grizz.inc.b.ext <- terra::extract(grizz.inc.raster, warp.sv.buf, mean, na.r
 warp.bhs.b.extract <- terra::extract(grizz.dens, warp.sv.buf, mean, na.rm = TRUE) 
 
 # Create New Column(s) for Extracted Values:
-warp.reproj$BiophysExtract <- warp.biophys.b.ext[,2]
+warp.reproj$BphysEx <- warp.biophys.b.ext[,2]
 #warp.reproj$SociobioExtract <- warp.sociobio.b.ext[,2]
-warp.reproj$GrizzIncExtract <- warp.grizz.inc.b.ext[,2]
-warp.reproj$BHSExtract <- warp.bhs.b.extract[,2]
+warp.reproj$GrzzInE <- warp.grizz.inc.b.ext[,2]
+warp.reproj$BHSExtr <- warp.bhs.b.extract[,2]
+
+# Check for NA's:
+which(is.na(warp.reproj$BphysEx)) #none
+which(is.na(warp.reproj$BHSExtr)) #none
+which(is.na(warp.reproj$GrzzInE)) # none!
 
 
 # Save this as new file ---------------------------------------------------
 
-st_write(warp.reproj, "/Users/shannonspragg/ONA_GRIZZ/WARP Bears /updated.master.df.shp")
+st_write(warp.reproj, "/Users/shannonspragg/ONA_GRIZZ/WARP Bears /updated.warp.soi.df.shp")
 warp.reproj <- st_read("/Users/shannonspragg/ONA_GRIZZ/WARP Bears /updated.master.df.shp")
 
 # Check for NA's: ---------------------------------------------------------

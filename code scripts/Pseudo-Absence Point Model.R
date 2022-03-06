@@ -8,7 +8,7 @@ library(tidyverse)
 library(dplyr)
 library(raster)
 library(terra)
-install.packages("dismo")
+#install.packages("dismo")
 library(dismo)
 library(stars)
 
@@ -46,9 +46,35 @@ add.cols <- setdiff(names(warp.ccs.df), names(abs.pts.sf))
 
 add_columns(abs.pts.sf, bears.reps)
 
-
-
 abs.pts.sf.b <- cbind(abs.pts.sf, add.cols)
+
+# Let's try this manually:
+abs.pts.sf['encontr_d'] <- NA
+abs.pts.sf['encntr_dt'] <- NA
+abs.pts.sf['spcs_nm'] <- NA
+abs.pts.sf['encntr_lc'] <- NA
+abs.pts.sf['encntr_dl'] <- 1
+abs.pts.sf['encntr_y'] <- 0
+abs.pts.sf['encntr_lt'] <- NA
+abs.pts.sf['encntr_ln'] <- NA
+abs.pts.sf['attrct_'] <- NA
+abs.pts.sf['enctyp_'] <- NA
+abs.pts.sf['otcm_nm'] <- NA
+abs.pts.sf['grop_cd'] <- NA
+abs.pts.sf['ttl_ncn'] <- NA
+abs.pts.sf['bears'] <- 0
+abs.pts.sf['ds__PA_'] <- 0
+abs.pts.sf['dstn___'] <- 0
+abs.pts.sf['Dm_Fr_T'] <- NA
+abs.pts.sf['Ttl_F_C'] <- 0
+abs.pts.sf['BphysEx'] <- 0
+abs.pts.sf['GrzzInE'] <- 0
+abs.pts.sf['BHSExtr'] <- 0
+abs.pts.sf['CCSUID'] <- 0
+abs.pts.sf['CCSNAME'] <- NA
+
+# Reorder the columns to match:
+abs.pts.sf <- abs.pts.sf[ , c(2,3,4,5,6,7,8,9,10,11,12,13,14,15,16,17,18,19,20,21,22,23,24,1)]
 
 
 # Restructure Dataframe: --------------------------------------------------
@@ -58,9 +84,13 @@ bears.reps <- warp.ccs.df %>% filter(warp.ccs.df$bears == "1")
 
 # Join our bear points with the absence points:
 
-bear.pts.w.abs <- rbind(bears.reps, abs.pts.sf, deparse.level = 1)
+bear.pts.w.abs <- rbind(bears.reps, abs.pts.sf)
 
-??rbind
+# Plot these to check:
+plot(st_geometry(bear.pts.w.abs))
+
+# Save as New Df: ---------------------------------------------------------
+st_write(bear.pts.w.abs, "/Users/shannonspragg/ONA_GRIZZ/WARP Bears /WARP Cropped - SIP/warp_pres.abs.shp")
 
 
 

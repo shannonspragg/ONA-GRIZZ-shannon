@@ -20,6 +20,11 @@ library("dplyr")
 # Bring in Data: ----------------------------------------------------------
 warp.df <- st_read("/Users/shannonspragg/ONA_GRIZZ/WARP Bears /WARP Cropped - SIP/warp_crop_10km_buf.shp")
 
+# Our WARP df with pres abs points:
+warp.pres.abs <- st_read("/Users/shannonspragg/ONA_GRIZZ/WARP Bears /updated.warp.soi.df.shp")
+
+soi.ccs.crop <- st_read( "/Users/shannonspragg/ONA_GRIZZ/CAN Spatial Data/SOI CCS regions/SOI_CCS_10km.shp") 
+
 soi.region <- st_read("/Users/shannonspragg/ONA_GRIZZ/CAN Spatial Data/BC Ecoprovinces/south.interior.shp")
 str(soi.region)
 
@@ -41,35 +46,36 @@ plot(st_geometry(bc.ccs.reproj))
 plot(st_geometry(soi.region), add=TRUE)
 
 
-# Buffer our SOI Region by 10km to match WARP df: -------------------------
+# Buffer our SOI Region by 10km to match WARP df:(skip this now) -------------------------
 
 # Buffer our Boundary to Match Points:
 soi.10k.buf <- st_buffer(soi.region, 10000)
 
 st_write(soi.10k.buf, "/Users/shannonspragg/ONA_GRIZZ/CAN Spatial Data/SOI Ecoprovince Boundary/SOI_10km_buf.shp")
 
+
 # Crop CCS Down to SOI 10km Extent: --------------------------------------------
-soi.crop <- st_intersection(bc.ccs.reproj, soi.10k.buf)
+soi.ccs.crop <- st_intersection(bc.ccs.reproj, soi.10k.buf)
 
 # Write this as a .shp for later: -----------------------------------------
 
-st_write(soi.crop, "/Users/shannonspragg/ONA_GRIZZ/CAN Spatial Data/SOI CCS regions/SOI_CCS_10km.shp")
-soi.crop <- st_read( "/Users/shannonspragg/ONA_GRIZZ/CAN Spatial Data/SOI CCS regions/SOI_CCS_10km.shp")
+st_write(soi.ccs.crop, "/Users/shannonspragg/ONA_GRIZZ/CAN Spatial Data/SOI CCS regions/SOI_CCS_10km.shp")
+soi.ccs.crop <- st_read( "/Users/shannonspragg/ONA_GRIZZ/CAN Spatial Data/SOI CCS regions/SOI_CCS_10km.shp")
 
 # Assign the WARP Points to a CCS Region: ---------------------------------
 ### Here we want to overlay the points with the regions, adding a column in the warp data that is CCS region ID, 
 #   make sure this is a factor, to fit this as a varying intercept
 
 # Check to see if our projections match:
-st_crs(warp.df) == st_crs(soi.crop) # [TRUE] = These ARE the same
+st_crs(warp.pres.abs) == st_crs(soi.ccs.crop) # [TRUE] = These ARE the same
 
 # Plot these together:
 plot(st_geometry(soi.crop))
 plot(st_geometry(warp.df), add=)
 
 # Assign our points to a CCS category:
-warp.ccs.join <- st_join(warp.df, left = TRUE, soi.crop) # join points
-warp.ccs.join.2 <- st_join(warp.df, soi.ccs, join= st_within)
+warp.ccs.join <- st_join(warp.pres.abs, left = TRUE, soi.ccs.crop) # join points
+#warp.ccs.join.2 <- st_join(warp.df, soi.ccs, join= st_within)
 
 head(warp.ccs.join) # HECK TO THE YES - we successfully assigned points to a farm type category
 
@@ -90,6 +96,12 @@ warp.ccs.join$FEAT_LEN <- NULL
 warp.ccs.join$CDNAME <- NULL
 warp.ccs.join$CDTYPE <- NULL
 warp.ccs.join$CPRVNCNM <- NULL
+warp.ccs.join$CCSNAME.x <- NULL
+warp.ccs.join$CCSUID.x <- NULL
+
+# Rename these quick:
+names(warp.ccs.join)[names(warp.ccs.join) == "CCSUID.y"] <- "CCSUID"
+names(warp.ccs.join)[names(warp.ccs.join) == "CCSNAME.y"] <- "CCSNAME"
 
 head(warp.ccs.join)
 
@@ -101,5 +113,5 @@ which(is.na(warp.ccs.join$CCSUID)) # yay!!
 
 
 # Save this new df for future purposes:
-st_write(warp.ccs.join, "/Users/shannonspragg/ONA_GRIZZ/WARP Bears /WARP Cropped - SIP/warp_crop_10_ccs.shp")
+st_write(warp.ccs.join, "/Users/shannonspragg/ONA_GRIZZ/WARP Bears /WARP Cropped - SIP/warp_pres_abs_10km_ccs.shp")
 

@@ -14,7 +14,7 @@ library(sp)
 library(rgeos)
 library(raster)
 library(rgdal)
-install.packages("fasterize")
+#install.packages("fasterize")
 library(fasterize)
 library(terra)
 library(stars)
@@ -22,6 +22,12 @@ library(stars)
 # Bring in the WARP All Speciec 1 Year Data -------------------------------
 conflict.data.all<-read.csv("/Users/shannonspragg/ONA_GRIZZ/WARP Bears /WARP All Species Full Yr/WARP 3.24.20 to 3.31.21 full .csv")
 head(conflict.data.all)
+
+# Bring in our pres abs data frame to get variables for our absences:
+warp.pres.abs <- st_read("/Users/shannonspragg/ONA_GRIZZ/WARP Bears /WARP Cropped - SIP/warp_pres.abs.shp")
+
+
+# Pre-Prep for Fresh WARP Data (skip this): -------------------------------
 
 # Merge the two encounter columns into one total encounter column:
 conflict.data.all$total_encounter<-conflict.data.all$encounter_adults + conflict.data.all$encounter_young
@@ -44,8 +50,12 @@ str(bears.spdf)
 bears.sf <- as(bears.spdf, "sf")
 str(bears.sf) # This gives us a sf data frame, good!
 
+
+
 # Bring in the PA,  Metro,  Ag Type,  and Farm Count Data -----------------
-bc.boundary <- st_read("/Users/shannonspragg/ONA_GRIZZ/CAN Spatial Data/BC Boundary.shp")
+#bc.boundary <- st_read("/Users/shannonspragg/ONA_GRIZZ/CAN Spatial Data/BC Boundary.shp")
+
+soi.10k.boundary <- st_read("/Users/shannonspragg/ONA_GRIZZ/CAN Spatial Data/SOI Ecoprovince Boundary/SOI_10km_buf.shp")
 
 bc.PAs <- st_read("/Users/shannonspragg/ONA_GRIZZ/CAN Spatial Data/BC protected areas/BC PAs.shp")
 str(bc.PAs) # Proper sf object, nice
@@ -68,7 +78,7 @@ biophys.cum.curmap <- rast("/Users/shannonspragg/rasters/biophys_normalized_cum_
 
 # Reproject All Data ------------------------------------------------------
 # Now we have the protected areas projected to match the biophys raster:
-bears.reproj <- st_make_valid(bears.sf) %>% 
+bears.reproj <- st_make_valid(warp.pres.abs) %>% 
   st_transform(crs=crs(biophys.cum.curmap))
 bc.PAs.reproj <- st_make_valid(bc.PAs) %>% 
   st_transform(crs=crs(biophys.cum.curmap))

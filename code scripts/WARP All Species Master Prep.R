@@ -89,7 +89,7 @@ farms.reproj <- st_make_valid(bc.dom.farms) %>%
   st_transform(crs=crs(biophys.cum.curmap))
 total.farms.reproj <- st_make_valid(bc.total.farms) %>% 
   st_transform(crs=crs(biophys.cum.curmap))
-bc.bound.reproj <- st_make_valid(bc.boundary) %>% 
+soi.bound.reproj <- st_make_valid(soi.10k.boundary) %>% 
   st_transform(crs=crs(biophys.cum.curmap))
 
 
@@ -107,20 +107,20 @@ min.dist <- apply(dist.pts2pas, 1, min)
 str(min.dist)
 
 # Add Distance Variable into Datatable:
-bears.reproj$distance_to_PAs<-min.dist
+bears.reproj$ds__PA_<-min.dist
 head(bears.reproj)
 
 # Remove the units from the values (note: in meters)
-as.numeric(bears.reproj$distance_to_PAs)
+as.numeric(bears.reproj$ds__PA_)
 
 # Convert units from meters to km:
-install.packages("measurements")
+#install.packages("measurements")
 library(measurements)
 
-dist_in_km<-conv_unit(bears.reproj$distance_to_PAs,"m","km")
+dist_in_km<-conv_unit(bears.reproj$ds__PA_,"m","km")
 str(dist_in_km)
-bears.reproj$distance_to_PA_km<-dist_in_km
-bears.reproj$distance_to_PAs <- NULL
+bears.reproj$ds__PA_<-dist_in_km
+#bears.reproj$distance_to_PAs <- NULL
 str(bears.reproj)
 
 # Now bears.reproj has our Dist to PA column added in
@@ -136,20 +136,20 @@ min.dist.met <- apply(dist.pts2met, 1, min)
 
 # Add Distance Variable into Data table
 # Here we create a new column for Distance to Metro Areas in km
-bears.reproj$distance_to_metro_km<-min.dist.met
+bears.reproj$dstn___<-min.dist.met
 head(bears.reproj)
 
 # Remove the units from the values (note: in meters)
-as.numeric(bears.reproj$distance_to_metro_km)
+as.numeric(bears.reproj$dstn___)
 
 # Convert units from meters to km:
-bears.reproj$distance_to_metro_km<-conv_unit(bears.reproj$distance_to_metro_km,"m","km")
+bears.reproj$dstn___<-conv_unit(bears.reproj$dstn___,"m","km")
 head(bears.reproj)
 
 # This added the dist to metro areas column to our bears.reproj df
 
 # Crop these points to just BC:
-bears.reproj <- st_crop(bears.reproj, bc.bound.reproj)
+bears.reproj.c <- st_crop(bears.reproj, soi.10k.boundary)
 plot(st_geometry(bears.reproj))
 # Now the dataset can be picked up and used from here:
 
@@ -172,7 +172,7 @@ farm.count.rast <- terra::rasterize(farm.count.sv, biophys.cum.curmap, field = "
 plot(farm.count.rast)
 
 # Buffer WARP Points Before Attributing Farm Values -----------------------
-# Here we buffer the WARP points by 500m before extracting the attributes from the farm polygons
+# Here we buffer the WARP points by 5000m (5km) before extracting the attributes from the farm polygons
 bears.buf <- bears.reproj %>% 
   st_buffer(., 5000)
 plot(st_geometry(bears.buf)) # Check the buffers
@@ -188,12 +188,15 @@ bears.farm.type.ext <- terra::extract(farm.type.rast, bears.sv.buf, modal, na.rm
 bears.total.farm.ext <- terra::extract(farm.count.rast, bears.sv.buf, mean, na.rm = TRUE) 
 
 # Create New Column(s) for Extracted Values:
-bears.reproj$Dom_Farm_Type <- bears.farm.type.ext[,2]
-bears.reproj$Total_Farm_Count <- bears.total.farm.ext[,2]
+bears.reproj$Dm_Fr_T <- bears.farm.type.ext[,2]
+bears.reproj$Ttl_F_C <- bears.total.farm.ext[,2]
 
+# Check for NA's quick:
+which(is.na(bears.reproj$Dm_Fr_T))
+which(is.na(bears.reproj$Ttl_F_C))
 
 # Checking for NA's: ------------------------------------------------------
-which(is.na(warp.all.sp$Ttl_F_C)) # Now only 2 NA's - good
+which(is.na(bears.reproj$Ttl_F_C)) # Now only 2 NA's - good
 warp.all.sp[10711,]
 warp.all.sp[17194,]
 
@@ -226,7 +229,7 @@ which(is.na(warp.all.sp.master$dstn___)) # no NA's
 # WARP All Species Master Data Frame --------------------------------------
 # Since we did this progressively, our bears.reproj file is the new "all species master", so
 # let us write that into a .shp here
-st_write(warp.all.sp.master, "/Users/shannonspragg/ONA_GRIZZ/WARP Bears /WARP All Species Full Yr/ WARP All Species Master Data Frame.shp")
+st_write(bears.reproj, "/Users/shannonspragg/ONA_GRIZZ/WARP Bears /warp.abs.need.extr.shp")
 
 # Bring this back in to check it:
 warp.all.sp.final <- st_read("/Users/shannonspragg/ONA_GRIZZ/WARP Bears /WARP All Species Full Yr/ WARP All Species Master Data Frame.shp")

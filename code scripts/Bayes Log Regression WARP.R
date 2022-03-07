@@ -46,7 +46,6 @@ library(randomForest)
 
 #warp.df <- st_read("/Users/shannonspragg/ONA_GRIZZ/WARP Bears /WARP Cropped - SIP/warp_crop_10km_buf.shp")
 warp.df <- st_read("/Users/shannonspragg/ONA_GRIZZ/WARP Bears /WARP Cropped - SIP/warp_crop_10_ccs.shp")
-str(warp.df)
 
 # Scale the Variables: ----------------------------------------------------------
 

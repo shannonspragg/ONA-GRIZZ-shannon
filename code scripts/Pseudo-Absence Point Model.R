@@ -27,7 +27,7 @@ soi.rast <- raster("/Users/shannonspragg/ONA_GRIZZ/CAN Spatial Data/SOI Ecoprovi
 
 # Generate Random Points for Pseudo-absences: -----------------------------
 set.seed(2345)
-p.abs.pts <- randomPoints(soi.rast, 4000)
+p.abs.pts <- randomPoints(soi.rast, 11000)
 
 plot(soi.rast)
 plot(p.abs.pts, add=TRUE) # This gives us our absence points!
@@ -80,17 +80,17 @@ abs.pts.sf <- abs.pts.sf[ , c(2,3,4,5,6,7,8,9,10,11,12,13,14,15,16,17,18,19,20,2
 # Restructure Dataframe: --------------------------------------------------
   #### Here I need to separate out the bear-only reports as their own data frame, then add the absence points in - probably have to re-extract all of these.
 
-bears.reps <- warp.ccs.df %>% filter(warp.ccs.df$bears == "1")
+# bears.reps <- warp.ccs.df %>% filter(warp.ccs.df$bears == "1") Don't need to do this - we want all species points to be 1's
 
 # Join our bear points with the absence points:
 
-bear.pts.w.abs <- rbind(bears.reps, abs.pts.sf)
+all.conflict.pts.w.abs <- rbind(warp.ccs.df, abs.pts.sf)
 
 # Plot these to check:
 plot(st_geometry(bear.pts.w.abs))
 
 # Save as New Df: ---------------------------------------------------------
-st_write(bear.pts.w.abs, "/Users/shannonspragg/ONA_GRIZZ/WARP Bears /WARP Cropped - SIP/warp_pres.abs.shp")
+st_write(all.conflict.pts.w.abs, "/Users/shannonspragg/ONA_GRIZZ/WARP Bears /WARP Cropped - SIP/warp_pres.abs.shp")
 
 
 

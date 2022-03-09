@@ -24,7 +24,7 @@ conflict.data.all<-read.csv("/Users/shannonspragg/ONA_GRIZZ/WARP Bears /WARP All
 head(conflict.data.all)
 
 # Bring in our pres abs data frame to get variables for our absences:
-warp.pres.abs <- st_read("/Users/shannonspragg/ONA_GRIZZ/WARP Bears /WARP Cropped - SIP/warp_pres.abs.shp")
+warp.pres.abs <- st_read("/Users/shannonspragg/ONA_GRIZZ/WARP Bears /warp.need.farms.shp")
 
 
 # Pre-Prep for Fresh WARP Data (skip this): -------------------------------
@@ -229,7 +229,7 @@ which(is.na(warp.all.sp.master$dstn___)) # no NA's
 # WARP All Species Master Data Frame --------------------------------------
 # Since we did this progressively, our bears.reproj file is the new "all species master", so
 # let us write that into a .shp here
-st_write(bears.reproj, "/Users/shannonspragg/ONA_GRIZZ/WARP Bears /warp.abs.need.extr.shp")
+st_write(bears.reproj, "/Users/shannonspragg/ONA_GRIZZ/WARP Bears /warp.pres.abs.need.CCS.shp")
 
 # Bring this back in to check it:
 warp.all.sp.final <- st_read("/Users/shannonspragg/ONA_GRIZZ/WARP Bears /WARP All Species Full Yr/ WARP All Species Master Data Frame.shp")

@@ -108,6 +108,15 @@ post2.ps <- stan_glm(bears_presence_ps ~ b2pa.dist.ps + b2met.dist.ps + dom.farm
                      prior = t_prior, prior_intercept = t_prior, QR=TRUE,
                      seed = SEED, refresh=0) # we add seed for reproducability
 
+##### Add in a Varying Intercept for SOI CCS Region:
+post2ps.var.int <- stan_glmer(bears_presence ~ b2pa.dist.sc + b2met.dist.sc + dom.farms + total.farms.sc + total.farms.sq + grizzinc.sc + bhs.sc + biophys.sc + (1 | CCSNAME), 
+                            data = mini.warp.df.ps,
+                            family = binomial(link = "logit"), # define our binomial glm
+                            prior = t_prior, prior_intercept = t_prior, QR=TRUE,
+                            seed = SEED, refresh=0) # we add seed for reproducability
+
+
+
 # Leave-one-out Cross_validation: -----------------------------------------
 
 ############## Run a Leave-One-Out (LOO):

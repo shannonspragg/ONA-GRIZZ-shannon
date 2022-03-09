@@ -32,7 +32,7 @@ library(randomForest)
 
 # Import Data: ------------------------------------------------------------
 
-warp.pres.abs <- st_read("/Users/shannonspragg/ONA_GRIZZ/WARP Bears /WARP Cropped - SIP/warp_presabs_hum_dens.shp")
+warp.pres.abs <- st_read("/Users/shannonspragg/ONA_GRIZZ/WARP Bears /WARP Cropped - SIP/warp_presabs_complete.shp")
 str(warp.pres.abs)
 
 # Scale the Variables: ----------------------------------------------------------

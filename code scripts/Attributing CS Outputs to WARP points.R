@@ -21,7 +21,7 @@ library(terra)
 library(rgdal)
 
 # Bring in WARP Master df and CS Rasters ----------------------------------
-warp.all.sp <- st_read("/Users/shannonspragg/ONA_GRIZZ/WARP Bears /warp.abs.need.extr.shp")
+warp.all.sp <- st_read("/Users/shannonspragg/ONA_GRIZZ/WARP Bears /WARP Cropped - SIP/warp_pres.abs.shp")
 
  
 # CS's for sociobio and biophysical:
@@ -83,9 +83,6 @@ crs(grizz.inc.raster) == crs(grizz.dens) # Nice, this worked --> now in BC Alber
 crs(biophys.cum.curmap) <- crs(grizz.inc.raster) 
 crs(biophys.cum.curmap) == crs(grizz.inc.raster) # Nice, this worked --> now in BC Albers EPSG 3005
     
-# Sociobio Current Map: (skip for now)
-#crs(sociobio.cum.curmap) <- crs(biophys.cum.curmap) 
-#crs(sociobio.cum.curmap) == crs(biophys.cum.curmap) # Nice, this worked --> now in BC Albers EPSG 3005
 
 # Project BC boundary:
 soi.reproj <- st_make_valid(soi.10k.boundary) %>% 
@@ -145,7 +142,6 @@ plot(warp.sv.buf)
 
 warp.biophys.b.ext <- terra::extract(biophys.cum.curmap, warp.sv.buf, mean, na.rm = TRUE) 
 # This gives us the mean value of each buffered area --> what we want!
-#warp.sociobio.b.ext <- terra::extract(sociobio.cum.curmap, warp.sv.buf, mean, na.rm = TRUE) 
 warp.grizz.inc.b.ext <- terra::extract(grizz.inc.raster, warp.sv.buf, mean, na.rm = TRUE) 
 warp.bhs.b.extract <- terra::extract(grizz.dens, warp.sv.buf, mean, na.rm = TRUE) 
 
@@ -163,7 +159,7 @@ which(is.na(warp.reproj$GrzzInE)) # none!
 
 # Save this as new file ---------------------------------------------------
 
-st_write(warp.reproj, "/Users/shannonspragg/ONA_GRIZZ/WARP Bears /updated.warp.soi.df.shp")
+st_write(warp.reproj, "/Users/shannonspragg/ONA_GRIZZ/WARP Bears /warp.need.farms.shp")
 warp.reproj <- st_read("/Users/shannonspragg/ONA_GRIZZ/WARP Bears /updated.master.df.shp")
 
 # Check for NA's: ---------------------------------------------------------

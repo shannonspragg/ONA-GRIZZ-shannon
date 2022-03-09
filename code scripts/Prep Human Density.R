@@ -53,6 +53,7 @@ str(hm.dens.soi) # Res is 1463 x 1463
 
 terra::writeRaster(hm.dens.soi, "/Users/shannonspragg/ONA_GRIZZ/CAN Spatial Data/Human Pop Density/human_dens_SOI_10km.tif")
 
+hm.dens.soi <- terra::rast("/Users/shannonspragg/ONA_GRIZZ/CAN Spatial Data/Human Pop Density/human_dens_SOI_10km.tif") # SOI Region 10km
 
 
 # Add Human Dens as Predictor: --------------------------------------------
@@ -108,5 +109,5 @@ which(is.na(warp.reproj.no.na$Human_Dens)) # This made them all 0
 
 
 # Save New Pres-abs DF with Human Dens: -----------------------------------
-st_write(warp.reproj.no.na, "/Users/shannonspragg/ONA_GRIZZ/WARP Bears /WARP Cropped - SIP/warp_presabs_hum_dens.shp")
+st_write(warp.reproj.no.na, "/Users/shannonspragg/ONA_GRIZZ/WARP Bears /WARP Cropped - SIP/warp_presabs_complete.shp")
 

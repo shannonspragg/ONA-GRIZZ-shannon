@@ -1,0 +1,61 @@
+---
+title: "Pseudo-abs Bayes Regs"
+output: html_document
+author: "Shannon Spragg"
+---
+
+```{r setup, include=FALSE}
+knitr::opts_chunk$set(echo = TRUE)
+```
+
+## Formatting our Pseudo-absence Bayesian Probability of Conflict Regressions:
+
+This document will include the different Bayesian regression models (simplest to most complex) for our WARP pseudo-abs dataframe (1's = all conflict report points , 0's = randomly generated absence points).
+
+We produce three different models to estimate the probability of any wildlife conflict points occurring, in order from simplest to most complex. As we are demonstrating the probability of conflict for any species, we only include predictors that possibly pertain to all species (not bear specific) which are human population density, distance to nearest PA and metro area, total farm count and dominant farm type by CCS region, and a varying intercept for CCS region.
+
+Model 1: logit(p_conflict) = B_1*PopDens 
+Model 2: logit(p_conflict) = a[CCS] + B_1*PopDens 
+Model 3: logit(p_conflict) = a[CCS] + B_1*PopDens + B_2 * Dist2PA + B_3 * Dist2Metro + B_4 * TotalFarms + B_5 * DomFarms
+
+We will use the resulting p(conflict) values to adjust our predictor rasters (multiplying the coefficients by each raster) and combine these rasters into a single raster representing our p(conflict) for general species. These values will then be extracted to points in our p(conflict) model for bears as a predictor.
+
+## Producing the Bayes Models:
+
+```{r packages, include=FALSE}
+library(sf)
+library(tidyverse)
+library(dplyr)
+library(raster)
+library(terra)
+library(tidyverse)
+library(caret)
+library(GGally)
+library(ggplot2)
+library(corrplot)
+library(bayesplot)
+theme_set(bayesplot::theme_default(base_family = "sans"))
+library(rstanarm)
+options(mc.cores = 1)
+library(loo)
+library(projpred)
+SEED=14124869
+library(sjPlot)
+library(nloptr)
+library(sjmisc)
+library(rsq)
+library(tidybayes)
+library(pROC)
+library(bayestestR)
+library(randomForest)
+```
+
+## Including Plots
+
+You can also embed plots, for example:
+
+```{r pressure, echo=FALSE}
+plot(pressure)
+```
+
+Note that the `echo = FALSE` parameter was added to the code chunk to prevent printing of the R code that generated the plot.

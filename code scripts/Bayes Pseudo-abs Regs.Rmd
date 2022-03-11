@@ -95,11 +95,11 @@ We can use the scale function to center our predictors by subtracting the means 
 ```{r mini df, echo=FALSE}
 # Fit Model with Rstanarm: ------------------------------------------------
 # Make a mini data frame with just our predictors (no spatial info):
-mini.warp.df.pa <-  data.frame(bears_presence_ps, b2pa.dist.ps, b2met.dist.ps, total.farms.ps, total.farms.ps, dom.farms.ps, grizzinc.ps, bhs.ps, biophys.ps, CCSUID.ps, CCSNAME.ps, pop.dens)
+mini.warp.df.ps <-  data.frame(bears_presence_ps, b2pa.dist.ps, b2met.dist.ps, total.farms.ps, total.farms.ps, dom.farms.ps, grizzinc.ps, bhs.ps, biophys.ps, CCSUID.ps, CCSNAME.ps, pop.dens)
 
 # Make our outcome to be factor type and create x and y variables:
-mini.warp.df.pa$bears_presence_ps <- factor(mini.warp.df.pa$bears_presence_ps)
-str(mini.warp.df.pa)
+mini.warp.df.ps$bears_presence_ps <- factor(mini.warp.df.ps$bears_presence_ps)
+str(mini.warp.df.ps)
 ```
 Here we produce a mini data frame that excludes the spatial geometry, but includes all of our critical predictors.
 
@@ -112,27 +112,31 @@ t_prior <- student_t(df = 7, location = 0, scale = 2.5)
 
 # Build our posterior distribution: stan_glm returns the posterior dist for parameters describing the uncertainty related to unknown parameter values
 post.pa.simplest <- stan_glm(bears_presence_ps ~ pop.dens, 
-                  data = mini.warp.df.pa,
+                  data = mini.warp.df.ps,
                   family = binomial(link = "logit"), # define our binomial glm
                   prior = t_prior, prior_intercept = t_prior, 
                   seed = SEED, refresh=0) # we add seed for reproducability
 
 # Add in a Varying Intercept for SOI CCS Region:
 post.pa.simple <- stan_glmer(bears_presence_ps ~ pop.dens + (1 | CCSNAME.ps), 
-                            data = mini.warp.df.pa,
+                            data = mini.warp.df.ps,
                             family = binomial(link = "logit"), # define our binomial glm
                             prior = t_prior, prior_intercept = t_prior,
                             seed = SEED, refresh=0) # we add seed for reproducability
 
 # Add in our other variables:
 post.pa.full <- stan_glmer(bears_presence_ps ~ b2pa.dist.ps + b2met.dist.ps + dom.farms.ps + total.farms.ps + total.farms.sq.ps + pop.dens + (1 | CCSNAME.ps), 
-                            data = mini.warp.df.pa,
+                            data = mini.warp.df.ps,
                             family = binomial(link = "logit"), # define our binomial glm
                             prior = t_prior, prior_intercept = t_prior, QR=TRUE,
                             seed = SEED, refresh=0) # we add seed for reproducability
 
+summary(post.pa.simple)
+summary(post.pa.simplest)
+summary(post.pa.full)
 ```
-Here we set our initial priors to students t with 7 degrees of freedom, and a scale of 2.5 which is a reasonable default fir prior when coefficients should be close to zero but have some chance of being large. We build our three models using stan_glm to return our posterior distribution for the specified model parameters.
+Here we set our initial priors to students t with 7 degrees of freedom, and a scale of 2.5 which is a reasonable default fir prior when coefficients should be close to zero but have some chance of being large. We build our three models using stan_glm to return our posterior distribution for the specified model parameters. Our first model, logit(p_conflict) = B_1*PopDens , has a 0.8 coefficient/mean for population density. Model 2, logit(p_conflict) = a[CCS] + B_1 * PopDens includes a varying intercept for CCS region and a coefficient/mean of -2.3 for population density. The full model, logit(p_conflict) = a[CCS] + B_1*PopDens + B_2 * Dist2PA + B_3 * Dist2Metro + B_4 * TotalFarms + B_5 * DomFarms shows a -3.3 coefficient for Dist2PA, a -1.4 for Dist2Metro , a -0.3 for Cattle Ranching & Farming (Domfarms), 1.1 Fruit and tree nut farming (Domfarms), 1.6 for Other animal production (Domfarms), 1.6 for Other crop farming (Domfarms), 0.2 for Vegetable & Meelon farming, -0.3 for total farms , 0.5 for total farsms squared, and 0.7 for population density.
+
 
 ## Find the Area Under the Curve for our Posterior Distributions:
 
@@ -152,6 +156,38 @@ legend("bottomright", legend=c("Full Pseudo-abs Regression", "Simple Pseudo-Abs 
        col=c("#377eb8", "#4daf4a", "red"), lwd = 4)
 ```
 Comparing the simple pseudo-absence model with the full model in a ROC plot shows that the full model has a 82% discrimination. This indicates that the model predictions are correct 82% of the time, slightly better than the simple model at 79% and the simplest model at 67%.
+
+
+## Leave One Out Cross Validation:
+
+```{r LOO, echo=FALSE}
+# Leave-one-out Cross_validation: -----------------------------------------
+# Run a Leave-One-Out (LOO):
+# Loo package implements fast Pareto smoothed leave-one-out-cross-val (PSIS-LOO) to compute expected log predictive density:
+(loo.simplest <- loo(post.pa.simplest, save_psis = TRUE))
+# Above we see that PSIS-LOO result is reliable as all Pareto k estimates are small (k< 0.5) Vehtari, Gelman and Gabry (2017a).
+(loo.simple <- loo(post.pa.simple, save_psis = TRUE))
+
+(loo.pa.full <- loo(post.pa.full, save_psis = TRUE))
+
+
+plot(loo1.ps, label_points = TRUE)
+loo1 # get the summary of our test
+
+############## Comparison to Baseline Model: -------------------------------------------
+
+# Compute our baseline result without covariates:
+post0.ps <- update(post.pa.full, formula = bears_presence_ps ~ 1, QR = FALSE, refresh=0)
+
+# Compare to our baseline:
+(loo0.ps <- loo(post0.ps)) # computing the PSIS-LOO for our baseline model
+
+loo_compare(loo0.ps, loo1.ps) # this high negative value for post0 shows us the covariates contain clearly useful information for predictions
+
+
+```
+
+
 
 
 

@@ -188,6 +188,11 @@ loo_compare(loo.0, loo.simple, loo.simplest, loo.pa.full) # this high negative v
 ```
 We conduct a leave-one-out cross validation for our three models and then compare them to the zero posterior. Above, we see that the full model and simple model's PSIS-LOO result is reliable as all Pareto k estimates are small (k< 0.5) and the Monte Carlo SE is 0.1 (Vehtari, Gelman and Gabry 2017a). The simplest model is also reliable as it has a Monte Carlo SE of 0.0 and all Pareto k estimates are small (k< 0.5). Comparing these LOO values to our baseline, we see that the theoretical expected log point wise predictive density (elpd_loo) is lowest for our full model and highest for our baseline posterior, indicating that the increased covariates in our models contain clearly useful information for predictions.
 
+## Create our P(General Conflict) Raster:
+
+Here we use the coefficients resulting from the above full regression to preform raster math (coeff_1 * predictor raster + coeff_2 * predictor raster + ...) to create one condensed raster representing the probability of general conflict.
+
+Then, we extract the values of this raster to our original warp conflict report data frame (1's = bears, 0's = other species reports), to use the p(general conlfict) as a predictor in the second Bayes model of bear conflict.
 
 
 

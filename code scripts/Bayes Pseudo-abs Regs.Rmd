@@ -53,12 +53,13 @@ library(randomForest)
 
 ```{r data, echo=FALSE}
 # Import Data: ------------------------------------------------------------
+# Here we have our presence-absence data:
 warp.pres.abs <- st_read("/Users/shannonspragg/ONA_GRIZZ/WARP Bears /WARP Cropped - SIP/warp_presabs_complete.shp")
 str(warp.pres.abs)
 ```
 
 
-```{r scale variables, echo=FALSE}
+```{r scale pres-abs variables, echo=FALSE}
 # Scale the Variables: ----------------------------------------------------------
 # Here we create a function to scale by subtracting the mean and dividing by 2 standard deviations:
 scale2sd <-function(variable){(variable - mean(variable, na.rm=TRUE))/(2*sd(variable, na.rm=TRUE))}
@@ -172,8 +173,8 @@ Comparing the simple pseudo-absence model with the full model in a ROC plot show
 (loo.pa.full <- loo(post.pa.full, save_psis = TRUE))
 
 
-plot(loo1.ps, label_points = TRUE)
-loo1 # get the summary of our test
+plot(loo.pa.full, label_points = TRUE)
+loo.pa.full # get the summary of our test
 
 ############## Comparison to Baseline Model: -------------------------------------------
 

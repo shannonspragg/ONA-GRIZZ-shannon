@@ -1,0 +1,194 @@
+---
+title: "Pseudo-abs Bayes Regs"
+output: html_document
+author: "Shannon Spragg"
+---
+
+```{r setup, include=FALSE}
+knitr::opts_chunk$set(echo = TRUE)
+```
+
+## Formatting our Pseudo-absence Bayesian Probability of Conflict Regressions:
+
+This document will include the different Bayesian regression models (simplest to most complex) for our WARP pseudo-abs dataframe (1's = all conflict report points , 0's = randomly generated absence points).
+
+We produce three different models to estimate the probability of any wildlife conflict points occurring, in order from simplest to most complex. As we are demonstrating the probability of conflict for any species, we only include predictors that possibly pertain to all species (not bear specific) which are human population density, distance to nearest PA and metro area, total farm count and dominant farm type by CCS region, and a varying intercept for CCS region.
+
+Model 1: logit(p_conflict) = B_1*PopDens 
+Model 2: logit(p_conflict) = a[CCS] + B_1*PopDens 
+Model 3: logit(p_conflict) = a[CCS] + B_1*PopDens + B_2 * Dist2PA + B_3 * Dist2Metro + B_4 * TotalFarms + B_5 * DomFarms
+
+We will use the resulting p(conflict) values to adjust our predictor rasters (multiplying the coefficients by each raster) and combine these rasters into a single raster representing our p(conflict) for general species. These values will then be extracted to points in our p(conflict) model for bears as a predictor.
+
+## Bring in and Scale the Data:
+
+```{r packages, include=FALSE}
+library(sf)
+library(tidyverse)
+library(dplyr)
+library(raster)
+library(terra)
+library(tidyverse)
+library(caret)
+library(GGally)
+library(ggplot2)
+library(corrplot)
+library(bayesplot)
+theme_set(bayesplot::theme_default(base_family = "sans"))
+library(rstanarm)
+options(mc.cores = 1)
+library(loo)
+library(projpred)
+SEED=14124869
+library(sjPlot)
+library(nloptr)
+library(sjmisc)
+library(rsq)
+library(tidybayes)
+library(pROC)
+library(bayestestR)
+library(randomForest)
+```
+
+
+```{r data, echo=FALSE}
+# Import Data: ------------------------------------------------------------
+warp.pres.abs <- st_read("/Users/shannonspragg/ONA_GRIZZ/WARP Bears /WARP Cropped - SIP/warp_presabs_complete.shp")
+str(warp.pres.abs)
+```
+
+
+```{r scale variables, echo=FALSE}
+# Scale the Variables: ----------------------------------------------------------
+# Here we create a function to scale by subtracting the mean and dividing by 2 standard deviations:
+scale2sd <-function(variable){(variable - mean(variable, na.rm=TRUE))/(2*sd(variable, na.rm=TRUE))}
+
+b2pa.dist.ps <- scale2sd(warp.pres.abs$ds__PA_)
+total.farms.ps <- scale2sd(warp.pres.abs$Ttl_F_C)
+b2met.dist.ps <- scale2sd(warp.pres.abs$dstn___)
+grizzinc.ps <- scale2sd(warp.pres.abs$GrzzInE)
+bhs.ps <- scale2sd(warp.pres.abs$BHSExtr)
+biophys.ps <- scale2sd(warp.pres.abs$BphysEx)
+pop.dens <- scale2sd(warp.pres.abs$Human_Dens)
+
+bears_presence_ps <- warp.pres.abs$bears # Binomial bears
+dom.farms.ps <- warp.pres.abs$Dm_Fr_T # Dominant farm type covariate -- non numeric
+dom.farms.ps <- as.factor(warp.pres.abs$Dm_Fr_T) # Making this work as a factor
+
+warp.pres.abs$CCSNAME <- as.factor(warp.pres.abs$CCSNAME)
+warp.pres.abs$CCSUID <- as.factor(warp.pres.abs$CCSUID)
+
+CCSUID.ps <- warp.pres.abs$CCSUID
+CCSNAME.ps <- warp.pres.abs$CCSNAME
+
+which(is.na(warp.pres.abs$CCSNAME.ps)) # Like 200 NA's!!
+which(is.na(warp.pres.abs$CCSUID.ps)) # Like 200 NA's!!
+
+# Add an QUADRATIC term for Farm Count: -----------------------------------
+# We want to add a quadratic term to farm count so that we can better interpret it against P(conflict)
+total.farms.sq.ps <- total.farms.ps*total.farms.ps
+```
+We can use the scale function to center our predictors by subtracting the means (center= TRUE) and scaling by dividing by their standard deviation (scale=TRUE). We do this as well as adding a quadratic term for our scaled total farms perdictor.
+
+## Producing the Bayes Models:
+
+```{r mini df, echo=FALSE}
+# Fit Model with Rstanarm: ------------------------------------------------
+# Make a mini data frame with just our predictors (no spatial info):
+mini.warp.df.ps <-  data.frame(bears_presence_ps, b2pa.dist.ps, b2met.dist.ps, total.farms.ps, total.farms.ps, dom.farms.ps, grizzinc.ps, bhs.ps, biophys.ps, CCSUID.ps, CCSNAME.ps, pop.dens)
+
+# Make our outcome to be factor type and create x and y variables:
+mini.warp.df.ps$bears_presence_ps <- factor(mini.warp.df.ps$bears_presence_ps)
+str(mini.warp.df.ps)
+```
+Here we produce a mini data frame that excludes the spatial geometry, but includes all of our critical predictors.
+
+```{r models, echo=TRUE}
+# Fitting our Posterior Regression: ---------------------------------------
+# tutorial here: https://avehtari.github.io/modelselection/diabetes.html 
+
+# Set our prior:
+t_prior <- student_t(df = 7, location = 0, scale = 2.5)
+
+# Build our posterior distribution: stan_glm returns the posterior dist for parameters describing the uncertainty related to unknown parameter values
+post.pa.simplest <- stan_glm(bears_presence_ps ~ pop.dens, 
+                  data = mini.warp.df.ps,
+                  family = binomial(link = "logit"), # define our binomial glm
+                  prior = t_prior, prior_intercept = t_prior, 
+                  seed = SEED, refresh=0) # we add seed for reproducability
+
+# Add in a Varying Intercept for SOI CCS Region:
+post.pa.simple <- stan_glmer(bears_presence_ps ~ pop.dens + (1 | CCSNAME.ps), 
+                            data = mini.warp.df.ps,
+                            family = binomial(link = "logit"), # define our binomial glm
+                            prior = t_prior, prior_intercept = t_prior,
+                            seed = SEED, refresh=0) # we add seed for reproducability
+# This has a bulk ESS error... not sure if that's a big deal
+
+# Add in our other variables:
+post.pa.full <- stan_glmer(bears_presence_ps ~ b2pa.dist.ps + b2met.dist.ps + dom.farms.ps + total.farms.ps + total.farms.sq.ps + pop.dens + (1 | CCSNAME.ps), 
+                            data = mini.warp.df.ps,
+                            family = binomial(link = "logit"), # define our binomial glm
+                            prior = t_prior, prior_intercept = t_prior, QR=TRUE,
+                            seed = SEED, refresh=0) # we add seed for reproducability
+
+summary(post.pa.simple)
+summary(post.pa.simplest)
+summary(post.pa.full)
+```
+Here we set our initial priors to students t with 7 degrees of freedom, and a scale of 2.5 which is a reasonable default fir prior when coefficients should be close to zero but have some chance of being large. We build our three models using stan_glm to return our posterior distribution for the specified model parameters. Our first model, logit(p_conflict) = B_1*PopDens , has a 0.8 coefficient/mean for population density. Model 2, logit(p_conflict) = a[CCS] + B_1 * PopDens includes a varying intercept for CCS region and a coefficient/mean of -2.3 for population density. The full model, logit(p_conflict) = a[CCS] + B_1*PopDens + B_2 * Dist2PA + B_3 * Dist2Metro + B_4 * TotalFarms + B_5 * DomFarms shows a -3.3 coefficient for Dist2PA, a -1.4 for Dist2Metro , a -0.3 for Cattle Ranching & Farming (Domfarms), 1.1 Fruit and tree nut farming (Domfarms), 1.6 for Other animal production (Domfarms), 1.6 for Other crop farming (Domfarms), 0.2 for Vegetable & Meelon farming, -0.3 for total farms , 0.5 for total farsms squared, and 0.7 for population density.
+
+
+## Find the Area Under the Curve for our Posterior Distributions:
+
+```{r roc plot, echo=FALSE}
+# Plot ROC for the Simple Posterior:
+par(pty="s") # sets our graph to square
+roc(bears_presence_ps, post.pa.full$fitted.values, plot=TRUE, legacy.axes=TRUE, percent=TRUE ,
+    xlab= "False Positive Percentage", ylab= "True Positive Percentage",
+    col="#377eb8", lwd=4, print.auc=TRUE) # this gives us the ROC curve , in 3544 conrols (bears 0) < 2062 cases (bears 1), Area under curve = 0.6547
+
+# Add ROC curve for our full pseudo-abs model:
+plot.roc(bears_presence_ps, post.pa.simple$fitted.values, percent=TRUE, col='#4daf4a', lwd=4, print.auc=TRUE, add=TRUE, print.auc.y=60)
+
+plot.roc(bears_presence_ps, post.pa.simplest$fitted.values, percent=TRUE, col='red', lwd=4, print.auc=TRUE, add=TRUE, print.auc.y=40)
+
+legend("bottomright", legend=c("Full Pseudo-abs Regression", "Simple Pseudo-Abs Regression", "Simplest Pseudo-abs Regression"),
+       col=c("#377eb8", "#4daf4a", "red"), lwd = 4)
+```
+Comparing the simple pseudo-absence model with the full model in a ROC plot shows that the full model has a 82% discrimination. This indicates that the model predictions are correct 82% of the time, slightly better than the simple model at 79% and the simplest model at 67%.
+
+
+## Leave One Out Cross Validation:
+
+```{r LOO, echo=FALSE}
+# Leave-one-out Cross_validation: -----------------------------------------
+# Run a Leave-One-Out (LOO):
+# Loo package implements fast Pareto smoothed leave-one-out-cross-val (PSIS-LOO) to compute expected log predictive density:
+(loo.simplest <- loo(post.pa.simplest, save_psis = TRUE))
+# Above we see that PSIS-LOO result is reliable as all Pareto k estimates are small (k< 0.5) Vehtari, Gelman and Gabry (2017a).
+(loo.simple <- loo(post.pa.simple, save_psis = TRUE))
+
+(loo.pa.full <- loo(post.pa.full, save_psis = TRUE))
+
+
+plot(loo1.ps, label_points = TRUE)
+loo1 # get the summary of our test
+
+############## Comparison to Baseline Model: -------------------------------------------
+
+# Compute our baseline result without covariates:
+post0.ps <- update(post.pa.simplest, formula = bears_presence_ps ~ 1, QR = FALSE, refresh=0)
+
+# Compare to our baseline:
+(loo.0 <- loo(post0.ps)) # computing the PSIS-LOO for our baseline model
+
+loo_compare(loo.0, loo.simple, loo.simplest, loo.pa.full) # this high negative value for post0 shows us the covariates contain clearly useful information for predictions
+```
+We conduct a leave-one-out cross validation for our three models and then compare them to the zero posterior. Above, we see that the full model and simple model's PSIS-LOO result is reliable as all Pareto k estimates are small (k< 0.5) and the Monte Carlo SE is 0.1 (Vehtari, Gelman and Gabry 2017a). The simplest model is also reliable as it has a Monte Carlo SE of 0.0 and all Pareto k estimates are small (k< 0.5). Comparing these LOO values to our baseline, we see that the theoretical expected log point wise predictive density (elpd_loo) is lowest for our full model and highest for our baseline posterior, indicating that the increased covariates in our models contain clearly useful information for predictions.
+
+
+
+
+
+

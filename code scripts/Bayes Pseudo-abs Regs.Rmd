@@ -14,9 +14,9 @@ This document will include the different Bayesian regression models (simplest to
 
 We produce three different models to estimate the probability of any wildlife conflict points occurring, in order from simplest to most complex. As we are demonstrating the probability of conflict for any species, we only include predictors that possibly pertain to all species (not bear specific) which are human population density, distance to nearest PA and metro area, total farm count and dominant farm type by CCS region, and a varying intercept for CCS region.
 
-Model 1: logit(p_conflict) = B_1*PopDens 
-Model 2: logit(p_conflict) = a[CCS] + B_1*PopDens 
-Model 3: logit(p_conflict) = a[CCS] + B_1*PopDens + B_2 * Dist2PA + B_3 * Dist2Metro + B_4 * TotalFarms + B_5 * DomFarms
+Model 1 (simplest) : logit(p_conflict) = B_1*PopDens 
+Model 2 (simple) : logit(p_conflict) = a[CCS] + B_1*PopDens 
+Model 3 (full) : logit(p_conflict) = a[CCS] + B_1*PopDens + B_2 * Dist2PA + B_3 * Dist2Metro + B_4 * TotalFarms + B_5 * DomFarms
 
 We will use the resulting p(conflict) values to adjust our predictor rasters (multiplying the coefficients by each raster) and combine these rasters into a single raster representing our p(conflict) for general species. These values will then be extracted to points in our p(conflict) model for bears as a predictor.
 
@@ -123,6 +123,7 @@ post.pa.simple <- stan_glmer(bears_presence_ps ~ pop.dens + (1 | CCSNAME.ps),
                             family = binomial(link = "logit"), # define our binomial glm
                             prior = t_prior, prior_intercept = t_prior,
                             seed = SEED, refresh=0) # we add seed for reproducability
+# This has a bulk ESS error... not sure if that's a big deal
 
 # Add in our other variables:
 post.pa.full <- stan_glmer(bears_presence_ps ~ b2pa.dist.ps + b2met.dist.ps + dom.farms.ps + total.farms.ps + total.farms.sq.ps + pop.dens + (1 | CCSNAME.ps), 

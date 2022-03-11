@@ -177,15 +177,15 @@ loo1 # get the summary of our test
 ############## Comparison to Baseline Model: -------------------------------------------
 
 # Compute our baseline result without covariates:
-post0.ps <- update(post.pa.full, formula = bears_presence_ps ~ 1, QR = FALSE, refresh=0)
+post0.ps <- update(post.pa.simplest, formula = bears_presence_ps ~ 1, QR = FALSE, refresh=0)
 
 # Compare to our baseline:
-(loo0.ps <- loo(post0.ps)) # computing the PSIS-LOO for our baseline model
+(loo.0 <- loo(post0.ps)) # computing the PSIS-LOO for our baseline model
 
-loo_compare(loo0.ps, loo1.ps) # this high negative value for post0 shows us the covariates contain clearly useful information for predictions
-
-
+loo_compare(loo.0, loo.simple, loo.simplest, loo.pa.full) # this high negative value for post0 shows us the covariates contain clearly useful information for predictions
 ```
+We conduct a leave-one-out cross validation for our three models and then compare them to the zero posterior. Above, we see that the full model and simple model's PSIS-LOO result is reliable as all Pareto k estimates are small (k< 0.5) and the Monte Carlo SE is 0.1 (Vehtari, Gelman and Gabry 2017a). The simplest model is also reliable as it has a Monte Carlo SE of 0.0 and all Pareto k estimates are small (k< 0.5). Comparing these LOO values to our baseline, we see that the theoretical expected log point wise predictive density (elpd_loo) is lowest for our full model and highest for our baseline posterior, indicating that the increased covariates in our models contain clearly useful information for predictions.
+
 
 
 

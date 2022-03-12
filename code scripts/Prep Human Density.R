@@ -82,6 +82,9 @@ crs(warp.ps.sv)
 plot(hm.dens.soi)
 plot(warp.ps.sv, add = TRUE) # HECK YES
 
+# Save our Human Dens Raster:
+
+
 # Extract Values to Points: -----------------------------------------------
 
 # Here I will extract the mean values from each raster to the buffered points

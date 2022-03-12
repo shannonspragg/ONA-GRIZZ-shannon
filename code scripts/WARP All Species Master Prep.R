@@ -171,6 +171,11 @@ plot(farm.type.rast)
 farm.count.rast <- terra::rasterize(farm.count.sv, biophys.cum.curmap, field = "VALUE")
 plot(farm.count.rast)
 
+# Save these Farm Rasters:
+terra::writeRaster(farm.type.rast, "/Users/shannonspragg/ONA_GRIZZ/Predictor Rasters/dom_farm_type_raster.tif")
+terra::writeRaster(farm.count.rast, "/Users/shannonspragg/ONA_GRIZZ/Predictor Rasters/total_farm_count_raster.tif" )
+
+
 # Buffer WARP Points Before Attributing Farm Values -----------------------
 # Here we buffer the WARP points by 5000m (5km) before extracting the attributes from the farm polygons
 bears.buf <- bears.reproj %>% 
@@ -225,6 +230,8 @@ which(is.na(warp.all.sp.master$Ttl_F_C)) # Now zero NA's
 which(is.na(warp.all.sp.master$Dm_Fr_T)) # Now zero NA's!
 which(is.na(warp.all.sp.master$ds__PA_)) # no NA's
 which(is.na(warp.all.sp.master$dstn___)) # no NA's
+
+
 
 # WARP All Species Master Data Frame --------------------------------------
 # Since we did this progressively, our bears.reproj file is the new "all species master", so

@@ -155,20 +155,25 @@ plot(st_geometry(bears.reproj))
 
 # Rasterize Farm Data & WARP Points ---------------------------------------
 
+# Crop our Polygons to SOI boundary:
+farm.type.soi.crop <- st_intersection(farms.reproj, soi.bound.reproj)
+plot(st_geometry(farm.type.soi.crop))
+
+tot.farms.soi.crop <- st_intersection(total.farms.reproj, soi.bound.reproj)
+plot(st_geometry(tot.farms.soi.crop))
+plot(st_geometry(soi.bound.reproj), add=TRUE) # This works
+
 # Make farm type a spatvector:
-farm.type.sv <- vect(farms.reproj)
+farm.type.soi.sv <- vect(farm.type.soi.crop)
 
-# Now do this for total farms:
-plot(total.farms.reproj, max.plot = 23)
-total.farms.reproj$VALUE <- as.numeric(total.farms.reproj$VALUE) # Making this numeric
+farm.count.soi.sv <- vect(tot.farms.soi.crop)
+plot(farm.count.soi.sv)
 
-farm.count.sv <- vect(total.farms.reproj)
-plot(farm.count.sv)
 # Now let's rasterize the farm type and count:
-farm.type.rast <- terra::rasterize(farm.type.sv, biophys.cum.curmap, field = "N_A_I_C")
+farm.type.rast <- terra::rasterize(farm.type.soi.sv, biophys.cum.curmap, field = "N_A_I_C")
 plot(farm.type.rast)
 
-farm.count.rast <- terra::rasterize(farm.count.sv, biophys.cum.curmap, field = "VALUE")
+farm.count.rast <- terra::rasterize(farm.count.soi.sv, biophys.cum.curmap, field = "VALUE")
 plot(farm.count.rast)
 
 # Save these Farm Rasters:

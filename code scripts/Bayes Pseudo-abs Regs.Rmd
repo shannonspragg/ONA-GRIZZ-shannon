@@ -136,8 +136,21 @@ post.pa.full <- stan_glmer(bears_presence_ps ~ b2pa.dist.ps + b2met.dist.ps + do
 summary(post.pa.simple)
 summary(post.pa.simplest)
 summary(post.pa.full)
+
 ```
 Here we set our initial priors to students t with 7 degrees of freedom, and a scale of 2.5 which is a reasonable default fir prior when coefficients should be close to zero but have some chance of being large. We build our three models using stan_glm to return our posterior distribution for the specified model parameters. Our first model, logit(p_conflict) = B_1*PopDens , has a 0.8 coefficient/mean for population density. Model 2, logit(p_conflict) = a[CCS] + B_1 * PopDens includes a varying intercept for CCS region and a coefficient/mean of -2.3 for population density. The full model, logit(p_conflict) = a[CCS] + B_1*PopDens + B_2 * Dist2PA + B_3 * Dist2Metro + B_4 * TotalFarms + B_5 * DomFarms shows a -3.3 coefficient for Dist2PA, a -1.4 for Dist2Metro , a -0.3 for Cattle Ranching & Farming (Domfarms), 1.1 Fruit and tree nut farming (Domfarms), 1.6 for Other animal production (Domfarms), 1.6 for Other crop farming (Domfarms), 0.2 for Vegetable & Meelon farming, -0.3 for total farms , 0.5 for total farsms squared, and 0.7 for population density.
+
+## Extract our Posterior Estimates:
+```{r extract estimates for post, echo=FALSE}
+# Extract our Posterior Estimates from the full model with varying intercept:
+preds.ccs.varying <- posterior_epred(post.pa.full)
+med.preds <- apply(preds.ccs.varying, 2, median)
+
+# Add this as a column to our data frams:
+warp.pres.abs$Post.Med.Preds <- med.preds
+
+st_write(warp.pres.abs, "/Users/shannonspragg/ONA_GRIZZ/WARP Bears /WARP Cropped - SIP/warp_presabs_post_preds.shp")
+```
 
 
 ## Find the Area Under the Curve for our Posterior Distributions:
@@ -211,6 +224,11 @@ dist2PA.rast <- terra::writeRaster(pa.soi.rast, "/Users/shannonspragg/ONA_GRIZZ/
 # Distance to Nearest Metro Area (km):
 dist2met.rast <- terra::writeRaster(metro.soi.rast, "/Users/shannonspragg/ONA_GRIZZ/Predictor Rasters/dist2metro_raster.tif" )
 
+# Human Pop Density (by sq km):
+hm.dens.rast <- terra::rast("/Users/shannonspragg/ONA_GRIZZ/CAN Spatial Data/Human Pop Density/human_dens_SOI_10km.tif") # SOI Region 10km
+
+# CCS Region ID:
+ccs.postmeans.rast <- terra::rast(ccs.post.means.rast, "/Users/shannonspragg/ONA_GRIZZ/Predictor Rasters/CCS_postmeans_raster.tif" )
 
 
 ```

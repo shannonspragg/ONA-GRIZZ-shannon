@@ -197,6 +197,21 @@ Then, we extract the values of this raster to our original warp conflict report 
 # Bring in Rasters:
 
 ```{r bring in data 2, include=FALSE}
+# Here we bring in all of our predictor rasters for the SOI region:
+
+# Dominant Farm Type by CCS Region:
+dom.farms.rast <- terra::rast(farm.type.rast, "/Users/shannonspragg/ONA_GRIZZ/Predictor Rasters/dom_farm_type_raster.tif")
+
+# Total Farm Count by CCS Region:
+tot.farms.rast <- terra::rast(farm.count.rast, "/Users/shannonspragg/ONA_GRIZZ/Predictor Rasters/total_farm_count_raster.tif" )
+
+# Distance to Neartest Protected Area (km):
+dist2PA.rast <- terra::writeRaster(pa.soi.rast, "/Users/shannonspragg/ONA_GRIZZ/Predictor Rasters/dist2PA_raster.tif")
+
+# Distance to Nearest Metro Area (km):
+dist2met.rast <- terra::writeRaster(metro.soi.rast, "/Users/shannonspragg/ONA_GRIZZ/Predictor Rasters/dist2metro_raster.tif" )
+
+
 
 ```
 

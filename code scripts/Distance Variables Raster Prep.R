@@ -56,26 +56,65 @@ st_crs(metro.reproj) == st_crs(soi.bound.reproj) # [TRUE]
 
 # Crop PA's & Metro to SOI Region: ----------------------------------------
 # Crop these points to just BC:
-PAs.soi.crop <- st_crop(bc.PAs.reproj, soi.bound.reproj)
+PAs.soi.crop <- st_intersection(bc.PAs.reproj, soi.bound.reproj)
 plot(st_geometry(PAs.soi.crop))
 
-metro.soi.crop <- st_crop(metro.reproj, soi.bound.reproj)
+metro.soi.crop <- st_intersection(metro.reproj, soi.bound.reproj)
 plot(st_geometry(metro.soi.crop))
-
+plot(st_geometry(soi.bound.reproj), add=TRUE) # This works
 
 # Rasterize our Points & Polygons: ----------------------------------------
 
-# Make farm type a spatvector:
+# Make our data spatvectors:
 PA.soi.sv <- vect(PAs.soi.crop)
 
-metro.soi.sv <- vect(metro.reproj)
-plot(farm.count.sv)
+metro.soi.sv <- vect(metro.soi.crop)
+plot(metro.soi.sv)
 
-# Now let's rasterize the farm type and count:
-pas.soi.rast <- terra::rasterize(PA.soi.sv, biophys.cum.curmap, field = "")
-plot(pa.soi.rast)
+warp.ps.sv <- vect(warp.pa.reproj)
 
-metro.soi.rast <- terra::rasterize(metro.soi.sv, biophys.cum.curmap, field = "")
-plot(metro.soi.rast)
 
-??terra::rasterize
+# Calculate Distance to PA's & Metro from points: -------------------------
+
+# Need to use our spatvectors:
+
+dist.pa.matrix <- terra::distance(warp.ps.sv, PA.soi.sv)
+
+dist.met.matrix <- terra::distance(warp.ps.sv, metro.soi.sv)
+
+# Add Distance Variable into Data table
+
+warp.ps.sv$dist2PA<-dist.pa.matrix
+head(warp.ps.sv)
+
+warp.ps.sv$dist2Metro <- dist.met.matrix
+
+# Remove the units from the values (note: in meters)
+as.numeric(warp.ps.sv$dist2PA)
+as.numeric(warp.ps.sv$dist2Metro)
+
+# Convert units from meters to km:
+library(measurements)
+warp.ps.sv$dist2PA<-conv_unit(warp.ps.sv$dist2PA,"m","km")
+
+warp.ps.sv$dist2Metro <- conv_unit(warp.ps.sv$dist2Metro, "m", "km")
+
+head(warp.ps.sv) # Perfect!
+
+
+# Make Metro and PA Dist Rasters: -----------------------------------------
+
+pa.soi.rast <- terra::rasterize(warp.ps.sv, biophys.cum.curmap, field = "dist2PA")
+
+metro.soi.rast <- terra::rasterize(warp.ps.sv, biophys.cum.curmap, field = "dist2Metro")
+
+# Check this to see if it looks right:
+plot(warp.ps.sv)
+plot(pa.soi.rast, add=TRUE) #YASS
+
+
+# Save our Rasters: -------------------------------------------------------
+terra::writeRaster(pa.soi.rast, "/Users/shannonspragg/ONA_GRIZZ/Predictor Rasters/dist2PA_raster.tif")
+terra::writeRaster(metro.soi.rast, "/Users/shannonspragg/ONA_GRIZZ/Predictor Rasters/dist2metro_raster.tif" )
+
+

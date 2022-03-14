@@ -26,15 +26,15 @@ soi.ccs <- st_read( "/Users/shannonspragg/ONA_GRIZZ/CAN Spatial Data/SOI CCS reg
 warp.pres.abs.df <- st_read("/Users/shannonspragg/ONA_GRIZZ/WARP Bears /WARP Cropped - SIP/warp_presabs_post_preds.shp")
 
 # Bring in one of our rasters for rasterizing polygon data later:
-biophys.cum.curmap <- rast("/Users/shannonspragg/rasters/biophys_normalized_cum_currmap.tif")
+soi.rast <- terra::rast("/Users/shannonspragg/ONA_GRIZZ/CAN Spatial Data/SOI Ecoprovince Boundary/SOI_10km.tif") # SOI Region 10km
 
 
 # Reproject All Data ------------------------------------------------------
 # Now we have the protected areas projected to match the biophys raster:
 warp.pa.reproj <- st_make_valid(warp.pres.abs.df) %>% 
-  st_transform(crs=crs(biophys.cum.curmap))
+  st_transform(crs=crs(soi.rast))
 soi.ccs.reproj <- st_make_valid(soi.ccs) %>% 
-  st_transform(crs=crs(biophys.cum.curmap))
+  st_transform(crs=crs(soi.rast))
 
 # Check to see if they match:
 st_crs(warp.pa.reproj) == st_crs(soi.ccs.reproj) # [TRUE] = These ARE now the same
@@ -49,14 +49,14 @@ plot(soi.ccs.sv)
 warp.ps.sv <- vect(warp.pa.reproj)
 
 # Make our Raster:
-soi.ccs.rast <- terra::rasterize(soi.ccs.sv, biophys.cum.curmap, field = "CCSNAME")
+soi.ccs.rast <- terra::rasterize(soi.ccs.sv, soi.rast, field = "CCSNAME")
 
 
 # Make Raster for our Posterior Means for CCS Varying Intercept: ---------------------
-post.means.rast <- terra::rasterize(warp.ps.sv, biophys.cum.curmap, field = "Pst_M_P")
+post.means.rast <- terra::rasterize(warp.ps.sv, soi.rast, field = "Pst_M_P")
 
 # Fix the column name:
-names(post.means.rast)[names(post.means.rast) == "biophys_normalized_cum_currmap"] <- "Posterior Mean Estimate"
+names(post.means.rast)[names(post.means.rast) == "SOI_10km"] <- "Posterior Mean Estimate"
 
 # Extract Values of Posterior Means to CCS regions: --------------------------------------
 
@@ -68,7 +68,7 @@ soi.ccs.sv$PostMean <- warp.post.mean.ext[,2]
 
 # Make our CCS Post Mean Raster: ------------------------------------------
 
-ccs.post.means.rast <- terra::rasterize(soi.ccs.sv, biophys.cum.curmap, field = "PostMean")
+ccs.post.means.rast <- terra::rasterize(soi.ccs.sv, soi.rast, field = "PostMean")
 
 # Check this:
 

@@ -21,7 +21,7 @@ library("dplyr")
 warp.df <- st_read("/Users/shannonspragg/ONA_GRIZZ/WARP Bears /WARP Cropped - SIP/warp_crop_10km_buf.shp")
 
 # Our WARP df with pres abs points:
-warp.pres.abs <- st_read("/Users/shannonspragg/ONA_GRIZZ/WARP Bears /warp.pres.abs.need.CCS.shp")
+warp.pres.abs <- st_read("/Users/shannonspragg/ONA_GRIZZ/WARP Bears /WARP Cropped - SIP/warp_presabs_complete.shp")
 
 soi.ccs.crop <- st_read( "/Users/shannonspragg/ONA_GRIZZ/CAN Spatial Data/SOI CCS regions/SOI_CCS_10km.shp") 
 
@@ -54,10 +54,10 @@ soi.10k.buf <- st_buffer(soi.region, 10000)
 st_write(soi.10k.buf, "/Users/shannonspragg/ONA_GRIZZ/CAN Spatial Data/SOI Ecoprovince Boundary/SOI_10km_buf.shp")
 
 
-# Crop CCS Down to SOI 10km Extent: --------------------------------------------
+# Crop CCS Down to SOI 10km Extent (skip): --------------------------------------------
 soi.ccs.crop <- st_intersection(bc.ccs.reproj, soi.10k.buf)
 
-# Write this as a .shp for later: -----------------------------------------
+# Write this as a .shp for later (skip): -----------------------------------------
 
 st_write(soi.ccs.crop, "/Users/shannonspragg/ONA_GRIZZ/CAN Spatial Data/SOI CCS regions/SOI_CCS_10km.shp")
 soi.ccs.crop <- st_read( "/Users/shannonspragg/ONA_GRIZZ/CAN Spatial Data/SOI CCS regions/SOI_CCS_10km.shp")
@@ -71,7 +71,7 @@ st_crs(warp.pres.abs) == st_crs(soi.ccs.crop) # [TRUE] = These ARE the same
 
 # Plot these together:
 plot(st_geometry(soi.crop))
-plot(st_geometry(warp.df), add=)
+plot(st_geometry(warp.df), add=TRUE)
 
 # Assign our points to a CCS category:
 warp.ccs.join <- st_join(warp.pres.abs, left = TRUE, soi.ccs.crop) # join points
@@ -113,5 +113,5 @@ which(is.na(warp.ccs.join$CCSUID)) # yay!!
 
 
 # Save this new df for future purposes:
-st_write(warp.ccs.join, "/Users/shannonspragg/ONA_GRIZZ/WARP Bears /WARP Cropped - SIP/warp_pres_abs_10km_ccs.shp")
+st_write(warp.ccs.join, "/Users/shannonspragg/ONA_GRIZZ/WARP Bears /WARP Cropped - SIP/warp_presabs_final.shp")
 

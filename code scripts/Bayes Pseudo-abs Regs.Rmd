@@ -54,7 +54,7 @@ library(randomForest)
 ```{r data, echo=FALSE}
 # Import Data: ------------------------------------------------------------
 # Here we have our presence-absence data:
-warp.pres.abs <- st_read("/Users/shannonspragg/ONA_GRIZZ/WARP Bears /WARP Cropped - SIP/warp_presabs_complete.shp")
+warp.pres.abs <- st_read("/Users/shannonspragg/ONA_GRIZZ/WARP Bears /WARP Cropped - SIP/warp_presabs_varint_means.shp")
 str(warp.pres.abs)
 ```
 
@@ -70,7 +70,7 @@ b2met.dist.ps <- scale2sd(warp.pres.abs$dstn___)
 grizzinc.ps <- scale2sd(warp.pres.abs$GrzzInE)
 bhs.ps <- scale2sd(warp.pres.abs$BHSExtr)
 biophys.ps <- scale2sd(warp.pres.abs$BphysEx)
-pop.dens <- scale2sd(warp.pres.abs$Human_Dens)
+pop.dens <- scale2sd(warp.pres.abs$Hmn_Dns)
 
 bears_presence_ps <- warp.pres.abs$bears # Binomial bears
 dom.farms.ps <- warp.pres.abs$Dm_Fr_T # Dominant farm type covariate -- non numeric
@@ -82,14 +82,11 @@ warp.pres.abs$CCSUID <- as.factor(warp.pres.abs$CCSUID)
 CCSUID.ps <- warp.pres.abs$CCSUID
 CCSNAME.ps <- warp.pres.abs$CCSNAME
 
-which(is.na(warp.pres.abs$CCSNAME.ps)) # Like 200 NA's!!
-which(is.na(warp.pres.abs$CCSUID.ps)) # Like 200 NA's!!
-
 # Add an QUADRATIC term for Farm Count: -----------------------------------
 # We want to add a quadratic term to farm count so that we can better interpret it against P(conflict)
 total.farms.sq.ps <- total.farms.ps*total.farms.ps
 ```
-We can use the scale function to center our predictors by subtracting the means (center= TRUE) and scaling by dividing by their standard deviation (scale=TRUE). We do this as well as adding a quadratic term for our scaled total farms perdictor.
+We can use the scale function to center our predictors by subtracting the means (center= TRUE) and scaling by dividing by their standard deviation (scale=TRUE). We do this as well as adding a quadratic term for our scaled total farms predictor.
 
 ## Producing the Bayes Models:
 
@@ -104,6 +101,7 @@ str(mini.warp.df.ps)
 ```
 Here we produce a mini data frame that excludes the spatial geometry, but includes all of our critical predictors.
 
+## Fit our Posterior Regressions:
 ```{r models, echo=TRUE}
 # Fitting our Posterior Regression: ---------------------------------------
 # tutorial here: https://avehtari.github.io/modelselection/diabetes.html 
@@ -140,18 +138,6 @@ summary(post.pa.full)
 ```
 Here we set our initial priors to students t with 7 degrees of freedom, and a scale of 2.5 which is a reasonable default fir prior when coefficients should be close to zero but have some chance of being large. We build our three models using stan_glm to return our posterior distribution for the specified model parameters. Our first model, logit(p_conflict) = B_1*PopDens , has a 0.8 coefficient/mean for population density. Model 2, logit(p_conflict) = a[CCS] + B_1 * PopDens includes a varying intercept for CCS region and a coefficient/mean of -2.3 for population density. The full model, logit(p_conflict) = a[CCS] + B_1*PopDens + B_2 * Dist2PA + B_3 * Dist2Metro + B_4 * TotalFarms + B_5 * DomFarms shows a -3.3 coefficient for Dist2PA, a -1.4 for Dist2Metro , a -0.3 for Cattle Ranching & Farming (Domfarms), 1.1 Fruit and tree nut farming (Domfarms), 1.6 for Other animal production (Domfarms), 1.6 for Other crop farming (Domfarms), 0.2 for Vegetable & Meelon farming, -0.3 for total farms , 0.5 for total farsms squared, and 0.7 for population density.
 
-## Extract our Posterior Estimates:
-```{r extract estimates for post, echo=FALSE}
-# Extract our Posterior Estimates from the full model with varying intercept:
-preds.ccs.varying <- posterior_epred(post.pa.full)
-med.preds <- apply(preds.ccs.varying, 2, median)
-
-# Add this as a column to our data frams:
-warp.pres.abs$Post.Med.Preds <- med.preds
-
-st_write(warp.pres.abs, "/Users/shannonspragg/ONA_GRIZZ/WARP Bears /WARP Cropped - SIP/warp_presabs_post_preds.shp")
-```
-
 
 ## Find the Area Under the Curve for our Posterior Distributions:
 
@@ -160,7 +146,7 @@ st_write(warp.pres.abs, "/Users/shannonspragg/ONA_GRIZZ/WARP Bears /WARP Cropped
 par(pty="s") # sets our graph to square
 roc(bears_presence_ps, post.pa.full$fitted.values, plot=TRUE, legacy.axes=TRUE, percent=TRUE ,
     xlab= "False Positive Percentage", ylab= "True Positive Percentage",
-    col="#377eb8", lwd=4, print.auc=TRUE) # this gives us the ROC curve , in 3544 conrols (bears 0) < 2062 cases (bears 1), Area under curve = 0.6547
+    col="#377eb8", lwd=4, print.auc=TRUE) # this gives us the ROC curve , in 3544 controls (bears 0) < 2062 cases (bears 1), Area under curve = 0.6547
 
 # Add ROC curve for our full pseudo-abs model:
 plot.roc(bears_presence_ps, post.pa.simple$fitted.values, percent=TRUE, col='#4daf4a', lwd=4, print.auc=TRUE, add=TRUE, print.auc.y=60)
@@ -208,7 +194,6 @@ Here we use the coefficients resulting from the above full regression to preform
 Then, we extract the values of this raster to our original warp conflict report data frame (1's = bears, 0's = other species reports), to use the p(general conlfict) as a predictor in the second Bayes model of bear conflict.
 
 # Bring in Rasters:
-
 ```{r bring in data 2, include=FALSE}
 # Here we bring in all of our predictor rasters for the SOI region:
 
@@ -231,10 +216,11 @@ dist2met.rast <- terra::rast("/Users/shannonspragg/ONA_GRIZZ/Predictor Rasters/d
 hm.dens.rast <- terra::rast("/Users/shannonspragg/ONA_GRIZZ/CAN Spatial Data/Human Pop Density/human_dens_SOI_10km.tif") # SOI Region 10km
 
 # CCS Region ID:
-ccs.postmeans.rast <- terra::rast("/Users/shannonspragg/ONA_GRIZZ/Predictor Rasters/CCS_postmeans_raster.tif" )
+ccs.varint.rast <- terra::rast("/Users/shannonspragg/ONA_GRIZZ/Predictor Rasters/CCS_varint_raster.tif" )
+names(ccs.varint.rast)[names(ccs.varint.rast) == "PostMean"] <- "CCS Varying Intercept Mean"
 ```
 
-```{r make subset rasters}
+```{r make subset rasters, echo=FALSE}
 # Subset the Dominant Farm Type Raster into Categories:
 cattle.ranching.rast <- dom.farms.rast$`Dominant Farm Type by CCS` == "Cattle ranching and farming [1121]"
 names(cattle.ranching.rast)[names(cattle.ranching.rast) == "Dominant Farm Type by CCS"] <- "Cattle Ranching & Farming [1121]"
@@ -248,8 +234,7 @@ veg.melon.rast <- dom.farms.rast$`Dominant Farm Type by CCS` == "Vegetable and m
 names(veg.melon.rast)[names(veg.melon.rast) == "Dominant Farm Type by CCS"] <- "Vegetable & Melon Farming [1112]"
 ```
 
-
-Here are our posterior coefficients:
+Here are our posterior coefficients (from post.pa.full):
 (Intercept)                                    -3.3    0.4  
 b2pa.dist.ps                                   -1.4    0.1  
 b2met.dist.ps                                  -1.3    0.2  
@@ -262,19 +247,19 @@ total.farms.ps                                 -0.3    0.3
 total.farms.sq.ps                               0.5    0.1  
 pop.dens                                        0.7    0.1  
 
-```{r raster math}
+```{r raster math, include=TRUE}
 # Make sure extents match:
 ext(dist2PA.rast) == ext(dist2met.rast) # TRUE
 ext(dist2met.rast) == ext(tot.farms.rast) #TRUE
 ext(tot.farms.rast) == ext(hm.dens.rast) #TRUE
 
 # Stack these spatrasters:
-conf.stack <- c(dist2PA.rast, dist2met.rast, tot.farms.rast, tot.farms.sq.rast, hm.dens.rast, ccs.postmeans.rast, cattle.ranching.rast, fruit.tree.nut.rast, other.animal.rast, other.crop.rast, veg.melon.rast)
+conf.stack <- c(dist2PA.rast, dist2met.rast, tot.farms.rast, tot.farms.sq.rast, hm.dens.rast, ccs.varint.rast, cattle.ranching.rast, fruit.tree.nut.rast, other.animal.rast, other.crop.rast, veg.melon.rast)
 plot(conf.stack) # plot these all to check
 
 # Create P(all conflict) raster with our regression coefficients:
     # Prob_conf_rast = Int.val + CCS + B_1est * PopDens…
-p_conf_rast <- -3.3 + ccs.postmeans.rast + (-1.4 * dist2PA.rast) + (-1.3 * dist2met.rast) + (-0.3 * tot.farms.rast) +  (0.5 * tot.farms.sq.rast) + (0.7 * hm.dens.rast) + (-0.3 * cattle.ranching.rast) + (1.1 * fruit.tree.nut.rast) + (1.5 * other.animal.rast) + (1.6 * other.crop.rast) + (0.3 * veg.melon.rast)
+p_conf_rast <- -3.3 + ccs.varint.rast + (-1.4 * dist2PA.rast) + (-1.3 * dist2met.rast) + (-0.3 * tot.farms.rast) +  (0.5 * tot.farms.sq.rast) + (0.7 * hm.dens.rast) + (-0.3 * cattle.ranching.rast) + (1.1 * fruit.tree.nut.rast) + (1.5 * other.animal.rast) + (1.6 * other.crop.rast) + (0.3 * veg.melon.rast)
 
 plot(p_conf_rast)
 ```

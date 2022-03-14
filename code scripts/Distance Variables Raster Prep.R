@@ -34,19 +34,19 @@ str(bc.metro)
 soi.10k.boundary <- st_read("/Users/shannonspragg/ONA_GRIZZ/CAN Spatial Data/SOI Ecoprovince Boundary/SOI_10km_buf.shp")
 
 # Bring in one of our rasters for rasterizing polygon data later:
-biophys.cum.curmap <- rast("/Users/shannonspragg/rasters/biophys_normalized_cum_currmap.tif")
+soi.rast <- terra::rast("/Users/shannonspragg/ONA_GRIZZ/CAN Spatial Data/SOI Ecoprovince Boundary/SOI_10km.tif") # SOI Region 10km
 
 
 # Reproject All Data ------------------------------------------------------
 # Now we have the protected areas projected to match the biophys raster:
 warp.pa.reproj <- st_make_valid(warp.pres.abs.df) %>% 
-  st_transform(crs=crs(biophys.cum.curmap))
+  st_transform(crs=crs(soi.rast))
 bc.PAs.reproj <- st_make_valid(bc.PAs) %>% 
-  st_transform(crs=crs(biophys.cum.curmap))
+  st_transform(crs=crs(soi.rast))
 metro.reproj <- st_make_valid(bc.metro) %>% 
-  st_transform(crs=crs(biophys.cum.curmap))
+  st_transform(crs=crs(soi.rast))
 soi.bound.reproj <- st_make_valid(soi.10k.boundary) %>% 
-  st_transform(crs=crs(biophys.cum.curmap))
+  st_transform(crs=crs(soi.rast))
 
 
 # Check to see if they match:
@@ -104,14 +104,18 @@ head(warp.ps.sv) # Perfect!
 
 # Make Metro and PA Dist Rasters: -----------------------------------------
 
-pa.soi.rast <- terra::rasterize(warp.ps.sv, biophys.cum.curmap, field = "dist2PA")
+pa.soi.rast <- terra::rasterize(warp.ps.sv, soi.rast, field = "dist2PA")
 
-metro.soi.rast <- terra::rasterize(warp.ps.sv, biophys.cum.curmap, field = "dist2Metro")
+metro.soi.rast <- terra::rasterize(warp.ps.sv, soi.rast, field = "dist2Metro")
 
 # Check this to see if it looks right:
 plot(warp.ps.sv)
 plot(pa.soi.rast, add=TRUE) #YASS
 
+# Fix the column names:
+names(pa.soi.rast)[names(pa.soi.rast) == "SOI_10km"] <- "Distance to Nearest PA (km)"
+
+names(metro.soi.rast)[names(metro.soi.rast) == "SOI_10km"] <- "Distance to Nearest Metro (km)"
 
 # Save our Rasters: -------------------------------------------------------
 terra::writeRaster(pa.soi.rast, "/Users/shannonspragg/ONA_GRIZZ/Predictor Rasters/dist2PA_raster.tif")

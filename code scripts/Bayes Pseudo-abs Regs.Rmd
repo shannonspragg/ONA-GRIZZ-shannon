@@ -102,7 +102,7 @@ str(mini.warp.df.ps)
 Here we produce a mini data frame that excludes the spatial geometry, but includes all of our critical predictors.
 
 ## Fit our Posterior Regressions:
-```{r models, echo=TRUE}
+```{r models, echo=FALSE}
 # Fitting our Posterior Regression: ---------------------------------------
 # tutorial here: https://avehtari.github.io/modelselection/diabetes.html 
 

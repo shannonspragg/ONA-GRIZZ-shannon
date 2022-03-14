@@ -9,7 +9,6 @@ library(tidyverse)
 library(dplyr)
 library(raster)
 library(terra)
-#install.packages("dismo")
 library(dismo)
 library(stars)
 
@@ -21,10 +20,12 @@ soi.rast <- terra::rast("/Users/shannonspragg/ONA_GRIZZ/CAN Spatial Data/SOI Eco
 
 soi.10k.buf <- st_read("/Users/shannonspragg/ONA_GRIZZ/CAN Spatial Data/SOI CCS regions/SOI_CCS_10km.shp")
 
+
 # Reproject the Rasters: --------------------------------------------------
 world.dens.reproj <- terra::project(world.hum.dens, crs(soi.rast))
 
 crs(world.dens.reproj) == crs(soi.rast) #TRUE
+crs(soi.rast) == crs(biophys.cum.curmap) #TRUE
 
 soi.reproj <- st_make_valid(soi.10k.buf) %>% 
   st_transform(crs=crs(soi.rast))
@@ -46,12 +47,17 @@ plot(soi.bound.vect, add=TRUE) # We see they're projected properly and have a ni
 
 hm.dens.soi <- terra::mask(hm.dens.rsmple, soi.bound.vect) # BEA-UTIFUL!
 
-str(hm.dens.soi) # Res is 1463 x 1463
+str(hm.dens.soi) # Res is 1463 x 1463, need to fix dimensions
 
+plot(hm.dens.soi)
+
+# Fix the column names:
+names(hm.dens.soi)[names(hm.dens.soi) == "gpw_v4_population_density_adju~ountry_totals_rev11_2020_1_deg"] <- "Human Population Density by Nearest km"
 
 # Save Raster as .tif: ----------------------------------------------------
 
 terra::writeRaster(hm.dens.soi, "/Users/shannonspragg/ONA_GRIZZ/CAN Spatial Data/Human Pop Density/human_dens_SOI_10km.tif")
+terra::writeRaster(hm.dens.soi, "/Users/shannonspragg/ONA_GRIZZ/Predictor Rasters/human_dens_SOI_10km.tif")
 
 hm.dens.soi <- terra::rast("/Users/shannonspragg/ONA_GRIZZ/CAN Spatial Data/Human Pop Density/human_dens_SOI_10km.tif") # SOI Region 10km
 

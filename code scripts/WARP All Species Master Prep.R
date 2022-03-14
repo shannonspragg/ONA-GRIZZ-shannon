@@ -14,7 +14,6 @@ library(sp)
 library(rgeos)
 library(raster)
 library(rgdal)
-#install.packages("fasterize")
 library(fasterize)
 library(terra)
 library(stars)
@@ -52,8 +51,8 @@ str(bears.sf) # This gives us a sf data frame, good!
 
 
 
+
 # Bring in the PA,  Metro,  Ag Type,  and Farm Count Data -----------------
-#bc.boundary <- st_read("/Users/shannonspragg/ONA_GRIZZ/CAN Spatial Data/BC Boundary.shp")
 
 soi.10k.boundary <- st_read("/Users/shannonspragg/ONA_GRIZZ/CAN Spatial Data/SOI Ecoprovince Boundary/SOI_10km_buf.shp")
 
@@ -73,24 +72,24 @@ bc.ccs<-st_read("/Users/shannonspragg/ONA_GRIZZ/CAN Spatial Data/BC census subdi
 str(bc.ccs)
 
 # Bring in one of our rasters for rasterizing polygon data later:
-biophys.cum.curmap <- rast("/Users/shannonspragg/rasters/biophys_normalized_cum_currmap.tif")
+soi.rast <- terra::rast("/Users/shannonspragg/ONA_GRIZZ/CAN Spatial Data/SOI Ecoprovince Boundary/SOI_10km.tif") # SOI Region 10km
 
 
 # Reproject All Data ------------------------------------------------------
 # Now we have the protected areas projected to match the biophys raster:
 bears.reproj <- st_make_valid(warp.pres.abs) %>% 
-  st_transform(crs=crs(biophys.cum.curmap))
+  st_transform(crs=crs(soi.rast))
 bc.PAs.reproj <- st_make_valid(bc.PAs) %>% 
-  st_transform(crs=crs(biophys.cum.curmap))
+  st_transform(crs=crs(soi.rast))
 metro.reproj <- st_make_valid(bc.metro) %>% 
-  st_transform(crs=crs(biophys.cum.curmap))
+  st_transform(crs=crs(soi.rast))
 
 farms.reproj <- st_make_valid(bc.dom.farms) %>% 
-  st_transform(crs=crs(biophys.cum.curmap))
+  st_transform(crs=crs(soi.rast))
 total.farms.reproj <- st_make_valid(bc.total.farms) %>% 
-  st_transform(crs=crs(biophys.cum.curmap))
+  st_transform(crs=crs(soi.rast))
 soi.bound.reproj <- st_make_valid(soi.10k.boundary) %>% 
-  st_transform(crs=crs(biophys.cum.curmap))
+  st_transform(crs=crs(soi.rast))
 
 
 # Check to see if they match:
@@ -153,6 +152,7 @@ bears.reproj.c <- st_crop(bears.reproj, soi.10k.boundary)
 plot(st_geometry(bears.reproj))
 # Now the dataset can be picked up and used from here:
 
+
 # Rasterize Farm Data & WARP Points ---------------------------------------
 
 # Crop our Polygons to SOI boundary:
@@ -170,11 +170,17 @@ farm.count.soi.sv <- vect(tot.farms.soi.crop)
 plot(farm.count.soi.sv)
 
 # Now let's rasterize the farm type and count:
-farm.type.rast <- terra::rasterize(farm.type.soi.sv, biophys.cum.curmap, field = "N_A_I_C")
+farm.type.rast <- terra::rasterize(farm.type.soi.sv, soi.rast, field = "N_A_I_C")
 plot(farm.type.rast)
 
-farm.count.rast <- terra::rasterize(farm.count.soi.sv, biophys.cum.curmap, field = "VALUE")
+farm.count.rast <- terra::rasterize(farm.count.soi.sv, soi.rast, field = "VALUE")
 plot(farm.count.rast)
+
+# Fix the column names:
+names(farm.type.rast)[names(farm.type.rast) == "N_A_I_C"] <- "Dominant Farm Type by CCS"
+
+names(farm.count.rast)[names(farm.count.rast) == "VALUE"] <- "Total Farm Count by CCS"
+
 
 # Save these Farm Rasters:
 terra::writeRaster(farm.type.rast, "/Users/shannonspragg/ONA_GRIZZ/Predictor Rasters/dom_farm_type_raster.tif")

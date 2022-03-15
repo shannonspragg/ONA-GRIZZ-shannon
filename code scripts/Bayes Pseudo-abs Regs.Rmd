@@ -187,6 +187,38 @@ loo_compare(loo.0, loo.simple, loo.simplest, loo.pa.full) # this high negative v
 ```
 We conduct a leave-one-out cross validation for our three models and then compare them to the zero posterior. Above, we see that the full model and simple model's PSIS-LOO result is reliable as all Pareto k estimates are small (k< 0.5) and the Monte Carlo SE is 0.1 (Vehtari, Gelman and Gabry 2017a). The simplest model is also reliable as it has a Monte Carlo SE of 0.0 and all Pareto k estimates are small (k< 0.5). Comparing these LOO values to our baseline, we see that the theoretical expected log point wise predictive density (elpd_loo) is lowest for our full model and highest for our baseline posterior, indicating that the increased covariates in our models contain clearly useful information for predictions.
 
+## Plotting Our Mixed Effects:
+```{r mixed efffects, echo=FALSE}
+# Basic Mixed Effect Plot:
+sjPlot::plot_model(post.pa.full)
+
+# Labeled Effect Plot:
+# Notes: axis labels should be in order from bottom to top. 
+# To see the values of the effect size and p-value, set show.values and show.p= TRUE
+post1.effects.plot <- sjPlot::plot_model(post1, 
+                   axis.labels=c("CS Biophysical (HII + topo ruggedness)","Bear Habitat Suitability", "Grizz Increase", "Total Farm Count ^2" ,"Total Farm Count" ,"Vegetable & Melon Farming" ,
+                                 "Other Crop Farming (tobacco, peanut, sugar-cane, hay, herbs & spices) ", "Other Animal Production (bees & honey, equine, fur-bearers)" , "Fruit & Tree Nut Farming" , "Cattle Ranching & Farming" ,
+                                   "Distance to Metro Area (km)" , "Distance to Protected Area (km)"),
+                   show.values=TRUE, show.p=FALSE,
+                   title="Effects of Social & Environmental Variables on Bear Conflict")
+
+##### Model Table of Effect Size:
+sjPlot::tab_model(post.pa.full)
+
+# Formatted Table (with labels):
+# Notes: predictor labels (pred.labels) should be listed from top to bottom; dv.labels= the name of the response variable that will be at the top of the table.
+
+post1.effects.tab <- sjPlot::tab_model(post1, 
+                  show.re.var= TRUE, show.se = TRUE , show.p = TRUE , show.r2 = TRUE, show.aic = TRUE , 
+                  pred.labels =c("(Intercept)" , "Distance to Protected Area (km)", "Distance to Metro Area (km)", "Cattle Ranching & Farming" , "Fruit & Tree Nut Farming" ,"Other Animal Production (bees & honey, equine, fur-bearers)" ,
+                                 "Other Crop Farming (tobacco, peanut, sugar-cane, hay, herbs & spices) ", "Vegetable & Melon Farming" , "Total Farm Count" , "Total Farm Count ^2" , "Grizz Increase", "Bear Habitat Suitability", "CS Biophysical (HII + topo ruggedness)"),
+                                 dv.labels= "Effects of Social & Environmental Variables on Bear Conflict")
+
+```
+
+
+
+
 ## Create our P(General Conflict) Raster:
 
 Here we use the coefficients resulting from the above full regression to preform raster math (coeff_1 * predictor raster + coeff_2 * predictor raster + ...) to create one condensed raster representing the probability of general conflict.

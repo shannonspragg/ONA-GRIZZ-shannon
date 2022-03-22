@@ -231,6 +231,7 @@ Then, we extract the values of this raster to our original warp conflict report 
 # Bring in Rasters:
 ```{r bring in data 2, include=FALSE}
 # Here we bring in all of our predictor rasters for the SOI region:
+# link to data here:   https://drive.google.com/drive/u/0/folders/1T60Al9vHOF-E7ftKzvzN2CMUyF1agC-l
 
 # Dominant Farm Type by CCS Region:
 dom.farms.rast <- terra::rast("/Users/shannonspragg/ONA_GRIZZ/Predictor Rasters/dom_farm_type_raster.tif")

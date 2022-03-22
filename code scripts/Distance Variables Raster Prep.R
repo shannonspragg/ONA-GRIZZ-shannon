@@ -53,6 +53,11 @@ soi.bound.reproj <- st_make_valid(soi.10k.boundary) %>%
 st_crs(warp.pa.reproj) == st_crs(bc.PAs.reproj) # [TRUE] = These ARE now the same
 st_crs(metro.reproj) == st_crs(soi.bound.reproj) # [TRUE]
 
+bc.albers.crs <- terra::crs("PROJCRS[\"NAD83 / BC Albers\",\n    BASEGEOGCRS[\"NAD83\",\n        DATUM[\"North American Datum 1983\",\n            ELLIPSOID[\"GRS 1980\",6378137,298.257222101,\n                LENGTHUNIT[\"metre\",1]]],\n        PRIMEM[\"Greenwich\",0,\n            ANGLEUNIT[\"degree\",0.0174532925199433]],\n        ID[\"EPSG\",4269]],\n    CONVERSION[\"British Columbia Albers\",\n        METHOD[\"Albers Equal Area\",\n            ID[\"EPSG\",9822]],\n        PARAMETER[\"Latitude of false origin\",45,\n            ANGLEUNIT[\"degree\",0.0174532925199433],\n            ID[\"EPSG\",8821]],\n        PARAMETER[\"Longitude of false origin\",-126,\n            ANGLEUNIT[\"degree\",0.0174532925199433],\n            ID[\"EPSG\",8822]],\n        PARAMETER[\"Latitude of 1st standard parallel\",50,\n            ANGLEUNIT[\"degree\",0.0174532925199433],\n            ID[\"EPSG\",8823]],\n        PARAMETER[\"Latitude of 2nd standard parallel\",58.5,\n            ANGLEUNIT[\"degree\",0.0174532925199433],\n            ID[\"EPSG\",8824]],\n        PARAMETER[\"Easting at false origin\",1000000,\n            LENGTHUNIT[\"metre\",1],\n            ID[\"EPSG\",8826]],\n        PARAMETER[\"Northing at false origin\",0,\n            LENGTHUNIT[\"metre\",1],\n            ID[\"EPSG\",8827]]],\n    CS[Cartesian,2],\n        AXIS[\"(E)\",east,\n            ORDER[1],\n            LENGTHUNIT[\"metre\",1]],\n        AXIS[\"(N)\",north,\n            ORDER[2],\n            LENGTHUNIT[\"metre\",1]],\n    USAGE[\n        SCOPE[\"Province-wide spatial data management.\"],\n        AREA[\"Canada - British Columbia.\"],\n        BBOX[48.25,-139.04,60.01,-114.08]],\n    ID[\"EPSG\",3005]]")
+
+bc.albers <- terra::crs("+proj=aea +lat_0=45 +lon_0=-126 +lat_1=50 +lat_2=58.5 +x_0=1000000 +y_0=0 +datum=NAD83 +units=m
++no_defs")
+
 
 # Crop PA's & Metro to SOI Region: ----------------------------------------
 # Crop these points to just BC:
@@ -62,6 +67,12 @@ plot(st_geometry(PAs.soi.crop))
 metro.soi.crop <- st_intersection(metro.reproj, soi.bound.reproj)
 plot(st_geometry(metro.soi.crop))
 plot(st_geometry(soi.bound.reproj), add=TRUE) # This works
+
+
+# Save these PA's and Metro Areas for SOI:
+st_write(PAs.soi.crop, "/Users/shannonspragg/ONA_GRIZZ/CAN Spatial Data/SOI PAs & Metro Areas/soi.PAs.10km.buf.shp")
+st_write(metro.soi.crop, "/Users/shannonspragg/ONA_GRIZZ/CAN Spatial Data/SOI PAs & Metro Areas/soi.metro.10km.buf.shp")
+
 
 # Rasterize our Points & Polygons: ----------------------------------------
 
@@ -73,10 +84,14 @@ plot(metro.soi.sv)
 
 warp.ps.sv <- vect(warp.pa.reproj)
 
+# Create a Continuous Raster for Cell Distance to PA's: -------------------
 
-# Calculate Distance to PA's & Metro from points: -------------------------
+dist.pa.raster <- terra::distance(soi.rast, PA.soi.sv)
 
-# Need to use our spatvectors:
+dist.met.raster <- terra::distance(soi.rast, metro.soi.sv)
+
+
+# Calculate Distance to PA's & Metro from points: SKIP THIS -------------------------
 
 dist.pa.matrix <- terra::distance(warp.ps.sv, PA.soi.sv)
 
@@ -104,21 +119,21 @@ head(warp.ps.sv) # Perfect!
 
 # Make Metro and PA Dist Rasters: -----------------------------------------
 
-pa.soi.rast <- terra::rasterize(warp.ps.sv, soi.rast, field = "dist2PA")
+#pa.soi.rast <- terra::rasterize(warp.ps.sv, soi.rast, field = "dist2PA")
 
-metro.soi.rast <- terra::rasterize(warp.ps.sv, soi.rast, field = "dist2Metro")
+#metro.soi.rast <- terra::rasterize(warp.ps.sv, soi.rast, field = "dist2Metro")
 
 # Check this to see if it looks right:
-plot(warp.ps.sv)
-plot(pa.soi.rast, add=TRUE) #YASS
+plot(dist.pa.raster)
+plot(warp.pa.reproj, add=TRUE) #YASS
 
 # Fix the column names:
-names(pa.soi.rast)[names(pa.soi.rast) == "SOI_10km"] <- "Distance to Nearest PA (km)"
+names(dist.pa.raster)[names(dist.pa.raster) == "SOI_10km"] <- "Distance to Nearest PA (km)"
 
-names(metro.soi.rast)[names(metro.soi.rast) == "SOI_10km"] <- "Distance to Nearest Metro (km)"
+names(dist.met.raster)[names(dist.met.raster) == "SOI_10km"] <- "Distance to Nearest Metro (km)"
 
 # Save our Rasters: -------------------------------------------------------
-terra::writeRaster(pa.soi.rast, "/Users/shannonspragg/ONA_GRIZZ/Predictor Rasters/dist2PA_raster.tif")
-terra::writeRaster(metro.soi.rast, "/Users/shannonspragg/ONA_GRIZZ/Predictor Rasters/dist2metro_raster.tif" )
+terra::writeRaster(dist.pa.raster, "/Users/shannonspragg/ONA_GRIZZ/Predictor Rasters/dist2PA_raster.tif")
+terra::writeRaster(dist.met.raster, "/Users/shannonspragg/ONA_GRIZZ/Predictor Rasters/dist2metro_raster.tif" )
 
 

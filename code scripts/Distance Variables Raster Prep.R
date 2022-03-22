@@ -69,6 +69,12 @@ plot(st_geometry(metro.soi.crop))
 plot(st_geometry(soi.bound.reproj), add=TRUE) # This works
 
 
+# Filter our PA's:
+soi.PA.filter <- filter(PAs.soi.crop, Shap_Ar > 10000)
+unique(bc.PA.filter$SUBS_RI)
+
+soi.PA.filter <- filter(PAs.soi.crop, Shap_Ar > 20000)
+
 # Save these PA's and Metro Areas for SOI:
 st_write(PAs.soi.crop, "/Users/shannonspragg/ONA_GRIZZ/CAN Spatial Data/SOI PAs & Metro Areas/soi.PAs.10km.buf.shp")
 st_write(metro.soi.crop, "/Users/shannonspragg/ONA_GRIZZ/CAN Spatial Data/SOI PAs & Metro Areas/soi.metro.10km.buf.shp")

@@ -41,6 +41,8 @@ str(warp.pres.abs)
 # Access this via googledrive: In our ONA-GRIZZ folder
 # at the link: https://drive.google.com/drive/u/0/folders/17n64UwIiwhGVCwTQX8uc31ybWJ0YIdtv
 
+# The WARP SOI Data:
+warp.soi <- st_read("/Users/shannonspragg/ONA_GRIZZ/WARP Bears /WARP SOI - All Reports/updated.warp.soi.df.shp")
 
 # Load Raster Data: -------------------------------------------------------
 # Here we bring in all of our predictor rasters for the SOI region:

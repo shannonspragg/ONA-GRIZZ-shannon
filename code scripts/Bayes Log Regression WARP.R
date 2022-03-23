@@ -45,7 +45,9 @@ library(randomForest)
 # Import the All Species Master df for our Southern Interior EcoProvince ----------------------------------------
 
 #warp.df <- st_read("/Users/shannonspragg/ONA_GRIZZ/WARP Bears /WARP Cropped - SIP/warp_crop_10km_buf.shp")
-warp.df <- st_read("/Users/shannonspragg/ONA_GRIZZ/WARP Bears /WARP Cropped - SIP/warp_crop_10_ccs.shp")
+#warp.df <- st_read("/Users/shannonspragg/ONA_GRIZZ/WARP Bears /WARP Cropped - SIP/warp_crop_10_ccs.shp")
+
+warp.soi <- st_read("/Users/shannonspragg/ONA_GRIZZ/WARP Bears /WARP SOI - All Reports/updated.warp.soi.df.shp")
 
 # Scale the Variables: ----------------------------------------------------------
 

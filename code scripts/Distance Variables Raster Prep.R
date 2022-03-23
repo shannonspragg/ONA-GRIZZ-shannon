@@ -69,6 +69,13 @@ plot(st_geometry(metro.soi.crop))
 plot(st_geometry(soi.bound.reproj), add=TRUE) # This works
 
 
+soi.15km.buf <- soi.bound.reproj %>% 
+  st_buffer(., 15000)
+plot(st_geometry(soi.15km.buf)) # Check the buffers
+
+soi.pas.15km.buf <- st_intersection(bc.PAs.reproj, soi.15km.buf)
+
+
 # Filter our PA's:We can filter by sq meters using either the Shap_Ar (in meters) or O_AREA (in hectares) columns - which are shape areas
 
 # Filter these to all bigger than 1 hectare:
@@ -83,15 +90,25 @@ soi.PA.filter.8hec <- filter(PAs.soi.crop, O_AREA > 8)
 soi.PA.filter.10hec <- filter(PAs.soi.crop, O_AREA > 10)
 # 50 hectares
 soi.PA.filter.50hec <- filter(PAs.soi.crop, O_AREA > 50)
-# 1000 hectares:
+
+# For General Conflict, let's do 1000 hectares:
 soi.PA.filter.1000hec <- filter(PAs.soi.crop, O_AREA > 1000)
-# 10,000 ha:
+
+# For bears conflict, let's do 10,000 ha:
 soi.PA.filter.10khec <- filter(PAs.soi.crop, O_AREA > 10000)
+
+#### Filter our 15km Buffered PA's:
+soi.15km.buf.1000hec <- filter(soi.pas.15km.buf, O_AREA > 1000) # Our 1k for general species
+soi.15km.buf.10khec <- filter(soi.pas.15km.buf, O_AREA > 10000) # Our 10k for bears only
+
 
 
 # Save these PA's and Metro Areas for SOI:
 st_write(PAs.soi.crop, "/Users/shannonspragg/ONA_GRIZZ/CAN Spatial Data/SOI PAs & Metro Areas/soi.PAs.10km.buf.shp")
 st_write(metro.soi.crop, "/Users/shannonspragg/ONA_GRIZZ/CAN Spatial Data/SOI PAs & Metro Areas/soi.metro.10km.buf.shp")
+
+st_write(soi.15km.buf.1000hec, "/Users/shannonspragg/ONA_GRIZZ/CAN Spatial Data/SOI PAs & Metro Areas/1k_ha_soi.PAs.15km.buf.shp")
+st_write(soi.15km.buf.10khec, "/Users/shannonspragg/ONA_GRIZZ/CAN Spatial Data/SOI PAs & Metro Areas/10k_ha_soi.PAs.15km.buf.shp")
 
 
 # Rasterize our Points & Polygons: ----------------------------------------
@@ -120,7 +137,6 @@ dist.met.raster <- terra::distance(soi.rast, metro.soi.sv)
 dist.pa.raster.1kha <- terra::distance(soi.rast, PA.soi.1kha) # Dist for our 1k PA's
 
 dist.pa.raster.10kha <- terra::distance(soi.rast, PA.soi.10kha) # Dist for our 10k PA's
-
 
 
 # Calculate Distance to PA's & Metro from points: SKIP THIS -------------------------
@@ -163,15 +179,21 @@ head(warp.ps.sv) # Perfect!
 plot(dist.pa.raster.1kha)
 plot(warp.pa.reproj, add=TRUE) #YASS
 
-plot(dist.pa.raster.10kha) # Plot our 10k ha and up PA's
+plot(dist.pa.raster.10kha) # Plot our 10k ha for bears
+plot(dist.pa.raster.1kha)  # Plot our 1k ha for general conflict
 
 # Fix the column names:
 names(dist.pa.raster)[names(dist.pa.raster) == "SOI_10km"] <- "Distance to Nearest PA (km)"
 
 names(dist.met.raster)[names(dist.met.raster) == "SOI_10km"] <- "Distance to Nearest Metro (km)"
 
+names(dist.pa.raster.1kha)[names(dist.pa.raster.1kha) == "SOI_10km"] <- "Distance to Nearest PA (m)"
+names(dist.pa.raster.10kha)[names(dist.pa.raster.10kha) == "SOI_10km"] <- "Distance to Nearest PA (m)"
+
+
 # Save our Rasters: -------------------------------------------------------
 terra::writeRaster(dist.pa.raster, "/Users/shannonspragg/ONA_GRIZZ/Predictor Rasters/dist2PA_raster.tif")
 terra::writeRaster(dist.met.raster, "/Users/shannonspragg/ONA_GRIZZ/Predictor Rasters/dist2metro_raster.tif" )
 
-
+terra::writeRaster(dist.pa.raster.1kha, "/Users/shannonspragg/ONA_GRIZZ/Predictor Rasters/1k_ha_dist2pa_raster.tif" )
+terra::writeRaster(dist.pa.raster.10kha, "/Users/shannonspragg/ONA_GRIZZ/Predictor Rasters/10k_hadist2pa_raster.tif" )

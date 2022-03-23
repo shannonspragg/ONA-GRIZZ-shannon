@@ -69,11 +69,25 @@ plot(st_geometry(metro.soi.crop))
 plot(st_geometry(soi.bound.reproj), add=TRUE) # This works
 
 
-# Filter our PA's:
-soi.PA.filter <- filter(PAs.soi.crop, Shap_Ar > 10000)
-unique(bc.PA.filter$SUBS_RI)
+# Filter our PA's:We can filter by sq meters using either the Shap_Ar (in meters) or O_AREA (in hectares) columns - which are shape areas
 
-soi.PA.filter <- filter(PAs.soi.crop, Shap_Ar > 20000)
+# Filter these to all bigger than 1 hectare:
+soi.PA.filter.1hec <- filter(PAs.soi.crop, O_AREA > 1)
+unique(bc.PA.filter.1hec$SUBS_RI)
+
+# 5 hectares:
+soi.PA.filter.5hec <- filter(PAs.soi.crop, O_AREA > 5)
+# 8 Hectares:
+soi.PA.filter.8hec <- filter(PAs.soi.crop, O_AREA > 8)
+# 10 hectares:
+soi.PA.filter.10hec <- filter(PAs.soi.crop, O_AREA > 10)
+# 50 hectares
+soi.PA.filter.50hec <- filter(PAs.soi.crop, O_AREA > 50)
+# 1000 hectares:
+soi.PA.filter.1000hec <- filter(PAs.soi.crop, O_AREA > 1000)
+# 10,000 ha:
+soi.PA.filter.10khec <- filter(PAs.soi.crop, O_AREA > 10000)
+
 
 # Save these PA's and Metro Areas for SOI:
 st_write(PAs.soi.crop, "/Users/shannonspragg/ONA_GRIZZ/CAN Spatial Data/SOI PAs & Metro Areas/soi.PAs.10km.buf.shp")
@@ -90,11 +104,23 @@ plot(metro.soi.sv)
 
 warp.ps.sv <- vect(warp.pa.reproj)
 
+# Our filtered PA's:
+
+PA.soi.1kha <- vect(soi.PA.filter.1000hec) # Our > 1000 ha PA's
+PA.soi.10kha <- vect(soi.PA.filter.10khec) # Our > 10k ha PA's
+
 # Create a Continuous Raster for Cell Distance to PA's: -------------------
 
 dist.pa.raster <- terra::distance(soi.rast, PA.soi.sv)
 
 dist.met.raster <- terra::distance(soi.rast, metro.soi.sv)
+
+
+# Do this for our filtered PA's:
+dist.pa.raster.1kha <- terra::distance(soi.rast, PA.soi.1kha) # Dist for our 1k PA's
+
+dist.pa.raster.10kha <- terra::distance(soi.rast, PA.soi.10kha) # Dist for our 10k PA's
+
 
 
 # Calculate Distance to PA's & Metro from points: SKIP THIS -------------------------
@@ -123,15 +149,21 @@ warp.ps.sv$dist2Metro <- conv_unit(warp.ps.sv$dist2Metro, "m", "km")
 head(warp.ps.sv) # Perfect!
 
 
-# Make Metro and PA Dist Rasters: -----------------------------------------
+# Make Metro and PA Dist to Points Rasters SKIP THIS: -----------------------------------------
 
 #pa.soi.rast <- terra::rasterize(warp.ps.sv, soi.rast, field = "dist2PA")
 
 #metro.soi.rast <- terra::rasterize(warp.ps.sv, soi.rast, field = "dist2Metro")
 
+
+
+# Check our Rasters: ------------------------------------------------------
+
 # Check this to see if it looks right:
-plot(dist.pa.raster)
+plot(dist.pa.raster.1kha)
 plot(warp.pa.reproj, add=TRUE) #YASS
+
+plot(dist.pa.raster.10kha) # Plot our 10k ha and up PA's
 
 # Fix the column names:
 names(dist.pa.raster)[names(dist.pa.raster) == "SOI_10km"] <- "Distance to Nearest PA (km)"

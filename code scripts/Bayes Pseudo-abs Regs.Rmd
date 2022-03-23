@@ -122,6 +122,7 @@ post.int.only <- stan_glmer(bears_presence_ps ~ 1 + (1 | CCSNAME.ps),
                   data = mini.warp.df.ps,
                   family = binomial(link = "logit"), # define our binomial glm
                   prior = t_prior, prior_intercept = t_prior, 
+                  chains = 6,
                   seed = SEED, refresh=0) # we add seed for reproducability
 
 # Look at our simple model:
@@ -129,6 +130,7 @@ post.pa.simple <- stan_glmer(bears_presence_ps ~ pop.dens + (1 | CCSNAME.ps),
                   data = mini.warp.df.ps,
                   family = binomial(link = "logit"), # define our binomial glm
                   prior = t_prior, prior_intercept = t_prior, 
+                  chains = 6,
                   seed = SEED, refresh=0) # we add seed for reproducability
 
 # Build out our Comparison Model (to compare to Global):
@@ -137,6 +139,7 @@ post.pa.compare <- stan_glmer(bears_presence_ps ~ b2pa.dist.ps + b2met.dist.ps +
                             data = mini.warp.df.ps,
                             family = binomial(link = "logit"), # define our binomial glm
                             prior = t_prior, prior_intercept = t_prior,
+                            chains = 6,
                             seed = SEED, refresh=0) # we add seed for reproducability
 # If this has a bulk ESS error... need to run chains for longer
 

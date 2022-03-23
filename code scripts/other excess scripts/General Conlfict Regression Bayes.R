@@ -35,14 +35,14 @@ library(bayestestR)
 
 # Load WARP Data: --------------------------------------------------------------
 # Here we have our presence-absence data:
-warp.pres.abs <- st_read("/Users/shannonspragg/ONA_GRIZZ/WARP Bears /WARP Cropped - SIP/warp_presabs_varint_means.shp")
+warp.pres.abs <- st_read("/Users/shannonspragg/ONA_GRIZZ/WARP Bears /WARP Cropped - SIP/WARP Final Pres-abs/pres_abs_1k_pa.shp")
 str(warp.pres.abs)
 
 # Access this via googledrive: In our ONA-GRIZZ folder
 # at the link: https://drive.google.com/drive/u/0/folders/17n64UwIiwhGVCwTQX8uc31ybWJ0YIdtv
 
-# The WARP SOI Data:
-warp.soi <- st_read("/Users/shannonspragg/ONA_GRIZZ/WARP Bears /WARP SOI - All Reports/updated.warp.soi.df.shp")
+# The WARP SOI Data: ***STILL NEEDS VARINT VARIABLE ADDED***
+warp.soi <- st_read("/Users/shannonspragg/ONA_GRIZZ/WARP Bears /WARP SOI - All Reports/warp_final_10k_pa.shp")
 
 # Load Raster Data: -------------------------------------------------------
 # Here we bring in all of our predictor rasters for the SOI region:

@@ -1,4 +1,4 @@
-# Creating a Distance to Metropolitan Areas Variable ----------------------
+v# Creating a Distance to Metropolitan Areas Variable ----------------------
 # Here we will work to import the metropolitan areas shapefile data, create a function that
 # calculates the minimum distance from WARP points to the nearest metro area, and add this to 
 # the Warp data as a "Distance to Metro" column to be used in regression analysis

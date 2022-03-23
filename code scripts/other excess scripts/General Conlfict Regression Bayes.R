@@ -58,7 +58,8 @@ tot.farms.rast <- terra::rast("/Users/shannonspragg/ONA_GRIZZ/Predictor Rasters/
 tot.farms.sq.rast <- tot.farms.rast * tot.farms.rast # I am not sure how to do this one...
 
 # Distance to Neartest Protected Area (km):
-dist2PA.rast <- terra::rast( "/Users/shannonspragg/ONA_GRIZZ/Predictor Rasters/dist2PA_raster.tif")
+dist2pa.rast.general.1k <- rast(dist.pa.raster.1kha, "/Users/shannonspragg/ONA_GRIZZ/Predictor Rasters/1k_ha_dist2pa_raster.tif" )
+dist2pa.rast.bear.10k <- rast(dist.pa.raster.10kha, "/Users/shannonspragg/ONA_GRIZZ/Predictor Rasters/10k_hadist2pa_raster.tif" )
 
 # Distance to Nearest Metro Area (km):
 dist2met.rast <- terra::rast("/Users/shannonspragg/ONA_GRIZZ/Predictor Rasters/dist2metro_raster.tif" )

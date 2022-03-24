@@ -128,8 +128,9 @@ str(mini.warp.df.ps)
 # Fitting our Posterior Regression: ---------------------------------------
 # tutorial here: https://avehtari.github.io/modelselection/diabetes.html 
 
-# Set our prior:
+# Set our priors:
 t_prior <- student_t(df = 7, location = 0, scale = 1.5)
+int_prior <- normal(location = 0, scale = NULL, autoscale = FALSE)
 
 # Build our posterior distribution: stan_glm returns the posterior dist for parameters describing the uncertainty related to unknown parameter values
 
@@ -137,14 +138,16 @@ t_prior <- student_t(df = 7, location = 0, scale = 1.5)
 post.int.only <- stan_glm(bears_presence_ps ~ 1 + (1 | CCSNAME.ps), 
                           data = mini.warp.df.ps,
                           family = binomial(link = "logit"), # define our binomial glm
-                          prior = t_prior, prior_intercept = t_prior, 
+                          prior = t_prior, prior_intercept = int_prior,
+                          iter = 5000,
                           seed = SEED, refresh=0) # we add seed for reproducability
 
 # Look at our simple model:
 post.pa.simple <- stan_glm(bears_presence_ps ~ pop.dens + (1 | CCSNAME.ps), 
                            data = mini.warp.df.ps,
                            family = binomial(link = "logit"), # define our binomial glm
-                           prior = t_prior, prior_intercept = t_prior, 
+                           prior = t_prior, prior_intercept = int_prior, 
+                           iter = 5000,
                            seed = SEED, refresh=0) # we add seed for reproducability
 
 # Build out our Comparison Model (to compare to Global):
@@ -152,7 +155,8 @@ post.pa.simple <- stan_glm(bears_presence_ps ~ pop.dens + (1 | CCSNAME.ps),
 post.pa.compare <- stan_glmer(bears_presence_ps ~ b2pa.dist.ps + b2met.dist.ps + dom.farms.ps + total.farms.ps + pop.dens + (1 | CCSNAME.ps), 
                               data = mini.warp.df.ps,
                               family = binomial(link = "logit"), # define our binomial glm
-                              prior = t_prior, prior_intercept = t_prior,
+                              prior = t_prior, prior_intercept = int_prior,
+                              iter = 5000,
                               seed = SEED, refresh=0) # we add seed for reproducability
 # If this has a bulk ESS error... need to run chains for longer
 

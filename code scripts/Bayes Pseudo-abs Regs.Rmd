@@ -189,6 +189,8 @@ Comparing the simple pseudo-absence model with the full model in a ROC plot show
 # Above we see that PSIS-LOO result is reliable as all Pareto k estimates are small (k< 0.5) Vehtari, Gelman and Gabry (2017a).
 (loo.simple <- loo(post.pa.simple, save_psis = TRUE))
 
+# Compare the LOO values for full model vs the one with quad term:
+(loo.pa.comp <- loo(post.pa.compare, save_psis = TRUE))
 (loo.pa.full <- loo(post.pa.full, save_psis = TRUE))
 
 
@@ -198,14 +200,14 @@ loo.pa.full # get the summary of our test
 ############## Comparison to Baseline Model: -------------------------------------------
 
 # Compute our baseline result without covariates:
-post0.ps <- update(post.pa.simplest, formula = bears_presence_ps ~ 1, QR = FALSE, refresh=0)
+post0.ps <- update(post.int.only, formula = bears_presence_ps ~ 1 + (1 | CCSNAME.ps), QR = FALSE, refresh=0)
 
 # Compare to our baseline:
 (loo.0 <- loo(post0.ps)) # computing the PSIS-LOO for our baseline model
 
-loo_compare(loo.0, loo.simple, loo.simplest, loo.pa.full) # this high negative value for post0 shows us the covariates contain clearly useful information for predictions
+loo.comparison <- loo_compare(loo.0, loo.pa.comp, loo.pa.full) # this high negative value for post0 shows us the covariates contain clearly useful information for predictions
 ```
-We conduct a leave-one-out cross validation for our three models and then compare them to the zero posterior. Above, we see that the full model and simple model's PSIS-LOO result is reliable as all Pareto k estimates are small (k< 0.5) and the Monte Carlo SE is 0.1 (Vehtari, Gelman and Gabry 2017a). The simplest model is also reliable as it has a Monte Carlo SE of 0.0 and all Pareto k estimates are small (k< 0.5). Comparing these LOO values to our baseline, we see that the theoretical expected log point wise predictive density (elpd_loo) is lowest for our full model and highest for our baseline posterior, indicating that the increased covariates in our models contain clearly useful information for predictions.
+We conduct a leave-one-out cross validation for our three models and then compare them to the zero posterior. Above, we see that the full model and simple model's PSIS-LOO result is reliable as all Pareto k estimates are small (k< 0.5) and the Monte Carlo SE is 0.1 (Vehtari, Gelman and Gabry 2017a). The simplest model is also reliable as it has a Monte Carlo SE of 0.0 and all Pareto k estimates are small (k< 0.5). Comparing these LOO values to our baseline, we see that the theoretical expected log point wise predictive density (elpd_loo) is lowest for our full model (still lower than the compare model) and highest for our baseline posterior, indicating that the increased covariates in our models contain clearly useful information for predictions.
 
 ## Plotting Our Mixed Effects:
 ```{r mixed efffects, echo=FALSE}
@@ -215,7 +217,7 @@ sjPlot::plot_model(post.pa.full)
 # Labeled Effect Plot:
 # Notes: axis labels should be in order from bottom to top. 
 # To see the values of the effect size and p-value, set show.values and show.p= TRUE
-post1.effects.plot <- sjPlot::plot_model(post1, 
+post1.effects.plot <- sjPlot::plot_model(post.pa.full, 
                    axis.labels=c("CS Biophysical (HII + topo ruggedness)","Bear Habitat Suitability", "Grizz Increase", "Total Farm Count ^2" ,"Total Farm Count" ,"Vegetable & Melon Farming" ,
                                  "Other Crop Farming (tobacco, peanut, sugar-cane, hay, herbs & spices) ", "Other Animal Production (bees & honey, equine, fur-bearers)" , "Fruit & Tree Nut Farming" , "Cattle Ranching & Farming" ,
                                    "Distance to Metro Area (km)" , "Distance to Protected Area (km)"),
@@ -235,9 +237,6 @@ post1.effects.tab <- sjPlot::tab_model(post1,
                                  dv.labels= "Effects of Social & Environmental Variables on Bear Conflict")
 
 ```
-
-
-
 
 ## Create our P(General Conflict) Raster:
 
@@ -260,8 +259,8 @@ tot.farms.rast <- terra::rast("/Users/shannonspragg/ONA_GRIZZ/Predictor Rasters/
 tot.farms.sq.rast <- tot.farms.rast * tot.farms.rast # I am not sure how to do this one...
 
 # Distance to Neartest Protected Area (km):
-dist2pa.rast.general.1k <- rast(dist.pa.raster.1kha, "/Users/shannonspragg/ONA_GRIZZ/Predictor Rasters/1k_ha_dist2pa_raster.tif" )
-dist2pa.rast.bear.10k <- rast(dist.pa.raster.10kha, "/Users/shannonspragg/ONA_GRIZZ/Predictor Rasters/10k_hadist2pa_raster.tif" )
+dist2pa.rast.general.1k <- rast("/Users/shannonspragg/ONA_GRIZZ/Predictor Rasters/1k_ha_dist2pa_raster.tif" )
+dist2pa.rast.bear.10k <- rast("/Users/shannonspragg/ONA_GRIZZ/Predictor Rasters/10k_hadist2pa_raster.tif" )
 
 # Distance to Nearest Metro Area (km):
 dist2met.rast <- terra::rast("/Users/shannonspragg/ONA_GRIZZ/Predictor Rasters/dist2metro_raster.tif" )
@@ -288,32 +287,24 @@ veg.melon.rast <- dom.farms.rast$`Dominant Farm Type by CCS` == "Vegetable and m
 names(veg.melon.rast)[names(veg.melon.rast) == "Dominant Farm Type by CCS"] <- "Vegetable & Melon Farming [1112]"
 ```
 
-Here are our posterior coefficients (from post.pa.full):
-(Intercept)                                    -3.3    0.4  
-b2pa.dist.ps                                   -1.4    0.1  
-b2met.dist.ps                                  -1.3    0.2  
-dom.farms.psCattle ranching and farming [1121] -0.3    0.4  
-dom.farms.psFruit and tree nut farming [1113]   1.1    0.5  
-dom.farms.psOther animal production [1129]      1.5    0.4  
-dom.farms.psOther crop farming [1119]           1.6    0.5  
-dom.farms.psVegetable and melon farming [1112]  0.3    0.7  
-total.farms.ps                                 -0.3    0.3  
-total.farms.sq.ps                               0.5    0.1  
-pop.dens                                        0.7    0.1  
+
 
 ```{r raster math, include=TRUE}
 # Make sure extents match:
-ext(dist2PA.rast) == ext(dist2met.rast) # TRUE
+ext(dist2pa.rast.general.1k) == ext(dist2met.rast) # TRUE
 ext(dist2met.rast) == ext(tot.farms.rast) #TRUE
 ext(tot.farms.rast) == ext(hm.dens.rast) #TRUE
 
+# View our Full Model Coefficients:
+summary(post.pa.full)
+
 # Stack these spatrasters:
-conf.stack <- c(dist2PA.rast, dist2met.rast, tot.farms.rast, tot.farms.sq.rast, hm.dens.rast, ccs.varint.rast, cattle.ranching.rast, fruit.tree.nut.rast, other.animal.rast, other.crop.rast, veg.melon.rast)
+conf.stack <- c(dist2pa.rast.general.1k, dist2met.rast, tot.farms.rast, tot.farms.sq.rast, hm.dens.rast, ccs.varint.rast, cattle.ranching.rast, fruit.tree.nut.rast, other.animal.rast, other.crop.rast, veg.melon.rast)
 plot(conf.stack) # plot these all to check
 
 # Create P(all conflict) raster with our regression coefficients:
     # Prob_conf_rast = Int.val + CCS + B_1est * PopDens…
-p_conf_rast <- -3.3 + ccs.varint.rast + (-1.4 * dist2PA.rast) + (-1.3 * dist2met.rast) + (-0.3 * tot.farms.rast) +  (0.5 * tot.farms.sq.rast) + (0.7 * hm.dens.rast) + (-0.3 * cattle.ranching.rast) + (1.1 * fruit.tree.nut.rast) + (1.5 * other.animal.rast) + (1.6 * other.crop.rast) + (0.3 * veg.melon.rast)
+p_conf_rast <- -3.3 + ccs.varint.rast + (-1.4 * dist2pa.rast.general.1k) + (-1.3 * dist2met.rast) + (-0.3 * tot.farms.rast) +  (0.5 * tot.farms.sq.rast) + (0.7 * hm.dens.rast) + (-0.3 * cattle.ranching.rast) + (1.1 * fruit.tree.nut.rast) + (1.6 * other.animal.rast) + (1.6 * other.crop.rast) + (0.2 * veg.melon.rast)
 
 plot(p_conf_rast)
 ```

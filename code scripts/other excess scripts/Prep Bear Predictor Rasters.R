@@ -13,7 +13,7 @@ library(stars)
 
 
 # Load Data: --------------------------------------------------------------
-soi.rast <- terra::rast("/Users/shannonspragg/ONA_GRIZZ/CAN Spatial Data/SOI Ecoprovince Boundary/SOI_10km.tif") # SOI Region 10km
+p.gen.conf.rast <- terra::rast("/Users/shannonspragg/ONA_GRIZZ/Predictor Rasters/prob_general_conf.tif")
 
 # Grizzinc:
 grizzinc.rast <- terra::rast("/Users/shannonspragg/rasters/grizz_inc_BC.tif")
@@ -28,7 +28,7 @@ biophys.rast <- rast("/Users/shannonspragg/ONA_grizz_Matt/data/processed/output/
 soi.10k.buf <- st_read("/Users/shannonspragg/ONA_GRIZZ/CAN Spatial Data/SOI CCS regions/SOI_CCS_10km.shp")
 
 # Check Projections: ------------------------------------------------------
-crs(soi.rast) == crs(grizzinc.rast) #TRUE
+crs(p.gen.conf.rast) == crs(grizzinc.rast) #TRUE
 crs(grizzinc.rast) == crs(bhs.rast) #TRUE
 crs(biophys.rast) == crs(bhs.rast) #TRUE
 
@@ -42,26 +42,49 @@ ext(biophys.rast)
 ext(bhs.rast)
 
 # Crop these Rasters:
-grizzinc.crop <- terra::crop(grizzinc.rast, soi.rast)
-biophys.crop <- terra::crop(biophys.rast, soi.rast)
-bhs.crop <- terra::crop(bhs.rast, soi.rast)
+grizzinc.crop <- terra::crop(grizzinc.rast, p.gen.conf.rast)
+biophys.crop <- terra::crop(biophys.rast, p.gen.conf.rast)
+bhs.crop <- terra::crop(bhs.rast, p.gen.conf.rast)
+
+# Resample to match extents and res:
+grizzinc.rsmple <- resample(grizzinc.crop, p.gen.conf.rast, method='bilinear')
+biophys.rsmple <- resample(biophys.crop, p.gen.conf.rast, method='bilinear')
+bhs.rsmple <- resample(bhs.crop, p.gen.conf.rast, method='bilinear')
+
 
 # Plot Check:
 soi.bound.vect <- vect(soi.reproj)
 
-plot(grizzinc.crop)
+plot(grizzinc.rsmple)
 plot(soi.bound.vect, add=TRUE)
 
-plot(biophys.crop)
+plot(biophys.rsmple)
 plot(soi.bound.vect, add=TRUE)
 
-plot(bhs.crop)
+plot(bhs.rsmple)
 plot(soi.bound.vect, add=TRUE)
+
+
+# Cut these down to the SOI Boundary: -------------------------------------
+
+grizzinc.soi <- terra::mask(grizzinc.rsmple, soi.bound.vect) # BEA-UTIFUL!
+biophys.soi <- terra::mask(biophys.rsmple, soi.bound.vect) # BEA-UTIFUL!
+bhs.soi <- terra::mask(bhs.rsmple, soi.bound.vect) # BEA-UTIFUL!
+
+
+plot(biophys.soi)
+plot(bhs.soi)
+
+# Fix the column names:
+names(grizzinc.soi)[names(grizzinc.soi) == "grizz_inc"] <- "Support for Grizzly Increase"
+names(biophys.soi)[names(biophys.soi) == "cum_curmap"] <- "Biophysical Connectivity Currentmap"
+names(bhs.soi)[names(bhs.soi) == "Height"] <- "Bear Habitat Suitability (BHS)"
+
 
 
 # Save our Cropped Rasters: -----------------------------------------------
-terra::writeRaster(grizzinc.crop, "/Users/shannonspragg/ONA_GRIZZ/Predictor Rasters/grizz_inc_SOI_10km.tif")
-terra::writeRaster(biophys.crop, "/Users/shannonspragg/ONA_GRIZZ/Predictor Rasters/biophys_SOI_10km.tif")
-terra::writeRaster(bhs.crop, "/Users/shannonspragg/ONA_GRIZZ/Predictor Rasters/bhs_SOI_10km.tif")
+terra::writeRaster(grizzinc.soi, "/Users/shannonspragg/ONA_GRIZZ/Predictor Rasters/grizz_inc_SOI_10km.tif")
+terra::writeRaster(biophys.soi, "/Users/shannonspragg/ONA_GRIZZ/Predictor Rasters/biophys_SOI_10km.tif")
+terra::writeRaster(bhs.soi, "/Users/shannonspragg/ONA_GRIZZ/Predictor Rasters/bhs_SOI_10km.tif")
 
 

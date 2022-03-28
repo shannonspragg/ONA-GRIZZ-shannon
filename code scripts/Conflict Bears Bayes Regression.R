@@ -179,20 +179,21 @@ ext(tot.farms.sq.rast.sc) == ext(cattle.ranching.rast) #TRUE
 
 # View our Full Model Coefficients:
 summary(post.co.full)
-
+fixef(post.co.full)
 
 # Stack these spatrasters:
-bear.conf.rast.stack <- c(grizzinc.rast.sc, bhs.rast.sc, biophys.rast.sc, tot.farms.rast.sc, tot.farms.sq.rast.sc, cattle.ranching.rast.sc, ccs.varint.rast, fruit.tree.nut.rast.sc, other.animal.rast.sc, other.crop.rast.sc, veg.melon.rast.sc, prob.gen.conf.rast)
-plot(conf.rast.stack) # plot these all to check
+bear.conf.rast.stack <- c(grizzinc.rast.sc, bhs.rast.sc, biophys.rast.sc, tot.farms.rast.sc, tot.farms.sq.rast.sc, cattle.ranching.rast, ccs.varint.rast, fruit.tree.nut.rast, other.animal.rast, other.crop.rast, veg.melon.rast, prob.gen.conf.rast)
+plot(bear.conf.rast.stack) # plot these all to check
 # It looks like veg.melon raster has all 0 values, so isn't working
 
 # Create P(all conflict) raster with our regression coefficients and rasters:
 # Prob_conf_rast = Int.val + CCS + B_1est * PopDens…
-conflict_rast <- -3.2624640 + ccs.varint.rast + (-1.3887130 * dist2pa.rast.sc) + (-1.2986664 * dist2metro.rast.sc) + (-0.2535196 * tot.farms.rast.sc) + (0.4583006 * tot.farms.sq.rast.sc) + (0.7262155 * hm.dens.rast.sc) + (-0.2987515 * cattle.ranching.rast.sc) + (1.1384551 * fruit.tree.nut.rast.sc) + (1.5483847 * other.animal.rast.sc) + (1.6437851 * other.crop.rast.sc) + (0.2613143 * veg.melon.rast)
+bear_conflict_rast <- -2.3296746 + ccs.varint.rast + (0.2333587 * grizzinc.rast.sc) + (0.4635907 * biophys.rast.sc) + (0.1143926 * bhs.rast.sc) + (-0.1341851 * tot.farms.rast.sc) + (0.9366107 * tot.farms.sq.rast.sc) 
++ (4.2281470 * prob.gen.conf.rast) + (0.8426185 * cattle.ranching.rast.sc) + (1.6446657 * fruit.tree.nut.rast.sc) + (1.3544810 * other.animal.rast.sc) + (-0.2962539 * other.crop.rast.sc) + (-1.8683451 * veg.melon.rast)
 
 # Convert the Raster to the Probability Scale:
-p_conf_rast <- app(conflict_rast, fun=plogis)
+p_BEAR_conf_rast <- app(bear_conflict_rast, fun=plogis)
 
-plot(p_conf_rast)
+plot(p_BEAR_conf_rast)
 
 

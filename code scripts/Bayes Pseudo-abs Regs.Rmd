@@ -259,7 +259,7 @@ tot.farms.rast <- terra::rast("/Users/shannonspragg/ONA_GRIZZ/Predictor Rasters/
 tot.farms.sq.rast <- tot.farms.rast * tot.farms.rast # I am not sure how to do this one...
 
 # Distance to Neartest Protected Area (km):
-dist2pa.rast.general.1k <- rast("/Users/shannonspragg/ONA_GRIZZ/Predictor Rasters/1k_ha_dist2pa_raster.tif" )
+dist2pa.rast.general.1k <- terra::rast("/Users/shannonspragg/ONA_GRIZZ/Predictor Rasters/1k_ha_dist2pa_raster.tif" )
 dist2pa.rast.bear.10k <- rast("/Users/shannonspragg/ONA_GRIZZ/Predictor Rasters/10k_hadist2pa_raster.tif" )
 
 # Distance to Nearest Metro Area (km):
@@ -287,6 +287,37 @@ veg.melon.rast <- dom.farms.rast$`Dominant Farm Type by CCS` == "Vegetable and m
 names(veg.melon.rast)[names(veg.melon.rast) == "Dominant Farm Type by CCS"] <- "Vegetable & Melon Farming [1112]"
 ```
 
+```{r scale our variables}
+# Scale the Rasters:
+# Here we create a function to scale by subtracting the mean and dividing by 2 standard deviations:
+scale2sd.raster <-function(variable){(variable - global(variable, "mean", na.rm=TRUE)[,1])/(2*global(variable, "sd", na.rm=TRUE)[,1])}
+
+dist2metro.rast.sc <- scale2sd.raster(dist2met.rast) # This is having issues by creating a dataframe
+dist2pa.rast.sc <- scale2sd.raster(dist2pa.rast.general.1k)
+tot.farms.rast.sc <- scale2sd.raster(tot.farms.rast)
+tot.farms.sq.rast.sc <- scale2sd.raster(tot.farms.sq.rast)
+hm.dens.rast.sc <- scale2sd.raster(hm.dens.rast)
+cattle.ranching.rast.sc <- scale2sd.raster(cattle.ranching.rast)
+fruit.tree.nut.rast.sc <- scale2sd.raster(fruit.tree.nut.rast)
+other.animal.rast.sc <- scale2sd.raster(other.animal.rast)
+other.crop.rast.sc <- scale2sd.raster(other.crop.rast)
+veg.melon.rast.sc <- scale2sd.raster(veg.melon.rast)
+
+
+# We can also do this Step by Step:
+
+# Distance to PA:
+d2pa.mean <- global(dist2pa.rast.general.1k, "mean")
+d2pa.sub.mean <- dist2pa.rast.general.1k - d2pa.mean[,1]
+d2pa.sd <- global(d2pa.sub.mean, "sd")
+d2pa.rast.sc <- d2pa.sub.mean / ( 2 * d2pa.sd[,1])
+
+# Distance to Metro
+d2met.mean <- global(dist2met.rast, "mean")
+d2met.sub.mean <- dist2met.rast - d2met.mean[,1]
+d2met.sd <- global(d2met.sub.mean, "sd")
+d2met.rast.sc <- d2met.sub.mean / ( 2 * d2met.sd[,1])
+```
 
 
 ```{r raster math, include=TRUE}
@@ -298,13 +329,18 @@ ext(tot.farms.rast) == ext(hm.dens.rast) #TRUE
 # View our Full Model Coefficients:
 summary(post.pa.full)
 
-# Stack these spatrasters:
-conf.stack <- c(dist2pa.rast.general.1k, dist2met.rast, tot.farms.rast, tot.farms.sq.rast, hm.dens.rast, ccs.varint.rast, cattle.ranching.rast, fruit.tree.nut.rast, other.animal.rast, other.crop.rast, veg.melon.rast)
-plot(conf.stack) # plot these all to check
 
-# Create P(all conflict) raster with our regression coefficients:
+# Stack these spatrasters:
+conf.rast.stack <- c(dist2pa.rast.sc, dist2metro.rast.sc, tot.farms.rast.sc, tot.farms.sq.rast.sc, hm.dens.rast.sc, ccs.varint.rast, cattle.ranching.rast.sc, fruit.tree.nut.rast.sc, other.animal.rast.sc, other.crop.rast.sc, veg.melon.rast.sc)
+plot(conf.rast.stack) # plot these all to check
+# It looks like veg.melon raster has all 0 values, so isn't working
+
+# Create P(all conflict) raster with our regression coefficients and rasters:
     # Prob_conf_rast = Int.val + CCS + B_1est * PopDens…
-p_conf_rast <- -3.3 + ccs.varint.rast + (-1.4 * dist2pa.rast.general.1k) + (-1.3 * dist2met.rast) + (-0.3 * tot.farms.rast) +  (0.5 * tot.farms.sq.rast) + (0.7 * hm.dens.rast) + (-0.3 * cattle.ranching.rast) + (1.1 * fruit.tree.nut.rast) + (1.6 * other.animal.rast) + (1.6 * other.crop.rast) + (0.2 * veg.melon.rast)
+conflict_rast <- -3.2624640 + ccs.varint.rast + (-1.3887130 * dist2pa.rast.sc) + (-1.2986664 * dist2metro.rast.sc) + (-0.2535196 * tot.farms.rast.sc) + (0.4583006 * tot.farms.sq.rast.sc) + (0.7262155 * hm.dens.rast.sc) + (-0.2987515 * cattle.ranching.rast.sc) + (1.1384551 * fruit.tree.nut.rast.sc) + (1.5483847 * other.animal.rast.sc) + (1.6437851 * other.crop.rast.sc) #+ (0.2613143 * veg.melon.rast.sc)
+
+# Convert the Raster to the Probability Scale:
+p_conf_rast <- app(conflict_rast, fun=plogis)
 
 plot(p_conf_rast)
 ```

@@ -41,6 +41,45 @@ str(warp.df)
 prob.gen.conf.rast <- terra::rast("/Users/shannonspragg/ONA_GRIZZ/Predictor Rasters/prob_general_conf.tif")
 
 
+# Import our Predictor Rasters: -------------------------------------------
+# Here we bring in all of our predictor rasters for the SOI region:
+
+# Dominant Farm Type by CCS Region:
+dom.farms.rast <- terra::rast("/Users/shannonspragg/ONA_GRIZZ/Predictor Rasters/dom_farm_type_raster.tif")
+
+# Total Farm Count by CCS Region:
+tot.farms.rast <- terra::rast("/Users/shannonspragg/ONA_GRIZZ/Predictor Rasters/total_farm_count_raster.tif" )
+
+# Total Farm Count Squared:
+tot.farms.sq.rast <- tot.farms.rast * tot.farms.rast # I am not sure how to do this one...
+
+# Grizzinc:
+grizzinc.rast <- terra::rast("/Users/shannonspragg/ONA_GRIZZ/Predictor Rasters/grizz_inc_SOI_10km.tif")
+
+# Bear Density - Bear Habitat Suitability (BHS):
+bhs.rast <- rast("/Users/shannonspragg/ONA_GRIZZ/Predictor Rasters/bhs_SOI_10km.tif")
+
+# Biophysical Current Map (Cumulative current flow shows the total current for each landscape pixel):
+biophys.rast <- rast("/Users/shannonspragg/ONA_GRIZZ/Predictor Rasters/biophys_SOI_10km.tif") # use this one
+
+# CCS Region ID:
+ccs.varint.rast <- terra::rast("/Users/shannonspragg/ONA_GRIZZ/Predictor Rasters/CCS_varint_raster.tif" )
+names(ccs.varint.rast)[names(ccs.varint.rast) == "PostMean"] <- "CCS Varying Intercept Mean"
+
+# Subset the Dominant Farm Type Raster into Categories:
+cattle.ranching.rast <- dom.farms.rast$`Dominant Farm Type by CCS` == "Cattle ranching and farming [1121]"
+names(cattle.ranching.rast)[names(cattle.ranching.rast) == "Dominant Farm Type by CCS"] <- "Cattle Ranching & Farming [1121]"
+fruit.tree.nut.rast <- dom.farms.rast$`Dominant Farm Type by CCS` == "Fruit and tree nut farming [1113]"
+names(fruit.tree.nut.rast)[names(fruit.tree.nut.rast) == "Dominant Farm Type by CCS"] <- "Fruit & Tree Nut Farming [1113]"
+other.animal.rast <- dom.farms.rast$`Dominant Farm Type by CCS` == "Other animal production [1129]"
+names(other.animal.rast)[names(other.animal.rast) == "Dominant Farm Type by CCS"] <- "Other Animal Production [1129]"
+other.crop.rast <- dom.farms.rast$`Dominant Farm Type by CCS` == "Other crop farming [1119]"
+names(other.crop.rast)[names(other.crop.rast) == "Dominant Farm Type by CCS"] <- "Other Crop Farming [1119]"
+veg.melon.rast <- dom.farms.rast$`Dominant Farm Type by CCS` == "Vegetable and melon farming [1112]"
+names(veg.melon.rast)[names(veg.melon.rast) == "Dominant Farm Type by CCS"] <- "Vegetable & Melon Farming [1112]"
+
+
+
 # Extract P(General Conflict) to WARP Points: -----------------------------
 
 # Check Projections:
@@ -115,5 +154,45 @@ post.co.full <- stan_glmer(bears_presence_co ~ dom.farms.co + total.farms.co + t
                            prior = t_prior, prior_intercept = int_prior, QR=TRUE,
                            iter = 5000,
                            seed = SEED, refresh=0) # we add seed for reproducibility
+summary(post.co.full)
+
+
+# Scale our Predictor Rasters: --------------------------------------------
+# Here we create a function to scale by subtracting the mean and dividing by 2 standard deviations:
+scale2sd.raster <-function(variable){(variable - global(variable, "mean", na.rm=TRUE)[,1])/(2*global(variable, "sd", na.rm=TRUE)[,1])}
+
+tot.farms.rast.sc <- scale2sd.raster(tot.farms.rast)
+tot.farms.sq.rast.sc <- scale2sd.raster(tot.farms.sq.rast)
+grizzinc.rast.sc <- scale2sd.raster(grizzinc.rast)
+bhs.rast.sc <- scale2sd.raster(bhs.rast)
+biophys.rast.sc <- scale2sd.raster(biophys.rast)
+
+# We don't need to scale the categorical rasters, CCS raster or the p(general conflict) raster
+
+
+# Produce our P(Bear Conflict) Raster: ------------------------------------
+
+# Make sure extents match:
+ext(grizzinc.rast.sc) == ext(bhs.rast.sc) # TRUE
+ext(biophys.rast.sc) == ext(tot.farms.rast.sc) #TRUE
+ext(tot.farms.sq.rast.sc) == ext(cattle.ranching.rast) #TRUE
+
+# View our Full Model Coefficients:
+summary(post.co.full)
+
+
+# Stack these spatrasters:
+bear.conf.rast.stack <- c(grizzinc.rast.sc, bhs.rast.sc, biophys.rast.sc, tot.farms.rast.sc, tot.farms.sq.rast.sc, cattle.ranching.rast.sc, ccs.varint.rast, fruit.tree.nut.rast.sc, other.animal.rast.sc, other.crop.rast.sc, veg.melon.rast.sc, prob.gen.conf.rast)
+plot(conf.rast.stack) # plot these all to check
+# It looks like veg.melon raster has all 0 values, so isn't working
+
+# Create P(all conflict) raster with our regression coefficients and rasters:
+# Prob_conf_rast = Int.val + CCS + B_1est * PopDens…
+conflict_rast <- -3.2624640 + ccs.varint.rast + (-1.3887130 * dist2pa.rast.sc) + (-1.2986664 * dist2metro.rast.sc) + (-0.2535196 * tot.farms.rast.sc) + (0.4583006 * tot.farms.sq.rast.sc) + (0.7262155 * hm.dens.rast.sc) + (-0.2987515 * cattle.ranching.rast.sc) + (1.1384551 * fruit.tree.nut.rast.sc) + (1.5483847 * other.animal.rast.sc) + (1.6437851 * other.crop.rast.sc) + (0.2613143 * veg.melon.rast)
+
+# Convert the Raster to the Probability Scale:
+p_conf_rast <- app(conflict_rast, fun=plogis)
+
+plot(p_conf_rast)
 
 

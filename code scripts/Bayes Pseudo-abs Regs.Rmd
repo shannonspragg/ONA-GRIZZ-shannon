@@ -297,11 +297,6 @@ dist2pa.rast.sc <- scale2sd.raster(dist2pa.rast.general.1k)
 tot.farms.rast.sc <- scale2sd.raster(tot.farms.rast)
 tot.farms.sq.rast.sc <- scale2sd.raster(tot.farms.sq.rast)
 hm.dens.rast.sc <- scale2sd.raster(hm.dens.rast)
-cattle.ranching.rast.sc <- scale2sd.raster(cattle.ranching.rast)
-fruit.tree.nut.rast.sc <- scale2sd.raster(fruit.tree.nut.rast)
-other.animal.rast.sc <- scale2sd.raster(other.animal.rast)
-other.crop.rast.sc <- scale2sd.raster(other.crop.rast)
-veg.melon.rast.sc <- scale2sd.raster(veg.melon.rast) # Since this raster is all zero values, scaling doesn't work
 
 # We can also do this Step by Step:
 
@@ -330,8 +325,9 @@ summary(post.pa.full)
 
 
 # Stack these spatrasters:
-conf.rast.stack <- c(dist2pa.rast.sc, dist2metro.rast.sc, tot.farms.rast.sc, tot.farms.sq.rast.sc, hm.dens.rast.sc, ccs.varint.rast, cattle.ranching.rast.sc, fruit.tree.nut.rast.sc, other.animal.rast.sc, other.crop.rast.sc, veg.melon.rast.sc)
+conf.rast.stack <- c(dist2pa.rast.sc, dist2metro.rast.sc, tot.farms.rast.sc, tot.farms.sq.rast.sc, hm.dens.rast.sc, ccs.varint.rast, cattle.ranching.rast, fruit.tree.nut.rast, other.animal.rast, other.crop.rast, veg.melon.rast)
 plot(conf.rast.stack) # plot these all to check
+
 # It looks like veg.melon raster has all 0 values, so isn't working
 
 # Create P(all conflict) raster with our regression coefficients and rasters:

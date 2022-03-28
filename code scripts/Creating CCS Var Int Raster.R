@@ -23,7 +23,7 @@ library(stars)
 
 soi.ccs.crop <- st_read( "/Users/shannonspragg/ONA_GRIZZ/CAN Spatial Data/SOI CCS regions/SOI_CCS_10km.shp")
 
-warp.pres.abs.df <- st_read("/Users/shannonspragg/ONA_GRIZZ/WARP Bears /WARP Cropped - SIP/warp_presabs_post_preds.shp")
+warp.pres.abs.df <- st_read("/Users/shannonspragg/ONA_GRIZZ/WARP Bears /WARP Cropped - SIP/WARP Final Pres-abs/pres_abs_1k_pa.shp")
 
 # Bring in one of our rasters for rasterizing polygon data later:
 soi.rast <- terra::rast("/Users/shannonspragg/ONA_GRIZZ/CAN Spatial Data/SOI Ecoprovince Boundary/SOI_10km.tif") # SOI Region 10km
@@ -177,7 +177,7 @@ plot(ccs.varint.means.rast, add=TRUE) #HECK YEAHHHH
 
 # Save our CCS Post Means Raster: -----------------------------------------
 
-terra::writeRaster(ccs.post.means.rast, "/Users/shannonspragg/ONA_GRIZZ/Predictor Rasters/CCS_varint_raster.tif" )
+terra::writeRaster(ccs.varint.means.rast, "/Users/shannonspragg/ONA_GRIZZ/Predictor Rasters/CCS_varint_raster.tif" )
 
 
 

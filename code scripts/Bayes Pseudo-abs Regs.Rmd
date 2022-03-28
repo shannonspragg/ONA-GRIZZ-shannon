@@ -301,8 +301,7 @@ cattle.ranching.rast.sc <- scale2sd.raster(cattle.ranching.rast)
 fruit.tree.nut.rast.sc <- scale2sd.raster(fruit.tree.nut.rast)
 other.animal.rast.sc <- scale2sd.raster(other.animal.rast)
 other.crop.rast.sc <- scale2sd.raster(other.crop.rast)
-veg.melon.rast.sc <- scale2sd.raster(veg.melon.rast)
-
+veg.melon.rast.sc <- scale2sd.raster(veg.melon.rast) # Since this raster is all zero values, scaling doesn't work
 
 # We can also do this Step by Step:
 
@@ -337,7 +336,7 @@ plot(conf.rast.stack) # plot these all to check
 
 # Create P(all conflict) raster with our regression coefficients and rasters:
     # Prob_conf_rast = Int.val + CCS + B_1est * PopDens…
-conflict_rast <- -3.2624640 + ccs.varint.rast + (-1.3887130 * dist2pa.rast.sc) + (-1.2986664 * dist2metro.rast.sc) + (-0.2535196 * tot.farms.rast.sc) + (0.4583006 * tot.farms.sq.rast.sc) + (0.7262155 * hm.dens.rast.sc) + (-0.2987515 * cattle.ranching.rast.sc) + (1.1384551 * fruit.tree.nut.rast.sc) + (1.5483847 * other.animal.rast.sc) + (1.6437851 * other.crop.rast.sc) #+ (0.2613143 * veg.melon.rast.sc)
+conflict_rast <- -3.2624640 + ccs.varint.rast + (-1.3887130 * dist2pa.rast.sc) + (-1.2986664 * dist2metro.rast.sc) + (-0.2535196 * tot.farms.rast.sc) + (0.4583006 * tot.farms.sq.rast.sc) + (0.7262155 * hm.dens.rast.sc) + (-0.2987515 * cattle.ranching.rast.sc) + (1.1384551 * fruit.tree.nut.rast.sc) + (1.5483847 * other.animal.rast.sc) + (1.6437851 * other.crop.rast.sc) + (0.2613143 * veg.melon.rast)
 
 # Convert the Raster to the Probability Scale:
 p_conf_rast <- app(conflict_rast, fun=plogis)
@@ -346,6 +345,11 @@ plot(p_conf_rast)
 ```
 We use raster math calculations to apply the regression coefficients to each corresponding raster and add these together to produce our probability of general wildlife conflict raster.
 
+```{r write raster}
+# Save our P(General Conflict) Raster:
+terra::writeRaster(p_conf_rast, "/Users/shannonspragg/ONA_GRIZZ/Predictor Rasters/prob_general_conf.tif")
+
+```
 
 
 

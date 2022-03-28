@@ -84,10 +84,6 @@ veg.melon.rast <- dom.farms.rast$`Dominant Farm Type by CCS` == "Vegetable and m
 names(veg.melon.rast)[names(veg.melon.rast) == "Dominant Farm Type by CCS"] <- "Vegetable & Melon Farming [1112]"
 
 
-
-
-
-
 # Scale the Variables: ----------------------------------------------------------
 # Here we create a function to scale by subtracting the mean and dividing by 2 standard deviations:
 scale2sd <-function(variable){(variable - mean(variable, na.rm=TRUE))/(2*sd(variable, na.rm=TRUE))}
@@ -113,9 +109,6 @@ CCSNAME.ps <- warp.pres.abs$CCSNAME
 # Add an QUADRATIC term for Farm Count: 
 # We want to add a quadratic term to farm count so that we can better interpret it against P(conflict)
 total.farms.sq.ps <- total.farms.ps*total.farms.ps
-
-
-
 
 # Prep Data for Modeling in Rstanarm: ------------------------------------------------
 # Make a mini data frame with just our predictors (no spatial info):

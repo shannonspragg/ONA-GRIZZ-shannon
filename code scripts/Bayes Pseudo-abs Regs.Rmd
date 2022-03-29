@@ -166,7 +166,7 @@ Here we set our initial priors to students t with 7 degrees of freedom, and a sc
 par(pty="s") # sets our graph to square
 roc(bears_presence_ps, post.pa.full$fitted.values, plot=TRUE, legacy.axes=TRUE, percent=TRUE ,
     xlab= "False Positive Percentage", ylab= "True Positive Percentage",
-    col="#377eb8", lwd=4, print.auc=TRUE) # this gives us the ROC curve , in 3544 controls (bears 0) < 2062 cases (bears 1), Area under curve = 0.6547
+    col="#377eb8", lwd=4, print.auc=TRUE) # this gives us the ROC curve , in 3544 controls (bears 0) < 2062 cases (bears 1), Area under curve = 0.82
 
 # Add ROC curve for our full pseudo-abs model:
 plot.roc(bears_presence_ps, post.pa.simple$fitted.values, percent=TRUE, col='#4daf4a', lwd=4, print.auc=TRUE, add=TRUE, print.auc.y=60)

@@ -77,6 +77,7 @@ other.crop.rast <- dom.farms.rast$`Dominant Farm Type by CCS` == "Other crop far
 names(other.crop.rast)[names(other.crop.rast) == "Dominant Farm Type by CCS"] <- "Other Crop Farming [1119]"
 veg.melon.rast <- dom.farms.rast$`Dominant Farm Type by CCS` == "Vegetable and melon farming [1112]"
 names(veg.melon.rast)[names(veg.melon.rast) == "Dominant Farm Type by CCS"] <- "Vegetable & Melon Farming [1112]"
+names(prob.gen.conf.rast)[names(prob.gen.conf.rast) == "lyr.1"] <- "Probability of General Conflict"
 
 
 
@@ -156,6 +157,13 @@ post.co.full <- stan_glmer(bears_presence_co ~ dom.farms.co + total.farms.co + t
                            seed = SEED, refresh=0) # we add seed for reproducibility
 summary(post.co.full)
 
+post.co.full.d2pa <- stan_glmer(bears_presence_co ~ b2pa.dist.co + b2met.dist.co + dom.farms.co + total.farms.co + total.farms.sq.co + grizzinc.co + biophys.co + bhs.co + (1 | CCSNAME.co) + prob.gen.conf, 
+                           data = mini.warp.df.co,
+                           family = binomial(link = "logit"), # define our binomial glm
+                           prior = t_prior, prior_intercept = int_prior, QR=TRUE,
+                           iter = 5000,
+                           seed = SEED, refresh=0) # we add seed for reproducibility
+
 
 # Scale our Predictor Rasters: --------------------------------------------
 # Here we create a function to scale by subtracting the mean and dividing by 2 standard deviations:
@@ -188,12 +196,12 @@ plot(bear.conf.rast.stack) # plot these all to check
 
 # Create P(all conflict) raster with our regression coefficients and rasters:
 # Prob_conf_rast = Int.val + CCS + B_1est * PopDens…
-bear_conflict_rast <- -2.3296746 + ccs.varint.rast + (0.2333587 * grizzinc.rast.sc) + (0.4635907 * biophys.rast.sc) + (0.1143926 * bhs.rast.sc) + (-0.1341851 * tot.farms.rast.sc) + (0.9366107 * tot.farms.sq.rast.sc) 
-+ (4.2281470 * prob.gen.conf.rast) + (0.8426185 * cattle.ranching.rast.sc) + (1.6446657 * fruit.tree.nut.rast.sc) + (1.3544810 * other.animal.rast.sc) + (-0.2962539 * other.crop.rast.sc) + (-1.8683451 * veg.melon.rast)
+bear_conflict_rast <- -2.2065293 + ccs.varint.rast + (0.2219576 * grizzinc.rast.sc) + (0.3871439 * biophys.rast.sc) + (0.1358926 * bhs.rast.sc) + (-0.1965030 * tot.farms.rast.sc) + (0.9117391 * tot.farms.sq.rast.sc) + 
+  (3.8415844 * prob.gen.conf.rast) + (0.7953578 * cattle.ranching.rast) + (1.5117984 * fruit.tree.nut.rast) + (1.3725416 * other.animal.rast) + (-0.2273150 * other.crop.rast) + (-1.6450018 * veg.melon.rast)
 
 # Convert the Raster to the Probability Scale:
 p_BEAR_conf_rast <- app(bear_conflict_rast, fun=plogis)
 
-plot(p_BEAR_conf_rast)
+plot(p_BEAR_conf_rast, title= "Probability of Bear Conflict in the SOI")
 
 

@@ -53,6 +53,9 @@ tot.farms.rast <- terra::rast("/Users/shannonspragg/ONA_GRIZZ/Predictor Rasters/
 # Total Farm Count Squared:
 tot.farms.sq.rast <- tot.farms.rast * tot.farms.rast # I am not sure how to do this one...
 
+# Dist to PA's , buffered for bears:
+dist2pa.bear.rast <- rast("/Users/shannonspragg/ONA_GRIZZ/Predictor Rasters/d2pa_bears_SOI_10km.tif")
+
 # Grizzinc:
 grizzinc.rast <- terra::rast("/Users/shannonspragg/ONA_GRIZZ/Predictor Rasters/grizz_inc_SOI_10km.tif")
 
@@ -149,7 +152,17 @@ t_prior <- student_t(df = 7, location = 0, scale = 1.5)
 int_prior <- normal(location = 0, scale = NULL, autoscale = FALSE)
 
 # Fit our full model with conlfict-only df:
-post.co.full <- stan_glmer(bears_presence_co ~ dom.farms.co + total.farms.co + total.farms.sq.co + grizzinc.co + biophys.co + bhs.co + (1 | CCSNAME.co) + prob.gen.conf, 
+
+# Intercept-only model:
+post.co.int <- stan_glmer(bears_presence_co ~ 1 + (1 | CCSNAME.co), 
+                           data = mini.warp.df.co,
+                           family = binomial(link = "logit"), # define our binomial glm
+                           prior = t_prior, prior_intercept = int_prior, QR=TRUE,
+                           iter = 5000,
+                           seed = SEED, refresh=0) # we add seed for reproducibility
+
+# Full model:
+post.co.full <- stan_glmer(bears_presence_co ~ b2pa.dist.co + dom.farms.co + total.farms.co + total.farms.sq.co + grizzinc.co + biophys.co + bhs.co + (1 | CCSNAME.co) + prob.gen.conf, 
                            data = mini.warp.df.co,
                            family = binomial(link = "logit"), # define our binomial glm
                            prior = t_prior, prior_intercept = int_prior, QR=TRUE,
@@ -157,12 +170,44 @@ post.co.full <- stan_glmer(bears_presence_co ~ dom.farms.co + total.farms.co + t
                            seed = SEED, refresh=0) # we add seed for reproducibility
 summary(post.co.full)
 
+# Curious about adding in PA's and metro:
 post.co.full.d2pa <- stan_glmer(bears_presence_co ~ b2pa.dist.co + b2met.dist.co + dom.farms.co + total.farms.co + total.farms.sq.co + grizzinc.co + biophys.co + bhs.co + (1 | CCSNAME.co) + prob.gen.conf, 
                            data = mini.warp.df.co,
                            family = binomial(link = "logit"), # define our binomial glm
                            prior = t_prior, prior_intercept = int_prior, QR=TRUE,
                            iter = 5000,
                            seed = SEED, refresh=0) # we add seed for reproducibility
+
+summary(post.co.full.d2pa) # these added ones don't seem to do much
+
+
+# Plot our Area Under the Curve: ------------------------------------------
+# Plot ROC for the Simple Posterior:
+par(pty="s") # sets our graph to square
+roc(bears_presence_co, post.co.full$fitted.values, plot=TRUE, legacy.axes=TRUE, percent=TRUE ,
+    xlab= "False Positive Percentage", ylab= "True Positive Percentage",
+    col="#377eb8", lwd=4, print.auc=TRUE) # this gives us the ROC curve , in 3544 controls (bears 0) < 2062 cases (bears 1), Area under curve = 0.
+
+# Leave-one-out Cross_validation: -----------------------------------------
+# Run a Leave-One-Out (LOO):
+# Loo package implements fast Pareto smoothed leave-one-out-cross-val (PSIS-LOO) to compute expected log predictive density:
+
+(loo.co.full <- loo(post.co.full, save_psis = TRUE))
+
+
+plot(loo.co.full, label_points = TRUE)
+loo.co.full # get the summary of our test
+
+##### Comparison to Baseline Model: --
+
+# Compute our baseline result without covariates:
+post0.co <- update(post.co.int, formula = bears_presence_co ~ 1 + (1 | CCSNAME.ps), QR = FALSE, refresh=0)
+
+# Compare to our baseline:
+(loo.0.co <- loo(post0.ps)) # computing the PSIS-LOO for our baseline model
+
+loo.comparison <- loo_compare(loo.0.co, loo.co.full) # this high negative value for post0 shows us the covariates contain clearly useful information for predictions
+
 
 
 # Scale our Predictor Rasters: --------------------------------------------
@@ -174,7 +219,7 @@ tot.farms.sq.rast.sc <- scale2sd.raster(tot.farms.sq.rast)
 grizzinc.rast.sc <- scale2sd.raster(grizzinc.rast)
 bhs.rast.sc <- scale2sd.raster(bhs.rast)
 biophys.rast.sc <- scale2sd.raster(biophys.rast)
-
+dist2pa.bears.rast.sc <- scale2sd.raster(dist2pa.bear.rast)
 # We don't need to scale the categorical rasters, CCS raster or the p(general conflict) raster
 
 
@@ -190,7 +235,7 @@ summary(post.co.full)
 fixef(post.co.full)
 
 # Stack these spatrasters:
-bear.conf.rast.stack <- c(grizzinc.rast.sc, bhs.rast.sc, biophys.rast.sc, tot.farms.rast.sc, tot.farms.sq.rast.sc, cattle.ranching.rast, ccs.varint.rast, fruit.tree.nut.rast, other.animal.rast, other.crop.rast, veg.melon.rast, prob.gen.conf.rast)
+bear.conf.rast.stack <- c(grizzinc.rast.sc, bhs.rast.sc, biophys.rast.sc, dist2pa.bears.rast.sc, tot.farms.rast.sc, tot.farms.sq.rast.sc, cattle.ranching.rast, ccs.varint.rast, fruit.tree.nut.rast, other.animal.rast, other.crop.rast, veg.melon.rast, prob.gen.conf.rast)
 plot(bear.conf.rast.stack) # plot these all to check
 # It looks like veg.melon raster has all 0 values, so isn't working
 

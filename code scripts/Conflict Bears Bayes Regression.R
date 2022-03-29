@@ -81,6 +81,8 @@ names(other.crop.rast)[names(other.crop.rast) == "Dominant Farm Type by CCS"] <-
 veg.melon.rast <- dom.farms.rast$`Dominant Farm Type by CCS` == "Vegetable and melon farming [1112]"
 names(veg.melon.rast)[names(veg.melon.rast) == "Dominant Farm Type by CCS"] <- "Vegetable & Melon Farming [1112]"
 names(prob.gen.conf.rast)[names(prob.gen.conf.rast) == "lyr.1"] <- "Probability of General Conflict"
+names(grizzinc.rast)[names(grizzinc.rast) == "griz_inc"] <- "Support for Grizzly Increase"
+names(biophys.rast)[names(biophys.rast) == "cum_currmap"] <- "Biophysical Current Map"
 
 
 
@@ -157,7 +159,7 @@ int_prior <- normal(location = 0, scale = NULL, autoscale = FALSE)
 post.co.int <- stan_glmer(bears_presence_co ~ 1 + (1 | CCSNAME.co), 
                            data = mini.warp.df.co,
                            family = binomial(link = "logit"), # define our binomial glm
-                           prior = t_prior, prior_intercept = int_prior, QR=TRUE,
+                           prior = t_prior, prior_intercept = int_prior, QR=FALSE,
                            iter = 5000,
                            seed = SEED, refresh=0) # we add seed for reproducibility
 
@@ -170,15 +172,6 @@ post.co.full <- stan_glmer(bears_presence_co ~ b2pa.dist.co + dom.farms.co + tot
                            seed = SEED, refresh=0) # we add seed for reproducibility
 summary(post.co.full)
 
-# Curious about adding in PA's and metro:
-post.co.full.d2pa <- stan_glmer(bears_presence_co ~ b2pa.dist.co + b2met.dist.co + dom.farms.co + total.farms.co + total.farms.sq.co + grizzinc.co + biophys.co + bhs.co + (1 | CCSNAME.co) + prob.gen.conf, 
-                           data = mini.warp.df.co,
-                           family = binomial(link = "logit"), # define our binomial glm
-                           prior = t_prior, prior_intercept = int_prior, QR=TRUE,
-                           iter = 5000,
-                           seed = SEED, refresh=0) # we add seed for reproducibility
-
-summary(post.co.full.d2pa) # these added ones don't seem to do much
 
 
 # Plot our Area Under the Curve: ------------------------------------------
@@ -208,6 +201,17 @@ post0.co <- update(post.co.int, formula = bears_presence_co ~ 1 + (1 | CCSNAME.p
 
 loo.comparison <- loo_compare(loo.0.co, loo.co.full) # this high negative value for post0 shows us the covariates contain clearly useful information for predictions
 
+
+
+
+
+# Plotting Mixed Effects: -------------------------------------------------
+
+# Basic Mixed Effect Plot:
+sjPlot::plot_model(post.co.full)
+
+# MIxed Effect Table:
+sjPlot::tab_model(post.co.full)
 
 
 # Scale our Predictor Rasters: --------------------------------------------
@@ -241,8 +245,8 @@ plot(bear.conf.rast.stack) # plot these all to check
 
 # Create P(all conflict) raster with our regression coefficients and rasters:
 # Prob_conf_rast = Int.val + CCS + B_1est * PopDens…
-bear_conflict_rast <- -2.2065293 + ccs.varint.rast + (0.2219576 * grizzinc.rast.sc) + (0.3871439 * biophys.rast.sc) + (0.1358926 * bhs.rast.sc) + (-0.1965030 * tot.farms.rast.sc) + (0.9117391 * tot.farms.sq.rast.sc) + 
-  (3.8415844 * prob.gen.conf.rast) + (0.7953578 * cattle.ranching.rast) + (1.5117984 * fruit.tree.nut.rast) + (1.3725416 * other.animal.rast) + (-0.2273150 * other.crop.rast) + (-1.6450018 * veg.melon.rast)
+bear_conflict_rast <- -2.24752149 + ccs.varint.rast + (-0.33246421 * dist2pa.bears.rast.sc) + (0.19042846 * grizzinc.rast.sc) + (0.36510753 * biophys.rast.sc) + ( 0.14304979 * bhs.rast.sc) + (-0.21169447 * tot.farms.rast.sc) + (0.91291537  * tot.farms.sq.rast.sc) + 
+  ( 3.66838122 * prob.gen.conf.rast) + (0.89961121 * cattle.ranching.rast) + (1.54684344 * fruit.tree.nut.rast) + (1.33420612 * other.animal.rast) + (-0.04345297 * other.crop.rast) + (-1.57909484 * veg.melon.rast)
 
 # Convert the Raster to the Probability Scale:
 p_BEAR_conf_rast <- app(bear_conflict_rast, fun=plogis)

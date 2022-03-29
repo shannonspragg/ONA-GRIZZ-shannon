@@ -292,7 +292,7 @@ names(veg.melon.rast)[names(veg.melon.rast) == "Dominant Farm Type by CCS"] <- "
 # Here we create a function to scale by subtracting the mean and dividing by 2 standard deviations:
 scale2sd.raster <-function(variable){(variable - global(variable, "mean", na.rm=TRUE)[,1])/(2*global(variable, "sd", na.rm=TRUE)[,1])}
 
-dist2metro.rast.sc <- scale2sd.raster(dist2met.rast) # This is having issues by creating a dataframe
+dist2metro.rast.sc <- scale2sd.raster(dist2met.rast) # This is having issues by creating a dataframee
 dist2pa.rast.sc <- scale2sd.raster(dist2pa.rast.general.1k)
 tot.farms.rast.sc <- scale2sd.raster(tot.farms.rast)
 tot.farms.sq.rast.sc <- scale2sd.raster(tot.farms.sq.rast)

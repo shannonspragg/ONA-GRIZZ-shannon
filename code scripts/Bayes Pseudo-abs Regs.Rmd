@@ -77,6 +77,21 @@ grizzinc.ps <- scale2sd(warp.pres.abs$GrzzInE)
 bhs.ps <- scale2sd(warp.pres.abs$BHSExtr)
 biophys.ps <- scale2sd(warp.pres.abs$BphysEx)
 pop.dens <- scale2sd(warp.pres.abs$Hmn_Dns)
+total.farms <- warp.pres.abs$Ttl_F_C
+total.farms.sq <- total.farms * total.farms
+
+# Note the mean and SD's that each variable was scaled by, so we can scale the rasters later:
+mean(warp.pres.abs$ds__PA_) #  3.803958
+sd(warp.pres.abs$ds__PA_)  #  4.130133  ( this is just 1 sd)
+mean(warp.pres.abs$Ttl_F_C)  # 175.0757
+sd(warp.pres.abs$Ttl_F_C)  # 171.3236
+mean(warp.pres.abs$dstn___) # 22.47916
+sd(warp.pres.abs$dstn___)  #  26.46386
+mean(warp.pres.abs$Hmn_Dns) # 13.50969
+sd(warp.pres.abs$Hmn_Dns)  # 10.56946
+mean(total.farms.sq) # 60001.49
+sd(total.farms.sq) # 122225.2
+
 
 bears_presence_ps <- warp.pres.abs$bears # Binomial bears
 dom.farms.ps <- warp.pres.abs$Dm_Fr_T # Dominant farm type covariate -- non numeric
@@ -91,6 +106,7 @@ CCSNAME.ps <- warp.pres.abs$CCSNAME
 # Add an QUADRATIC term for Farm Count: -----------------------------------
 # We want to add a quadratic term to farm count so that we can better interpret it against P(conflict)
 total.farms.sq.ps <- total.farms.ps*total.farms.ps
+
 ```
 We can use the scale function to center our predictors by subtracting the means (center= TRUE) and scaling by dividing by their standard deviation (scale=TRUE). We do this as well as adding a quadratic term for our scaled total farms predictor.
 
@@ -260,7 +276,6 @@ tot.farms.sq.rast <- tot.farms.rast * tot.farms.rast # I am not sure how to do t
 
 # Distance to Neartest Protected Area (km):
 dist2pa.rast.general.1k <- terra::rast("/Users/shannonspragg/ONA_GRIZZ/Predictor Rasters/1k_ha_dist2pa_raster.tif" )
-dist2pa.rast.bear.10k <- rast("/Users/shannonspragg/ONA_GRIZZ/Predictor Rasters/10k_hadist2pa_raster.tif" )
 
 # Distance to Nearest Metro Area (km):
 dist2met.rast <- terra::rast("/Users/shannonspragg/ONA_GRIZZ/Predictor Rasters/dist2metro_raster.tif" )
@@ -291,26 +306,62 @@ names(veg.melon.rast)[names(veg.melon.rast) == "Dominant Farm Type by CCS"] <- "
 # Scale the Rasters:
 # Here we create a function to scale by subtracting the mean and dividing by 2 standard deviations:
 scale2sd.raster <-function(variable){(variable - global(variable, "mean", na.rm=TRUE)[,1])/(2*global(variable, "sd", na.rm=TRUE)[,1])}
-
-dist2metro.rast.sc <- scale2sd.raster(dist2met.rast) # This is having issues by creating a dataframee
+dist2metro.rast.sc <- scale2sd.raster(dist2met.rast) 
 dist2pa.rast.sc <- scale2sd.raster(dist2pa.rast.general.1k)
 tot.farms.rast.sc <- scale2sd.raster(tot.farms.rast)
 tot.farms.sq.rast.sc <- scale2sd.raster(tot.farms.sq.rast)
 hm.dens.rast.sc <- scale2sd.raster(hm.dens.rast)
 
+
+# Here are our means and sd's that the predictors were scaled by:
+mean(warp.pres.abs$ds__PA_) #  3.803958
+sd(warp.pres.abs$ds__PA_)  #  4.130133  ( this is just 1 sd)
+mean(warp.pres.abs$Ttl_F_C)  # 175.0757
+sd(warp.pres.abs$Ttl_F_C)  # 171.3236
+mean(warp.pres.abs$dstn___) # 22.47916
+sd(warp.pres.abs$dstn___)  #  26.46386
+mean(warp.pres.abs$Hmn_Dns) # 13.50969
+sd(warp.pres.abs$Hmn_Dns)  # 10.56946
+mean(total.farms.sq) # 60001.49
+sd(total.farms.sq) # 122225.2
+
 # We can also do this Step by Step:
 
 # Distance to PA:
-d2pa.mean <- global(dist2pa.rast.general.1k, "mean")
-d2pa.sub.mean <- dist2pa.rast.general.1k - d2pa.mean[,1]
-d2pa.sd <- global(d2pa.sub.mean, "sd")
-d2pa.rast.sc <- d2pa.sub.mean / ( 2 * d2pa.sd[,1])
+d2pa.mean <- mean(warp.pres.abs$ds__PA_)
+d2pa.sub.mean <- dist2pa.rast.general.1k - d2pa.mean
+d2pa.sd <- sd(warp.pres.abs$ds__PA_)
+d2pa.rast.sc <- d2pa.sub.mean / ( 2 * d2pa.sd)
 
 # Distance to Metro
-d2met.mean <- global(dist2met.rast, "mean")
-d2met.sub.mean <- dist2met.rast - d2met.mean[,1]
-d2met.sd <- global(d2met.sub.mean, "sd")
-d2met.rast.sc <- d2met.sub.mean / ( 2 * d2met.sd[,1])
+d2met.mean <- mean(warp.pres.abs$dstn___)
+d2met.sub.mean <- dist2met.rast - d2met.mean
+d2met.sd <- sd(warp.pres.abs$dstn___)
+d2met.rast.sc <- d2met.sub.mean / ( 2 * d2met.sd)
+
+# Total Farm Count:
+ttl.farm.mean <- mean(warp.pres.abs$Ttl_F_C)
+ttl.f.sub.mean <- tot.farms.rast - ttl.farm.mean
+ttl.f.sd <- sd(warp.pres.abs$Ttl_F_C)
+tot.farms.rast.sc <- ttl.f.sub.mean / ( 2 * ttl.f.sd)
+
+# Total Farms Sq:
+ttl.farm.sq.mean <- mean(total.farms.sq)
+ttl.f.sq.sub.mean <- tot.farms.sq.rast - ttl.farm.sq.mean
+ttl.f.sq.sd <- sd(total.farms.sq)
+tot.farms.sq.rast.sc <- ttl.f.sq.sub.mean / ( 2 * ttl.f.sq.sd)
+
+# Human Density:
+pop.dens.mean <- mean(warp.pres.abs$Hmn_Dns)
+pop.sub.mean <- hm.dens.rast - pop.dens.mean
+pop.dens.sd <- sd(warp.pres.abs$Hmn_Dns)
+hm.dens.rast.sc <- pop.sub.mean / ( 2 * pop.dens.sd)
+
+
+
+
+
+
 ```
 
 

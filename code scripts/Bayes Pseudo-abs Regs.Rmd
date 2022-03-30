@@ -331,13 +331,13 @@ sd(total.farms.sq) # 122225.2
 d2pa.mean <- mean(warp.pres.abs$ds__PA_)
 d2pa.sub.mean <- dist2pa.rast.general.1k - d2pa.mean
 d2pa.sd <- sd(warp.pres.abs$ds__PA_)
-d2pa.rast.sc <- d2pa.sub.mean / ( 2 * d2pa.sd)
+dist2pa.rast.sc <- d2pa.sub.mean / ( 2 * d2pa.sd)
 
 # Distance to Metro
 d2met.mean <- mean(warp.pres.abs$dstn___)
 d2met.sub.mean <- dist2met.rast - d2met.mean
 d2met.sd <- sd(warp.pres.abs$dstn___)
-d2met.rast.sc <- d2met.sub.mean / ( 2 * d2met.sd)
+dist2metro.rast.sc <- d2met.sub.mean / ( 2 * d2met.sd)
 
 # Total Farm Count:
 ttl.farm.mean <- mean(warp.pres.abs$Ttl_F_C)
@@ -356,11 +356,6 @@ pop.dens.mean <- mean(warp.pres.abs$Hmn_Dns)
 pop.sub.mean <- hm.dens.rast - pop.dens.mean
 pop.dens.sd <- sd(warp.pres.abs$Hmn_Dns)
 hm.dens.rast.sc <- pop.sub.mean / ( 2 * pop.dens.sd)
-
-
-
-
-
 
 ```
 
@@ -383,7 +378,7 @@ plot(conf.rast.stack) # plot these all to check
 
 # Create P(all conflict) raster with our regression coefficients and rasters:
     # Prob_conf_rast = Int.val + CCS + B_1est * PopDens…
-conflict_rast <- -3.2624640 + ccs.varint.rast + (-1.3887130 * dist2pa.rast.sc) + (-1.2986664 * dist2metro.rast.sc) + (-0.2535196 * tot.farms.rast.sc) + (0.4583006 * tot.farms.sq.rast.sc) + (0.7262155 * hm.dens.rast.sc) + (-0.2987515 * cattle.ranching.rast.sc) + (1.1384551 * fruit.tree.nut.rast.sc) + (1.5483847 * other.animal.rast.sc) + (1.6437851 * other.crop.rast.sc) + (0.2613143 * veg.melon.rast)
+conflict_rast <- -3.2624640 + ccs.varint.rast + (-1.3887130 * dist2pa.rast.sc) + (-1.2986664 * dist2metro.rast.sc) + (-0.2535196 * tot.farms.rast.sc) + (0.4583006 * tot.farms.sq.rast.sc) + (0.7262155 * hm.dens.rast.sc) + (-0.2987515 * cattle.ranching.rast) + (1.1384551 * fruit.tree.nut.rast) + (1.5483847 * other.animal.rast) + (1.6437851 * other.crop.rast) + (0.2613143 * veg.melon.rast)
 
 # Convert the Raster to the Probability Scale:
 p_conf_rast <- app(conflict_rast, fun=plogis)

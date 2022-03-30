@@ -185,15 +185,22 @@ plot(dist.pa.raster.1kha)  # Plot our 1k ha for general conflict
 # Fix the column names:
 names(dist.pa.raster)[names(dist.pa.raster) == "SOI_10km"] <- "Distance to Nearest PA (km)"
 
+
+# Make sure our rasters are in km:
+dist.pa.rast.1kha <- conv_unit(dist.pa.raster.1kha,"m","km") # There we go
+dist.pa.rast.10kha <- conv_unit(dist.pa.raster.10kha,"m","km")
+dist.met.raster <- conv_unit(dist.met.raster,"m","km")
+
+names(dist.pa.rast.1kha)[names(dist.pa.rast.1kha) == "SOI_10km"] <- "Distance to Nearest PA (km)"
+names(dist.pa.rast.10kha)[names(dist.pa.rast.10kha) == "SOI_10km"] <- "Distance to Nearest PA (km)"
 names(dist.met.raster)[names(dist.met.raster) == "SOI_10km"] <- "Distance to Nearest Metro (km)"
 
-names(dist.pa.raster.1kha)[names(dist.pa.raster.1kha) == "SOI_10km"] <- "Distance to Nearest PA (m)"
-names(dist.pa.raster.10kha)[names(dist.pa.raster.10kha) == "SOI_10km"] <- "Distance to Nearest PA (m)"
+
 
 
 # Save our Rasters: -------------------------------------------------------
 terra::writeRaster(dist.pa.raster, "/Users/shannonspragg/ONA_GRIZZ/Predictor Rasters/dist2PA_raster.tif")
 terra::writeRaster(dist.met.raster, "/Users/shannonspragg/ONA_GRIZZ/Predictor Rasters/dist2metro_raster.tif" )
 
-terra::writeRaster(dist.pa.raster.1kha, "/Users/shannonspragg/ONA_GRIZZ/Predictor Rasters/1k_ha_dist2pa_raster.tif" )
-terra::writeRaster(dist.pa.raster.10kha, "/Users/shannonspragg/ONA_GRIZZ/Predictor Rasters/10k_hadist2pa_raster.tif" )
+terra::writeRaster(dist.pa.rast.1kha, "/Users/shannonspragg/ONA_GRIZZ/Predictor Rasters/1k_ha_dist2pa_raster.tif" )
+terra::writeRaster(dist.pa.rast.10kha, "/Users/shannonspragg/ONA_GRIZZ/Predictor Rasters/10k_hadist2pa_raster.tif" )

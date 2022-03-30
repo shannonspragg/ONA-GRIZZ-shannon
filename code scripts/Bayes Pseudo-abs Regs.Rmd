@@ -313,18 +313,6 @@ tot.farms.sq.rast.sc <- scale2sd.raster(tot.farms.sq.rast)
 hm.dens.rast.sc <- scale2sd.raster(hm.dens.rast)
 
 
-# Here are our means and sd's that the predictors were scaled by:
-mean(warp.pres.abs$ds__PA_) #  3.803958
-sd(warp.pres.abs$ds__PA_)  #  4.130133  ( this is just 1 sd)
-mean(warp.pres.abs$Ttl_F_C)  # 175.0757
-sd(warp.pres.abs$Ttl_F_C)  # 171.3236
-mean(warp.pres.abs$dstn___) # 22.47916
-sd(warp.pres.abs$dstn___)  #  26.46386
-mean(warp.pres.abs$Hmn_Dns) # 13.50969
-sd(warp.pres.abs$Hmn_Dns)  # 10.56946
-mean(total.farms.sq) # 60001.49
-sd(total.farms.sq) # 122225.2
-
 # We can also do this Step by Step:
 
 # Distance to PA:

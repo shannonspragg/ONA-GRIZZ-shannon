@@ -195,12 +195,18 @@ names(dist.pa.rast.1kha)[names(dist.pa.rast.1kha) == "SOI_10km"] <- "Distance to
 names(dist.pa.rast.10kha)[names(dist.pa.rast.10kha) == "SOI_10km"] <- "Distance to Nearest PA (km)"
 names(dist.met.raster)[names(dist.met.raster) == "SOI_10km"] <- "Distance to Nearest Metro (km)"
 
+# Cut these down to the SOI Boundary: -------------------------------------
+soi.bound.vect <- vect(soi.bound.reproj)
+
+dist.pa.rast.1kha.soi <- terra::mask(dist.pa.rast.1kha, soi.bound.vect) # BEA-UTIFUL!
+dist.pa.rast.10kha.soi <- terra::mask(dist.pa.rast.10kha, soi.bound.vect) # BEA-UTIFUL!
+dist.met.rast.soi <- terra::mask(dist.met.raster, soi.bound.vect) # BEA-UTIFUL!
 
 
 
 # Save our Rasters: -------------------------------------------------------
 terra::writeRaster(dist.pa.raster, "/Users/shannonspragg/ONA_GRIZZ/Predictor Rasters/dist2PA_raster.tif")
-terra::writeRaster(dist.met.raster, "/Users/shannonspragg/ONA_GRIZZ/Predictor Rasters/dist2metro_raster.tif" )
+terra::writeRaster(dist.met.rast.soi, "/Users/shannonspragg/ONA_GRIZZ/Predictor Rasters/dist2metro_raster.tif" )
 
-terra::writeRaster(dist.pa.rast.1kha, "/Users/shannonspragg/ONA_GRIZZ/Predictor Rasters/1k_ha_dist2pa_raster.tif" )
-terra::writeRaster(dist.pa.rast.10kha, "/Users/shannonspragg/ONA_GRIZZ/Predictor Rasters/10k_hadist2pa_raster.tif" )
+terra::writeRaster(dist.pa.rast.1kha.soi, "/Users/shannonspragg/ONA_GRIZZ/Predictor Rasters/1k_ha_dist2pa_raster.tif" )
+terra::writeRaster(dist.pa.rast.10kha.soi, "/Users/shannonspragg/ONA_GRIZZ/Predictor Rasters/10k_hadist2pa_raster.tif" )

@@ -54,7 +54,7 @@ tot.farms.rast <- terra::rast("/Users/shannonspragg/ONA_GRIZZ/Predictor Rasters/
 tot.farms.sq.rast <- tot.farms.rast * tot.farms.rast # I am not sure how to do this one...
 
 # Dist to PA's , buffered for bears:
-dist2pa.bear.rast <- rast("/Users/shannonspragg/ONA_GRIZZ/Predictor Rasters/d2pa_bears_SOI_10km.tif")
+dist2pa.bear.rast <- rast("/Users/shannonspragg/ONA_GRIZZ/Predictor Rasters/10k_hadist2pa_raster.tif")
 
 # Grizzinc:
 grizzinc.rast <- terra::rast("/Users/shannonspragg/ONA_GRIZZ/Predictor Rasters/grizz_inc_SOI_10km.tif")
@@ -114,12 +114,14 @@ which(is.na(warp.df$ProbGeneralConf)) #none
 # Scale the Variables: ----------------------------------------------------------
 scale2sd <-function(variable){(variable - mean(variable, na.rm=TRUE))/(2*sd(variable, na.rm=TRUE))}
 
-b2pa.dist.co <- scale2sd(warp.df$ds__PA_)
-total.farms.co <- scale2sd(warp.df$Ttl_F_C)
-b2met.dist.co <- scale2sd(warp.df$dstn___)
-grizzinc.co <- scale2sd(warp.df$GrzzInE)
-bhs.co <- scale2sd(warp.df$BHSExtr)
-biophys.co <- scale2sd(warp.df$BphysEx)
+b2pa.dist.co.sc <- scale2sd(warp.df$ds__PA_)
+total.farms.co.sc <- scale2sd(warp.df$Ttl_F_C)
+b2met.dist.co.sc <- scale2sd(warp.df$dstn___)
+grizzinc.co.sc <- scale2sd(warp.df$GrzzInE)
+bhs.co.sc <- scale2sd(warp.df$BHSExtr)
+biophys.co.sc <- scale2sd(warp.df$BphysEx)
+total.farms.warp.co <- warp.df$Ttl_F_C
+total.farms.sq.co <- total.farms.warp * total.farms.warp
 
 bears_presence_co <- warp.df$bears # Binomial bears
 dom.farms.co <- warp.df$Dm_Fr_T # Dominant farm type covariate -- non numeric
@@ -137,13 +139,14 @@ which(is.na(warp.df$CCSUID.ps)) # none
 
 # Add an QUADRATIC term for Farm Count: 
 # We want to add a quadratic term to farm count so that we can better interpret it against P(conflict)
-total.farms.sq.co <- total.farms.co*total.farms.co
+total.farms.sq.co.sc <- total.farms.co.sc*total.farms.co.sc
 
 
 # Fit Data for Rstanarm: --------------------------------------------------
 
 # And do this for our conflict only df:
-mini.warp.df.co <- data.frame(bears_presence_co, b2pa.dist.co, b2met.dist.co, total.farms.co, total.farms.co, total.farms.sq.co, dom.farms.co, grizzinc.co, bhs.co, biophys.co, CCSUID.co, CCSNAME.co )
+mini.warp.df.co <- data.frame(bears_presence_co, b2pa.dist.co.sc, total.farms.co.sc, total.farms.sq.co.sc, dom.farms.co, 
+                              grizzinc.co.sc, bhs.co.sc, biophys.co.sc, CCSUID.co, CCSNAME.co, prob.gen.conf )
 
 # Make sure this is a factor:
 mini.warp.df.co$bears_presence_co <- factor(mini.warp.df.co$bears_presence_co)
@@ -164,7 +167,7 @@ post.co.int <- stan_glmer(bears_presence_co ~ 1 + (1 | CCSNAME.co),
                            seed = SEED, refresh=0) # we add seed for reproducibility
 
 # Full model:
-post.co.full <- stan_glmer(bears_presence_co ~ b2pa.dist.co + dom.farms.co + total.farms.co + total.farms.sq.co + grizzinc.co + biophys.co + bhs.co + (1 | CCSNAME.co) + prob.gen.conf, 
+post.co.full <- stan_glmer(bears_presence_co ~ b2pa.dist.co.sc + dom.farms.co + total.farms.co.sc + total.farms.sq.co.sc + grizzinc.co.sc + biophys.co.sc + bhs.co.sc + (1 | CCSNAME.co) + prob.gen.conf, 
                            data = mini.warp.df.co,
                            family = binomial(link = "logit"), # define our binomial glm
                            prior = t_prior, prior_intercept = int_prior, QR=TRUE,
@@ -218,12 +221,44 @@ sjPlot::tab_model(post.co.full)
 # Here we create a function to scale by subtracting the mean and dividing by 2 standard deviations:
 scale2sd.raster <-function(variable){(variable - global(variable, "mean", na.rm=TRUE)[,1])/(2*global(variable, "sd", na.rm=TRUE)[,1])}
 
-tot.farms.rast.sc <- scale2sd.raster(tot.farms.rast)
-tot.farms.sq.rast.sc <- scale2sd.raster(tot.farms.sq.rast)
-grizzinc.rast.sc <- scale2sd.raster(grizzinc.rast)
-bhs.rast.sc <- scale2sd.raster(bhs.rast)
-biophys.rast.sc <- scale2sd.raster(biophys.rast)
-dist2pa.bears.rast.sc <- scale2sd.raster(dist2pa.bear.rast)
+# We can also do this Step by Step:
+
+# Distance to PA:
+d2pa.mean.co <- mean(warp.df$ds__PA_)
+d2pa.sub.mean.co <- dist2pa.bear.rast - d2pa.mean.co
+d2pa.sd.co <- sd(warp.df$ds__PA_)
+dist2pa.bear.rast.sc <- d2pa.sub.mean.co / ( 2 * d2pa.sd.co)
+
+# Total Farm Count:
+ttl.farm.mean.co <- mean(warp.df$Ttl_F_C)
+ttl.f.sub.mean.co <- tot.farms.rast - ttl.farm.mean.co
+ttl.f.sd.co <- sd(warp.df$Ttl_F_C)
+tot.farms.rast.co.sc <- ttl.f.sub.mean.co / ( 2 * ttl.f.sd.co)
+
+# Total Farms Sq:
+ttl.farm.sq.mean.co <- mean(total.farms.sq.co)
+ttl.f.sq.sub.mean.co <- tot.farms.sq.rast - ttl.farm.sq.mean.co
+ttl.f.sq.sd.co <- sd(total.farms.sq.co)
+tot.farms.sq.rast.co.sc <- ttl.f.sq.sub.mean.co / ( 2 * ttl.f.sq.sd.co)
+
+# Grizz Increase:
+grizzinc.mean <- mean(warp.df$GrzzInE)
+grizz.sub.mean <- grizzinc.rast - grizzinc.mean
+grizzinc.sd <- sd(warp.df$GrzzInE)
+grizzinc.rast.sc <- grizz.sub.mean / ( 2 * grizzinc.sd)
+
+# Biophys:
+biophys.mean <- mean(warp.df$BphysEx)
+bio.sub.mean <- biophys.rast - biophys.mean
+biophys.sd <- sd(warp.df$BphysEx)
+biophys.rast.sc <- bio.sub.mean / ( 2 * biophys.sd)
+
+# BHS:
+bhs.mean <- mean(warp.df$BHSExtr)
+bhs.sub.mean <- bhs.rast - bhs.mean
+bhs.sd <- sd(warp.df$BHSExtr)
+bhs.rast.sc <- bhs.sub.mean / ( 2 * bhs.sd)
+
 # We don't need to scale the categorical rasters, CCS raster or the p(general conflict) raster
 
 
@@ -239,18 +274,18 @@ summary(post.co.full)
 fixef(post.co.full)
 
 # Stack these spatrasters:
-bear.conf.rast.stack <- c(grizzinc.rast.sc, bhs.rast.sc, biophys.rast.sc, dist2pa.bears.rast.sc, tot.farms.rast.sc, tot.farms.sq.rast.sc, cattle.ranching.rast, ccs.varint.rast, fruit.tree.nut.rast, other.animal.rast, other.crop.rast, veg.melon.rast, prob.gen.conf.rast)
+bear.conf.rast.stack <- c(grizzinc.rast.sc, bhs.rast.sc, biophys.rast.sc, dist2pa.bear.rast.sc, tot.farms.rast.co.sc, tot.farms.sq.rast.co.sc, cattle.ranching.rast, ccs.varint.rast, fruit.tree.nut.rast, other.animal.rast, other.crop.rast, veg.melon.rast, prob.gen.conf.rast)
 plot(bear.conf.rast.stack) # plot these all to check
 # It looks like veg.melon raster has all 0 values, so isn't working
 
 # Create P(all conflict) raster with our regression coefficients and rasters:
 # Prob_conf_rast = Int.val + CCS + B_1est * PopDens…
-bear_conflict_rast <- -2.24752149 + ccs.varint.rast + (-0.33246421 * dist2pa.bears.rast.sc) + (0.19042846 * grizzinc.rast.sc) + (0.36510753 * biophys.rast.sc) + ( 0.14304979 * bhs.rast.sc) + (-0.21169447 * tot.farms.rast.sc) + (0.91291537  * tot.farms.sq.rast.sc) + 
-  ( 3.66838122 * prob.gen.conf.rast) + (0.89961121 * cattle.ranching.rast) + (1.54684344 * fruit.tree.nut.rast) + (1.33420612 * other.animal.rast) + (-0.04345297 * other.crop.rast) + (-1.57909484 * veg.melon.rast)
+bear_conflict_rast <- -1.767194645 + ccs.varint.rast + (-0.272180709 * dist2pa.bear.rast.sc) + (0.190484001 * grizzinc.rast.sc) + (0.377704254 * biophys.rast.sc) + ( 0.001733723 * bhs.rast.sc) + (-0.205342727 * tot.farms.rast.co.sc) + (0.829898279  * tot.farms.sq.rast.co.sc) + 
+  ( 3.171972498 * prob.gen.conf.rast) + (0.936089290 * cattle.ranching.rast) + (1.226594906 * fruit.tree.nut.rast) + (1.186180400 * other.animal.rast) + (1.057287864 * other.crop.rast) + (0.391081848 * veg.melon.rast)
 
 # Convert the Raster to the Probability Scale:
 p_BEAR_conf_rast <- app(bear_conflict_rast, fun=plogis)
 
-plot(p_BEAR_conf_rast, title= "Probability of Bear Conflict in the SOI")
+plot(p_BEAR_conf_rast)
 
 

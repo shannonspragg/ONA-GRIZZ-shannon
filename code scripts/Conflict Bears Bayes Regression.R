@@ -175,6 +175,12 @@ post.co.full <- stan_glmer(bears_presence_co ~ b2pa.dist.co.sc + dom.farms.co + 
                            seed = SEED, refresh=0) # we add seed for reproducibility
 summary(post.co.full)
 
+post.co.offset <- stan_glmer(bears_presence_co ~ b2pa.dist.co.sc + dom.farms.co + total.farms.co.sc + total.farms.sq.co.sc + grizzinc.co.sc + biophys.co.sc + bhs.co.sc + (1 | CCSNAME.co) + offset(prob.gen.conf), 
+                             data = mini.warp.df.co,
+                             family = binomial(link = "logit"), # define our binomial glm
+                             prior = t_prior, prior_intercept = int_prior, QR=TRUE,
+                             iter = 5000,
+                             seed = SEED, refresh=0) # we add seed for reproducibility
 
 
 # Plot our Area Under the Curve: ------------------------------------------

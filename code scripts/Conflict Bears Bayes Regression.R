@@ -182,6 +182,16 @@ post.co.offset <- stan_glmer(bears_presence_co ~ b2pa.dist.co.sc + dom.farms.co 
                              iter = 5000,
                              seed = SEED, refresh=0) # we add seed for reproducibility
 
+##### Plot the posterior for our different variables:
+plot_model(post.co.full, sort.est = TRUE) # This plots just fixed effects
+plot_model(post.co.offset, sort.est = TRUE)
+
+# Posterior with varying intercepts:
+co.full.plot<-plot(post.co.full, "areas", prob = 0.95, prob_outer = 1)
+co.full.plot+ geom_vline(xintercept = 0)
+
+co.offset.plot <- plot(post.co.offset, "areas", prob = 0.95, prob_outer = 1)
+co.offset.plot+ geom_vline(xintercept = 0)
 
 # Plot our Area Under the Curve: ------------------------------------------
 # Plot ROC for the Simple Posterior:
@@ -195,6 +205,7 @@ roc(bears_presence_co, post.co.full$fitted.values, plot=TRUE, legacy.axes=TRUE, 
 # Loo package implements fast Pareto smoothed leave-one-out-cross-val (PSIS-LOO) to compute expected log predictive density:
 
 (loo.co.full <- loo(post.co.full, save_psis = TRUE))
+(loo.co.offset <- loo(post.co.offset, save_psis = TRUE))
 
 
 plot(loo.co.full, label_points = TRUE)
@@ -206,11 +217,9 @@ loo.co.full # get the summary of our test
 post0.co <- update(post.co.int, formula = bears_presence_co ~ 1 + (1 | CCSNAME.ps), QR = FALSE, refresh=0)
 
 # Compare to our baseline:
-(loo.0.co <- loo(post0.ps)) # computing the PSIS-LOO for our baseline model
+(loo.0.co <- loo(post.co.int)) # computing the PSIS-LOO for our baseline model
 
-loo.comparison <- loo_compare(loo.0.co, loo.co.full) # this high negative value for post0 shows us the covariates contain clearly useful information for predictions
-
-
+loo.comparison <- loo_compare(loo.0.co, loo.co.full, loo.co.offset) # this high negative value for post0 shows us the covariates contain clearly useful information for predictions
 
 
 
@@ -276,8 +285,8 @@ ext(biophys.rast.sc) == ext(tot.farms.rast.sc) #TRUE
 ext(tot.farms.sq.rast.sc) == ext(cattle.ranching.rast) #TRUE
 
 # View our Full Model Coefficients:
-summary(post.co.full)
-fixef(post.co.full)
+summary(post.co.offset)
+fixef(post.co.offset)
 
 # Stack these spatrasters:
 bear.conf.rast.stack <- c(grizzinc.rast.sc, bhs.rast.sc, biophys.rast.sc, dist2pa.bear.rast.sc, tot.farms.rast.co.sc, tot.farms.sq.rast.co.sc, cattle.ranching.rast, ccs.varint.rast, fruit.tree.nut.rast, other.animal.rast, other.crop.rast, veg.melon.rast, prob.gen.conf.rast)
@@ -289,9 +298,15 @@ plot(bear.conf.rast.stack) # plot these all to check
 bear_conflict_rast <- -1.767194645 + ccs.varint.rast + (-0.272180709 * dist2pa.bear.rast.sc) + (0.190484001 * grizzinc.rast.sc) + (0.377704254 * biophys.rast.sc) + ( 0.001733723 * bhs.rast.sc) + (-0.205342727 * tot.farms.rast.co.sc) + (0.829898279  * tot.farms.sq.rast.co.sc) + 
   ( 3.171972498 * prob.gen.conf.rast) + (0.936089290 * cattle.ranching.rast) + (1.226594906 * fruit.tree.nut.rast) + (1.186180400 * other.animal.rast) + (1.057287864 * other.crop.rast) + (0.391081848 * veg.melon.rast)
 
+# Our full model with general conflict offset:
+bear_conf_offset_rast <- -1.91599762 + ccs.varint.rast + (-0.35141508 * dist2pa.bear.rast.sc) + (0.24895303 * grizzinc.rast.sc) + (0.42021820 * biophys.rast.sc) + ( 0.02482996 * bhs.rast.sc) + (0.03447354 * tot.farms.rast.co.sc) + (0.90059431   * tot.farms.sq.rast.co.sc) + 
+  ( 3.171972498 * prob.gen.conf.rast) + (1.19655094  * cattle.ranching.rast) + (1.64229631 * fruit.tree.nut.rast) + (1.32375855 * other.animal.rast) + (1.64578382 * other.crop.rast) + (1.47316753 * veg.melon.rast)
+
 # Convert the Raster to the Probability Scale:
 p_BEAR_conf_rast <- app(bear_conflict_rast, fun=plogis)
 
-plot(p_BEAR_conf_rast)
+p_BEAR_conf_offset_rast <- app(bear_conf_offset_rast, fun=plogis)
 
+plot(p_BEAR_conf_rast)
+plot(p_BEAR_conf_offset_rast) # Our p(bear conflict) with offset for general conflict
 

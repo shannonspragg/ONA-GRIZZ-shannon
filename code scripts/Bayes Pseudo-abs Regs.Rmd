@@ -269,6 +269,14 @@ Then, we extract the values of this raster to our original warp conflict report 
 # Dominant Farm Type by CCS Region:
 dom.farms.rast <- terra::rast("/Users/shannonspragg/ONA_GRIZZ/Predictor Rasters/dom_farm_type_raster.tif")
 
+beef.cattle.rast <- rast("/Users/shannonspragg/ONA_GRIZZ/Predictor Rasters/beef_cattle_raster.tif")
+cattle.ranching.rast <- rast("/Users/shannonspragg/ONA_GRIZZ/Predictor Rasters/cattle_ranching_raster.tif")
+other.animal.rast <- rast("/Users/shannonspragg/ONA_GRIZZ/Predictor Rasters/other_animal_prod_raster.tif")
+fruit.tree.nut.rast <- rast("/Users/shannonspragg/ONA_GRIZZ/Predictor Rasters/fruit_treenut_raster.tif")
+other.crop.rast <- rast("/Users/shannonspragg/ONA_GRIZZ/Predictor Rasters/other_crop_prod_raster.tif")
+greenhs.rast <- rast("/Users/shannonspragg/ONA_GRIZZ/Predictor Rasters/greenhouse_crop_raster.tif")
+veg.mel.rast <- rast("/Users/shannonspragg/ONA_GRIZZ/Predictor Rasters/veg_melon_raster.tif")
+
 # Total Farm Count by CCS Region:
 tot.farms.rast <- terra::rast("/Users/shannonspragg/ONA_GRIZZ/Predictor Rasters/total_farm_count_raster.tif" )
 
@@ -289,19 +297,6 @@ ccs.varint.rast <- terra::rast("/Users/shannonspragg/ONA_GRIZZ/Predictor Rasters
 names(ccs.varint.rast)[names(ccs.varint.rast) == "PostMean"] <- "CCS Varying Intercept Mean"
 ```
 
-```{r make subset rasters, echo=FALSE}
-# Subset the Dominant Farm Type Raster into Categories:
-cattle.ranching.rast <- dom.farms.rast$`Dominant Farm Type by CCS` == "Cattle ranching and farming [1121]"
-names(cattle.ranching.rast)[names(cattle.ranching.rast) == "Dominant Farm Type by CCS"] <- "Cattle Ranching & Farming [1121]"
-fruit.tree.nut.rast <- dom.farms.rast$`Dominant Farm Type by CCS` == "Fruit and tree nut farming [1113]"
-names(fruit.tree.nut.rast)[names(fruit.tree.nut.rast) == "Dominant Farm Type by CCS"] <- "Fruit & Tree Nut Farming [1113]"
-other.animal.rast <- dom.farms.rast$`Dominant Farm Type by CCS` == "Other animal production [1129]"
-names(other.animal.rast)[names(other.animal.rast) == "Dominant Farm Type by CCS"] <- "Other Animal Production [1129]"
-other.crop.rast <- dom.farms.rast$`Dominant Farm Type by CCS` == "Other crop farming [1119]"
-names(other.crop.rast)[names(other.crop.rast) == "Dominant Farm Type by CCS"] <- "Other Crop Farming [1119]"
-veg.melon.rast <- dom.farms.rast$`Dominant Farm Type by CCS` == "Vegetable and melon farming [1112]"
-names(veg.melon.rast)[names(veg.melon.rast) == "Dominant Farm Type by CCS"] <- "Vegetable & Melon Farming [1112]"
-```
 
 ```{r scale our variables}
 # Scale the Rasters:
@@ -360,14 +355,14 @@ summary(post.pa.full)
 
 
 # Stack these spatrasters:
-conf.rast.stack <- c(dist2pa.rast.sc, dist2metro.rast.sc, tot.farms.rast.sc, tot.farms.sq.rast.sc, hm.dens.rast.sc, ccs.varint.rast, cattle.ranching.rast, fruit.tree.nut.rast, other.animal.rast, other.crop.rast, veg.melon.rast)
+conf.rast.stack <- c(dist2pa.rast.sc, dist2metro.rast.sc, tot.farms.rast.sc, tot.farms.sq.rast.sc, hm.dens.rast.sc, ccs.varint.rast, cattle.ranching.rast, fruit.tree.nut.rast, other.animal.rast, other.crop.rast, veg.mel.rast)
 plot(conf.rast.stack) # plot these all to check
 
 # It looks like veg.melon raster has all 0 values, so isn't working
 
 # Create P(all conflict) raster with our regression coefficients and rasters:
     # Prob_conf_rast = Int.val + CCS + B_1est * PopDens…
-conflict_rast <- -3.2624640 + ccs.varint.rast + (-1.3887130 * dist2pa.rast.sc) + (-1.2986664 * dist2metro.rast.sc) + (-0.2535196 * tot.farms.rast.sc) + (0.4583006 * tot.farms.sq.rast.sc) + (0.7262155 * hm.dens.rast.sc) + (-0.2987515 * cattle.ranching.rast) + (1.1384551 * fruit.tree.nut.rast) + (1.5483847 * other.animal.rast) + (1.6437851 * other.crop.rast) + (0.2613143 * veg.melon.rast)
+conflict_rast <- -3.2624640 + ccs.varint.rast + (-1.3887130 * dist2pa.rast.sc) + (-1.2986664 * dist2metro.rast.sc) + (-0.2535196 * tot.farms.rast.sc) + (0.4583006 * tot.farms.sq.rast.sc) + (0.7262155 * hm.dens.rast.sc) + (-0.2987515 * cattle.ranching.rast) + (1.1384551 * fruit.tree.nut.rast) + (1.5483847 * other.animal.rast) + (1.6437851 * other.crop.rast) + (0.2613143 * veg.mel.rast)
 
 # Convert the Raster to the Probability Scale:
 p_conf_rast <- app(conflict_rast, fun=plogis)

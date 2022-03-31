@@ -163,9 +163,30 @@ tot.farms.soi.crop <- st_intersection(total.farms.reproj, soi.bound.reproj)
 plot(st_geometry(tot.farms.soi.crop))
 plot(st_geometry(soi.bound.reproj), add=TRUE) # This works
 
+# Isolate Farm Type Subsets:
+beef.cattle <- dplyr::filter(farm.type.soi.crop, N_A_I_C == "Beef cattle ranching and farming, including feedlots [112110]") 
+cattle.ranch <- dplyr::filter(farm.type.soi.crop, N_A_I_C == "Cattle ranching and farming [1121]") 
+other.animal <- dplyr::filter(farm.type.soi.crop, N_A_I_C == "Other animal production [1129]") 
+fruit.tree.nut <- dplyr::filter(farm.type.soi.crop, N_A_I_C == "Fruit and tree nut farming [1113]") 
+other.crop <- dplyr::filter(farm.type.soi.crop, N_A_I_C == "Other crop farming [1119]") 
+greenhouse <- dplyr::filter(farm.type.soi.crop, N_A_I_C == "Greenhouse, nursery and floriculture production [1114]") 
+veg.melon <- dplyr::filter(farm.type.soi.crop, N_A_I_C == "Vegetable and melon farming [1112]") 
+
+
 # Make farm type a spatvector:
 farm.type.soi.sv <- vect(farm.type.soi.crop)
 
+# And our sub categories:
+beef.cat.sv <- vect(beef.cattle)
+cat.ranch.sv <- vect(cattle.ranch)
+other.animal.sv <- vect(other.animal)
+fruit.tree.sv <- vect(fruit.tree.nut)
+other.crop.sv <- vect(other.crop)
+greenhouse.sv <- vect(greenhouse)
+veg.mel.sv <- vect(veg.melon)
+
+
+# Now farm count:
 farm.count.soi.sv <- vect(tot.farms.soi.crop)
 plot(farm.count.soi.sv)
 
@@ -176,16 +197,72 @@ plot(farm.type.rast)
 farm.count.rast <- terra::rasterize(farm.count.soi.sv, soi.rast, field = "VALUE")
 plot(farm.count.rast)
 
+# And our subset rasters:
+beef.cattle.rast <- terra::rasterize(beef.cat.sv, soi.rast)
+cattle.ranch.rast <- terra::rasterize(cat.ranch.sv, soi.rast, field = "N_A_I_C")
+other.animal.rast <- terra::rasterize(other.animal.sv, soi.rast, field = "N_A_I_C")
+fruit.treenut.rast <- terra::rasterize(fruit.tree.sv, soi.rast, field = "N_A_I_C")
+other.crop.rast <- terra::rasterize(other.crop.sv, soi.rast, field = "N_A_I_C")
+greenhouse.rast <- terra::rasterize(greenhouse.sv, soi.rast, field = "N_A_I_C")
+veg.mel.rast <- terra::rasterize(veg.mel.sv, soi.rast, field = "N_A_I_C")
+
+
 # Fix the column names:
 names(farm.type.rast)[names(farm.type.rast) == "N_A_I_C"] <- "Dominant Farm Type by CCS"
 
+names(beef.cattle.rast)[names(beef.cattle.rast) == "N_A_I_C"] <- "Beef cattle ranching and farming, including feedlots [112110]"
+names(cattle.ranch.rast)[names(cattle.ranch.rast) == "N_A_I_C"] <- "Cattle ranching and farming [1121]"
+names(other.animal.rast)[names(other.animal.rast) == "N_A_I_C"] <- "Other animal production [1129]"
+names(fruit.treenut.rast)[names(fruit.treenut.rast) == "N_A_I_C"] <- "Fruit and tree nut farming [1113]"
+names(other.crop.rast)[names(other.crop.rast) == "N_A_I_C"] <- "Other crop farming [1119]"
+names(greenhouse.rast)[names(greenhouse.rast) == "N_A_I_C"] <- "Greenhouse, nursery and floriculture production [1114]"
+names(veg.mel.rast)[names(veg.mel.rast) == "N_A_I_C"] <- "Vegetable and melon farming [1112]" 
+
 names(farm.count.rast)[names(farm.count.rast) == "VALUE"] <- "Total Farm Count by CCS"
+
+# Merge these back to SOI Rasters:
+beef.cattle.soi <- merge(beef.cattle.rast, soi.rast)
+beef.cattle.soi[beef.cattle.soi == 0] <- 1
+beef.cattle.soi[beef.cattle.soi == 327] <- 0
+
+cattle.ranch.soi <- merge(cattle.ranch.rast, soi.rast)
+cattle.ranch.soi[cattle.ranch.soi == 0] <- 1
+cattle.ranch.soi[cattle.ranch.soi == 327] <- 0
+
+other.animal.soi <- merge(other.animal.rast, soi.rast)
+other.animal.soi[other.animal.soi == 0] <- 1
+other.animal.soi[other.animal.soi == 327] <- 0
+
+fruit.treenut.soi <- merge(fruit.treenut.rast, soi.rast)
+fruit.treenut.soi[fruit.treenut.soi == 0] <- 1
+fruit.treenut.soi[fruit.treenut.soi == 327] <- 0
+
+other.crop.soi <- merge(other.crop.rast, soi.rast)
+other.crop.soi[other.crop.soi == 0] <- 1
+other.crop.soi[other.crop.soi == 327] <- 0
+
+greenhouse.soi <- merge(greenhouse.rast, soi.rast)
+greenhouse.soi[greenhouse.soi == 0] <- 1
+greenhouse.soi[greenhouse.soi == 327] <- 0
+
+veg.mel.soi <- merge(veg.mel.rast, soi.rast)
+veg.mel.soi[veg.mel.soi == 0] <- 1
+veg.mel.soi[veg.mel.soi == 327] <- 0
 
 
 # Save these Farm Rasters:
 terra::writeRaster(farm.type.rast, "/Users/shannonspragg/ONA_GRIZZ/Predictor Rasters/dom_farm_type_raster.tif")
 terra::writeRaster(farm.count.rast, "/Users/shannonspragg/ONA_GRIZZ/Predictor Rasters/total_farm_count_raster.tif" )
 
+terra::writeRaster(beef.cattle.soi, "/Users/shannonspragg/ONA_GRIZZ/Predictor Rasters/beef_cattle_raster.tif")
+terra::writeRaster(cattle.ranch.soi, "/Users/shannonspragg/ONA_GRIZZ/Predictor Rasters/cattle_ranching_raster.tif")
+terra::writeRaster(other.animal.soi, "/Users/shannonspragg/ONA_GRIZZ/Predictor Rasters/other_animal_prod_raster.tif")
+terra::writeRaster(fruit.treenut.soi, "/Users/shannonspragg/ONA_GRIZZ/Predictor Rasters/fruit_treenut_raster.tif")
+terra::writeRaster(other.crop.soi, "/Users/shannonspragg/ONA_GRIZZ/Predictor Rasters/other_crop_prod_raster.tif")
+terra::writeRaster(greenhouse.soi, "/Users/shannonspragg/ONA_GRIZZ/Predictor Rasters/greenhouse_crop_raster.tif")
+terra::writeRaster(veg.mel.soi, "/Users/shannonspragg/ONA_GRIZZ/Predictor Rasters/veg_melon_raster.tif")
+
+dom.farm.rast.check <- rast("/Users/shannonspragg/ONA_GRIZZ/Predictor Rasters/dom_farm_type_raster.tif")
 
 # Buffer WARP Points Before Attributing Farm Values -----------------------
 # Here we buffer the WARP points by 5000m (5km) before extracting the attributes from the farm polygons

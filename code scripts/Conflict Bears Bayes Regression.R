@@ -46,6 +46,13 @@ prob.gen.conf.rast <- terra::rast("/Users/shannonspragg/ONA_GRIZZ/Predictor Rast
 
 # Dominant Farm Type by CCS Region:
 dom.farms.rast <- terra::rast("/Users/shannonspragg/ONA_GRIZZ/Predictor Rasters/dom_farm_type_raster.tif")
+beef.cattle.rast <- rast("/Users/shannonspragg/ONA_GRIZZ/Predictor Rasters/beef_cattle_raster.tif")
+cattle.ranching.rast <- rast("/Users/shannonspragg/ONA_GRIZZ/Predictor Rasters/cattle_ranching_raster.tif")
+other.animal.rast <- rast("/Users/shannonspragg/ONA_GRIZZ/Predictor Rasters/other_animal_prod_raster.tif")
+fruit.tree.nut.rast <- rast("/Users/shannonspragg/ONA_GRIZZ/Predictor Rasters/fruit_treenut_raster.tif")
+other.crop.rast <- rast("/Users/shannonspragg/ONA_GRIZZ/Predictor Rasters/other_crop_prod_raster.tif")
+greenhs.rast <- rast("/Users/shannonspragg/ONA_GRIZZ/Predictor Rasters/greenhouse_crop_raster.tif")
+veg.mel.rast <- rast("/Users/shannonspragg/ONA_GRIZZ/Predictor Rasters/veg_melon_raster.tif")
 
 # Total Farm Count by CCS Region:
 tot.farms.rast <- terra::rast("/Users/shannonspragg/ONA_GRIZZ/Predictor Rasters/total_farm_count_raster.tif" )
@@ -68,22 +75,6 @@ biophys.rast <- rast("/Users/shannonspragg/ONA_GRIZZ/Predictor Rasters/biophys_S
 # CCS Region ID:
 ccs.varint.rast <- terra::rast("/Users/shannonspragg/ONA_GRIZZ/Predictor Rasters/CCS_varint_raster.tif" )
 names(ccs.varint.rast)[names(ccs.varint.rast) == "PostMean"] <- "CCS Varying Intercept Mean"
-
-# Subset the Dominant Farm Type Raster into Categories:
-cattle.ranching.rast <- dom.farms.rast$`Dominant Farm Type by CCS` == "Cattle ranching and farming [1121]"
-names(cattle.ranching.rast)[names(cattle.ranching.rast) == "Dominant Farm Type by CCS"] <- "Cattle Ranching & Farming [1121]"
-fruit.tree.nut.rast <- dom.farms.rast$`Dominant Farm Type by CCS` == "Fruit and tree nut farming [1113]"
-names(fruit.tree.nut.rast)[names(fruit.tree.nut.rast) == "Dominant Farm Type by CCS"] <- "Fruit & Tree Nut Farming [1113]"
-other.animal.rast <- dom.farms.rast$`Dominant Farm Type by CCS` == "Other animal production [1129]"
-names(other.animal.rast)[names(other.animal.rast) == "Dominant Farm Type by CCS"] <- "Other Animal Production [1129]"
-other.crop.rast <- dom.farms.rast$`Dominant Farm Type by CCS` == "Other crop farming [1119]"
-names(other.crop.rast)[names(other.crop.rast) == "Dominant Farm Type by CCS"] <- "Other Crop Farming [1119]"
-veg.melon.rast <- dom.farms.rast$`Dominant Farm Type by CCS` == "Vegetable and melon farming [1112]"
-names(veg.melon.rast)[names(veg.melon.rast) == "Dominant Farm Type by CCS"] <- "Vegetable & Melon Farming [1112]"
-names(prob.gen.conf.rast)[names(prob.gen.conf.rast) == "lyr.1"] <- "Probability of General Conflict"
-names(grizzinc.rast)[names(grizzinc.rast) == "griz_inc"] <- "Support for Grizzly Increase"
-names(biophys.rast)[names(biophys.rast) == "cum_currmap"] <- "Biophysical Current Map"
-
 
 
 # Extract P(General Conflict) to WARP Points: -----------------------------
@@ -108,7 +99,6 @@ warp.df$ProbGeneralConf <- warp.prob.gen.ext[,2]
 
 # Check for NA's:
 which(is.na(warp.df$ProbGeneralConf)) #none
-
 
 
 # Scale the Variables: ----------------------------------------------------------
@@ -182,6 +172,7 @@ post.co.offset <- stan_glmer(bears_presence_co ~ b2pa.dist.co.sc + dom.farms.co 
                              iter = 5000,
                              seed = SEED, refresh=0) # we add seed for reproducibility
 
+
 ##### Plot the posterior for our different variables:
 plot_model(post.co.full, sort.est = TRUE) # This plots just fixed effects
 plot_model(post.co.offset, sort.est = TRUE)
@@ -192,6 +183,7 @@ co.full.plot+ geom_vline(xintercept = 0)
 
 co.offset.plot <- plot(post.co.offset, "areas", prob = 0.95, prob_outer = 1)
 co.offset.plot+ geom_vline(xintercept = 0)
+
 
 # Plot our Area Under the Curve: ------------------------------------------
 # Plot ROC for the Simple Posterior:
@@ -289,7 +281,7 @@ summary(post.co.offset)
 fixef(post.co.offset)
 
 # Stack these spatrasters:
-bear.conf.rast.stack <- c(grizzinc.rast.sc, bhs.rast.sc, biophys.rast.sc, dist2pa.bear.rast.sc, tot.farms.rast.co.sc, tot.farms.sq.rast.co.sc, cattle.ranching.rast, ccs.varint.rast, fruit.tree.nut.rast, other.animal.rast, other.crop.rast, veg.melon.rast, prob.gen.conf.rast)
+bear.conf.rast.stack <- c(grizzinc.rast.sc, bhs.rast.sc, biophys.rast.sc, dist2pa.bear.rast.sc, tot.farms.rast.co.sc, tot.farms.sq.rast.co.sc, cattle.ranching.rast, ccs.varint.rast, fruit.tree.nut.rast, other.animal.rast, other.crop.rast, veg.mel.rast, prob.gen.conf.rast)
 plot(bear.conf.rast.stack) # plot these all to check
 # It looks like veg.melon raster has all 0 values, so isn't working
 
@@ -299,8 +291,8 @@ bear_conflict_rast <- -1.767194645 + ccs.varint.rast + (-0.272180709 * dist2pa.b
   ( 3.171972498 * prob.gen.conf.rast) + (0.936089290 * cattle.ranching.rast) + (1.226594906 * fruit.tree.nut.rast) + (1.186180400 * other.animal.rast) + (1.057287864 * other.crop.rast) + (0.391081848 * veg.melon.rast)
 
 # Our full model with general conflict offset:
-bear_conf_offset_rast <- -1.91599762 + ccs.varint.rast + (-0.35141508 * dist2pa.bear.rast.sc) + (0.24895303 * grizzinc.rast.sc) + (0.42021820 * biophys.rast.sc) + ( 0.02482996 * bhs.rast.sc) + (0.03447354 * tot.farms.rast.co.sc) + (0.90059431   * tot.farms.sq.rast.co.sc) + 
-  ( 3.171972498 * prob.gen.conf.rast) + (1.19655094  * cattle.ranching.rast) + (1.64229631 * fruit.tree.nut.rast) + (1.32375855 * other.animal.rast) + (1.64578382 * other.crop.rast) + (1.47316753 * veg.melon.rast)
+bear_conf_offset_rast <- -1.885970912 + ccs.varint.rast + (-0.325936392 * dist2pa.bear.rast.sc) + (0.238192923  * grizzinc.rast.sc) + (0.434320141 * biophys.rast.sc) + ( -0.008000519 * bhs.rast.sc) + (0.015953383 * tot.farms.rast.co.sc) + (0.876481329 * tot.farms.sq.rast.co.sc) + 
+  ( 3.171972498 * prob.gen.conf.rast) + (1.187479574  * cattle.ranching.rast) + (1.488549377 * fruit.tree.nut.rast) + (1.216286474 * other.animal.rast) + (1.582768773 * other.crop.rast) + (1.576219007 * veg.mel.rast)
 
 # Convert the Raster to the Probability Scale:
 p_BEAR_conf_rast <- app(bear_conflict_rast, fun=plogis)

@@ -169,11 +169,11 @@ post.co.offset <- stan_glmer(bears_presence_co ~ b2pa.dist.co.sc + dom.farms.co 
                              data = mini.warp.df.co,
                              family = binomial(link = "logit"), # define our binomial glm
                              prior = t_prior, prior_intercept = int_prior, QR=TRUE,
-                             iter = 5000,
+                             iter = 5000, # Run for enough iterations to avoid errors
                              seed = SEED, refresh=0) # we add seed for reproducibility
 
 
-##### Plot the posterior for our different variables:
+##### Plot the posterior for just fixed effects of          eour different variables:
 plot_model(post.co.full, sort.est = TRUE) # This plots just fixed effects
 plot_model(post.co.offset, sort.est = TRUE)
 

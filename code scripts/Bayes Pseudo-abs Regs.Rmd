@@ -14,7 +14,7 @@ This document will include the different Bayesian regression models (simplest to
 
 We produce three different models to estimate the probability of any wildlife conflict points occurring, in order from simplest to most complex. As we are demonstrating the probability of conflict for any species, we only include predictors that possibly pertain to all species (not bear specific) which are human population density, distance to nearest PA and metro area, total farm count and dominant farm type by CCS region, and a varying intercept for CCS region.
 
-Model 1 (simplest) : logit(p_conflict) = B_1*PopDens 
+Model 1 (null) : logit(p_conflict) = 1 + a[CCS]
 Model 2 (simple) : logit(p_conflict) = a[CCS] + B_1*PopDens 
 Model 3 (full) : logit(p_conflict) = a[CCS] + B_1*PopDens + B_2 * Dist2PA + B_3 * Dist2Metro + B_4 * TotalFarms + B_5 * DomFarms
 
@@ -176,6 +176,16 @@ saveRDS(post.pa.full, file = "post_pa_full.rds")
 
 
 plot_model(post.pa.full, sort.est = TRUE)
+
+# Labeled Effect Plot:
+# Notes: axis labels should be in order from bottom to top. 
+# To see the values of the effect size and p-value, set show.values and show.p= TRUE
+post.pa.full.effects.plot <- sjPlot::plot_model(post.pa.full, 
+                                         axis.labels=c("Population Density", "Total Farm Count ^2" ,"Total Farm Count" ,"Vegetable & Melon Farming" , "Other Crop Farming (tobacco, peanut, sugar-cane, hay, herbs & spices) ", "Other Animal Production (bees & honey, equine, fur-bearers)" , "Fruit & Tree Nut Farming" , "Cattle Ranching & Farming" , "Distance to Metro Area (km)",
+                                                        "Distance to Protected Area (km)"),
+                                         show.values=TRUE, show.p=FALSE,
+                                         title="Effects of Social & Environmental Variables on General Conflict")
+
 ```
 Here we set our initial priors to students t with 7 degrees of freedom, and a scale of 2.5 which is a reasonable default fir prior when coefficients should be close to zero but have some chance of being large. We build our three models using stan_glm to return our posterior distribution for the specified model parameters. Our first model, logit(p_conflict) = B_1*PopDens , has a 0.8 coefficient/mean for population density. Model 2, logit(p_conflict) = a[CCS] + B_1 * PopDens includes a varying intercept for CCS region and a coefficient/mean of -2.3 for population density. The full model, logit(p_conflict) = a[CCS] + B_1*PopDens + B_2 * Dist2PA + B_3 * Dist2Metro + B_4 * TotalFarms + B_5 * DomFarms shows a -3.3 coefficient for Dist2PA, a -1.4 for Dist2Metro , a -0.3 for Cattle Ranching & Farming (Domfarms), 1.1 Fruit and tree nut farming (Domfarms), 1.6 for Other animal production (Domfarms), 1.6 for Other crop farming (Domfarms), 0.2 for Vegetable & Meelon farming, -0.3 for total farms , 0.5 for total farsms squared, and 0.7 for population density.
 

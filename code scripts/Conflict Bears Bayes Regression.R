@@ -172,10 +172,14 @@ post.co.offset <- stan_glmer(bears_presence_co ~ b2pa.dist.co.sc + dom.farms.co 
                              iter = 5000, # Run for enough iterations to avoid errors
                              seed = SEED, refresh=0) # we add seed for reproducibility
 
+# Save an object to a file
+saveRDS(post.co.offset, file = "post_co_offset.rds")
+# Restore the object
+post.co.offset <- readRDS(file = "post_co_offset.rds")
 
-##### Plot the posterior for just fixed effects of          eour different variables:
+##### Plot the posterior for just fixed effects of our different variables:
 plot_model(post.co.full, sort.est = TRUE) # This plots just fixed effects
-plot_model(post.co.offset, sort.est = TRUE)
+plot_model(post.co.offset)
 
 # Posterior with varying intercepts:
 co.full.plot<-plot(post.co.full, "areas", prob = 0.95, prob_outer = 1)
@@ -218,7 +222,18 @@ loo.comparison <- loo_compare(loo.0.co, loo.co.full, loo.co.offset) # this high 
 # Plotting Mixed Effects: -------------------------------------------------
 
 # Basic Mixed Effect Plot:
-sjPlot::plot_model(post.co.full)
+sjPlot::plot_model(post.co.offset)
+
+# Labeled Effect Plot:
+# Notes: axis labels should be in order from bottom to top. 
+# To see the values of the effect size and p-value, set show.values and show.p= TRUE
+post.co.offset.effects.plot <- sjPlot::plot_model(post1, 
+                                         axis.labels=c("CS Biophysical (HII + topo ruggedness)","Bear Habitat Suitability", "Grizz Increase", "Total Farm Count ^2" ,"Total Farm Count" ,"Vegetable & Melon Farming" ,
+                                                       "Other Crop Farming (tobacco, peanut, sugar-cane, hay, herbs & spices) ", "Other Animal Production (bees & honey, equine, fur-bearers)" , "Fruit & Tree Nut Farming" , "Cattle Ranching & Farming" ,
+                                                       "Distance to Metro Area (km)" , "Distance to Protected Area (km)"),
+                                         show.values=TRUE, show.p=FALSE,
+                                         title="Effects of Social & Environmental Variables on Bear Conflict")
+
 
 # MIxed Effect Table:
 sjPlot::tab_model(post.co.full)

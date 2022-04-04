@@ -171,6 +171,10 @@ summary(post.pa.simple)
 summary(post.pa.compare)
 summary(post.pa.full)
 
+# Save an object to a file
+saveRDS(post.pa.full, file = "post_pa_full.rds")
+
+
 plot_model(post.pa.full, sort.est = TRUE)
 ```
 Here we set our initial priors to students t with 7 degrees of freedom, and a scale of 2.5 which is a reasonable default fir prior when coefficients should be close to zero but have some chance of being large. We build our three models using stan_glm to return our posterior distribution for the specified model parameters. Our first model, logit(p_conflict) = B_1*PopDens , has a 0.8 coefficient/mean for population density. Model 2, logit(p_conflict) = a[CCS] + B_1 * PopDens includes a varying intercept for CCS region and a coefficient/mean of -2.3 for population density. The full model, logit(p_conflict) = a[CCS] + B_1*PopDens + B_2 * Dist2PA + B_3 * Dist2Metro + B_4 * TotalFarms + B_5 * DomFarms shows a -3.3 coefficient for Dist2PA, a -1.4 for Dist2Metro , a -0.3 for Cattle Ranching & Farming (Domfarms), 1.1 Fruit and tree nut farming (Domfarms), 1.6 for Other animal production (Domfarms), 1.6 for Other crop farming (Domfarms), 0.2 for Vegetable & Meelon farming, -0.3 for total farms , 0.5 for total farsms squared, and 0.7 for population density.

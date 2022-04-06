@@ -103,7 +103,7 @@ We can use the scale function to center our predictors by subtracting the means 
 ```{r mini df, echo=FALSE}
 # Fit Model with Rstanarm: ------------------------------------------------
 # Make a mini data frame with just our predictors (no spatial info):
-mini.warp.df.ps <-  data.frame(bears_presence_ps, b2pa.dist.ps, b2met.dist.ps, total.farms.ps, total.farms.ps, dom.farms.ps, grizzinc.ps, bhs.ps, biophys.ps, CCSUID.ps, CCSNAME.ps, pop.dens)
+mini.warp.df.ps <-  data.frame(bears_presence_ps, b2pa.dist.ps, b2met.dist.ps, total.farms.ps, total.farms.ps, dom.farms.ps, CCSNAME.ps, pop.dens)
 
 # Make our outcome to be factor type and create x and y variables:
 mini.warp.df.ps$bears_presence_ps <- factor(mini.warp.df.ps$bears_presence_ps)
@@ -239,7 +239,7 @@ We conduct a leave-one-out cross validation for our three models and then compar
 (kfold1.ps <- rstanarm::kfold(post.pa.full, K = 10, cores = getOption("mc.cores", 1)))
 
 # Try a stratified k-fold, stratifying on the CCSID variable:
-cv4folds <- kfold_split_stratified(K=4, x=mini.warp.df.ps$CCSNAME.ps)
+cv10folds <- kfold_split_stratified(K=4, x=mini.warp.df.ps$CCSNAME.ps)
 
 cv10folds <- kfold_split_stratified(K=10, x=mini.warp.df.ps$dom.farms.ps)
 
@@ -248,9 +248,10 @@ cv6folds <- kfold_split_stratified(K=6, x=mini.warp.df.ps$dom.farms.ps)
 
 
 # Now run K fold with stratefied variable:
-kfold.test.ps <- rstanarm::kfold(post.pa.full, K=6, folds = cv4folds, data=mini.warp.df.ps)
+kfold.test.ps <- rstanarm::kfold(post.pa.full, K=10, folds = cv10folds)
 
 kfold.10.ps <- rstanarm::kfold(post.pa.full, K=10, folds = cv10folds)
+
 
 ```
 

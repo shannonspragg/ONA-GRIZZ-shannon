@@ -1,0 +1,229 @@
+---
+---
+title: "Final Project - SS"
+output: html_document
+author: "shannon spragg"
+date: "10/22/21"
+---
+## Final Project
+
+# Instructions:
+Fit two different kinds of models (e.g. logistic regression and random forest; or, better yet, use the dismo vignette and use some of the additional classifiers there; or, better still, read some of the Introduction to Statistical Learning book and use classification approaches described there).
+
+For each model-type, fit a global model (i.e., a model that contains all of the predictors you’ve developed) and a reduced model (i.e., a model with only the handful of predictors you imagine to be important based on your visualizations). You should have a total of 4 different model objects.
+
+Use k-fold cross-validation (see the vignettes for dismo and Intro to Statistical Learning) to evaluate the preictive accuracy of each model
+
+
+```{r setup, include=FALSE}
+knitr::opts_chunk$set(echo = TRUE)
+```
+
+## Final Project: MT Wildlife Collisions
+```{r load packages}
+library(tidyverse)
+library(pander)
+library(sf)
+library(terra)
+library(raster)
+library(dismo)
+library(sp)
+library(rgdal) 
+library(rgeos)
+library(pander)
+library(randomForest)
+library(rJava)
+library(measurements)
+install.packages("caret")
+library(caret)
+install.packages("ISLR2")
+library(ISLR2)
+library("boot")
+```
+
+
+```{r load data}
+# Bring in Master DF and HMI raster:
+mt.master.df <- st_read("data/mt_master_df.shp")
+# add a column to show that the centroid points are presences
+mt.master.df$y <- 1
+
+human.mod.rast <- raster::raster('/opt/data/session08/hmi.tif')
+mt.boundary <- tigris::states(cb=TRUE) %>% 
+  filter(STUSPS == "MT") 
+mt.pas <- st_read("data/MT_PAs.shp")
+
+# Reproject Data:
+mt.bound.reproj <- st_make_valid(mt.boundary) %>% 
+  st_transform(crs=crs(human.mod.rast))
+st_crs(mt.bound.reproj) # This worked, they match! Now, match master to this one
+mt.master.reproj <- st_transform(mt.master.df, crs = st_crs(mt.bound.reproj))
+st_crs(mt.master.reproj)
+mt.pas.reproj <- st_transform(mt.pas, crs = st_crs(mt.bound.reproj))
+
+#human.mod.crop <- terra::resample(human.mod.rast, mammal.tot.rich)
+
+# Crop the HMI raster to MT:
+hmi.mt.crop <- crop(human.mod.rast, mt.bound.reproj)
+mt.outline <- st_boundary(mt.bound.reproj) # Just making this a boundary (not polygon)
+hmi.mt.rast <- raster(hmi.mt.crop)
+mt.pa.rast <- raster::rasterize(mt.pas.reproj, hmi.mt.crop)
+
+pred.stack <- stack(hmi.mt.crop, mt.pa.rast)
+
+
+# Plot these to check projections are correct:
+plot(hmi.mt.crop)
+plot(mt.outline, add = TRUE) 
+plot(mt.master.reproj, add = TRUE) # This looks good!
+```
+
+```{r produce background pts}
+# Now we produce pseudo-absence points:
+abs <- sampleRandom(pred.stack, 4057, na.rm = TRUE, sp=TRUE)
+plot(abs)
+abs <- st_as_sf(abs)
+abs$y <- 0
+colnames(abs)
+
+# give it an ID column:
+abs <- dplyr::mutate(abs, ID = row_number())
+abs <- abs %>% 
+  relocate(ID)
+```
+
+```{r add predictors to abs pts}
+# Create a PA variable:
+abs.pas <- abs %>%
+  st_join(., mt.pas.reproj[, c("d_Mang_Typ", "d_Mang_Nam", "Unit_Nm" , "Loc_Nm")], left = TRUE) 
+
+abs.pas.merged <- abs.pas %>%
+  distinct(ID, .keep_all = TRUE) # Here we just drop the duplicates
+
+# Let's create a Dist to PA's Column and add to the df ------------------------
+# Calculation of the distance between the PA's and our points:
+dist.col2pas <- st_distance(abs.pas.merged, mt.pas.reproj)
+head(dist.col2pas)
+# Must find the minimum distance to PA's (Distance from conflict point to nearest PA)
+min.dist <- apply(dist.col2pas, 1, min)
+str(min.dist)
+# Add Distance Variable into Datatable:
+abs.pas.merged$distance_to_PAs<-min.dist
+# Make the Dist to PA's in km:
+dist_in_km<-conv_unit(abs.pas.merged$distance_to_PAs,"m","km")
+str(dist_in_km)
+abs.pas.merged$distance_to_PAs<-dist_in_km
+head(abs.pas.merged) # Looks good!
+```
+
+
+```{r add predictors to pres pts}
+# Extract the pres stack to pres points:
+mt.master.sp <- as(mt.master.reproj, 'Spatial') # Making master.df sp object
+
+pres.pts <- extract(pred.stack, mt.master.sp, df=TRUE, na.rm = TRUE)
+
+# Bind our presence points /extracted values to the master df:
+pres.pts.df <- cbind(mt.master.reproj, pres.pts)
+
+# Add variables to our pres points:
+pres.pts.subset <- pres.pts.df %>%
+  dplyr::select(ID, hmi, layer, y)
+
+# Create a PA variable:
+pres.pas <- pres.pts.subset %>%
+  st_join(., mt.pas.reproj[, c("d_Mang_Typ", "d_Mang_Nam", "Unit_Nm" , "Loc_Nm")], left = TRUE) 
+
+pres.pas.merged <- pres.pas %>%
+  distinct(ID, .keep_all = TRUE) # Here we just drop the duplicates
+
+# Let's create a Dist to PA's Column and add to the df ------------------------
+# Calculation of the distance between the PA's and our points:
+pdist.col2pas <- st_distance(pres.pas.merged, mt.pas.reproj)
+head(pdist.col2pas)
+
+# Must find the minimum distance to PA's (Distance from conflict point to nearest PA)
+pmin.dist <- apply(pdist.col2pas, 1, min)
+str(pmin.dist)
+
+# Add Distance Variable into Datatable:
+pres.pas.merged$distance_to_PAs<-pmin.dist
+
+# Make the Dist to PA's in km:
+pdist_in_km<-conv_unit(pres.pas.merged$distance_to_PAs,"m","km")
+str(pdist_in_km)
+pres.pas.merged$distance_to_PAs<-pdist_in_km
+head(pres.pas.merged) # Looks good!
+
+```
+
+```{r join pres and abs}
+# Now we join the pres and abs dataframes:
+pres.abs.df <- rbind(abs.pas.merged, pres.pas.merged)
+head(pres.abs.df)
+# Now these are in single df with pres and abs and our predictors
+```
+
+
+```{r scale predictors}
+# Make sure our predictors are near each other:
+pres.abs.df <- pres.abs.df %>% relocate(distance_to_PAs, .before = y)
+
+#Now let's scale the predictors: (have to scale individually bc won't work all together)
+pres.abs.df$hmi <- scale(pres.abs.df$hmi)
+pres.abs.df$layer <- scale(pres.abs.df$layer)
+pres.abs.df$distance_to_PAs <- scale(pres.abs.df$distance_to_PAs)
+
+```
+
+```{r model one - logistic regression}
+logistic.global <- glm(y ~ hmi + distance_to_PAs + layer, family=binomial(link="logit"), data = pres.abs.df)
+logistic.reg1 <- glm(y ~ hmi + layer, family = binomial(link="logit"), data = pres.abs.df)
+```
+
+```{r model two - random forest}
+reg.model <- y ~ hmi + distance_to_PAs + layer
+rf1 <- randomForest(reg.model, data=pres.abs.df, na.action=na.exclude)
+## Warning in randomForest.default(m, y, ...): The response has five or fewer
+## unique values. Are you sure you want to do regression?
+class.model <- factor(y) ~ hmi + layer + distance_to_PAs
+rf2 <- randomForest(class.model, data=pres.abs.df, na.action=na.exclude)
+# Look at predictor importance based on splits in decision tree that uses the variables:
+varImpPlot(rf1)
+varImpPlot(rf2)
+
+# It looks like variable hmi and layer are more pure than the other variable, which is pretty close to zero
+```
+
+```{r k fold cross validation}
+# Let's try this k - fold cross validation:
+pres.abs.no.geo <- st_drop_geometry(pres.abs.df)
+
+set.seed (1)
+# Split observations into training set:
+train <- sample (4057, 2028)
+lm.fit <- lm(y~ hmi, data = pres.abs.df , subset = train)
+# Estimate response for observations:
+attach(pres.abs.df)
+mean((y - predict(lm.fit , pres.abs.df))[-train ]^2)
+# The estimated test MSE for the linear regression fit is 0.6666119
+
+# Use the poly() function to estimate the test error for the quadratic and cubic regressions:
+lm.fit2 <- lm(y~ poly(hmi, 2), data = pres.abs.df , subset = train)
+
+mean((y - predict(lm.fit2, pres.abs.df))[-train]^2)
+# [1] 18.72
+lm.fit3 <- lm(y~ poly(hmi, 3), data = pres.abs.df , subset = train)
+mean((mpg - predict (lm.fit3 , pres.abs.df))[-train]^2)
+
+# Leave one out cross validation:
+glm.fit <- glm (y ~ hmi , data = pres.abs.df)
+coef(glm.fit)
+
+glm.fit <- glm(y ~ hmi , data = pres.abs.df)
+cv.err <- cv.glm(pres.abs.df , glm.fit)
+cv.err$delta
+# [1] 0.1259023 0.1259023 These are our cross validation results with a K of 8114
+
+
+```

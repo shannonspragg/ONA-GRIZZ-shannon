@@ -124,7 +124,6 @@ prob.gen.conf <- warp.df$ProbGeneralConf  # This was already scaled
 warp.df$CCSNAME <- as.factor(warp.df$CCSNAME)
 warp.df$CCSUID <- as.factor(warp.df$CCSUID)
 
-CCSUID.co <- warp.df$CCSUID
 CCSNAME.co <- warp.df$CCSNAME
 
 which(is.na(warp.df$CCSNAME.ps)) # none
@@ -139,7 +138,7 @@ total.farms.sq.co.sc <- total.farms.co.sc*total.farms.co.sc
 
 # And do this for our conflict only df:
 mini.warp.df.co <- data.frame(bears_presence_co, b2pa.dist.co.sc, total.farms.co.sc, total.farms.sq.co.sc, dom.farms.co, 
-                              grizzinc.co.sc, bhs.co.sc, biophys.co.sc, CCSUID.co, CCSNAME.co, prob.gen.conf )
+                              grizzinc.co.sc, bhs.co.sc, biophys.co.sc, CCSNAME.co, prob.gen.conf )
 
 # Make sure this is a factor:
 mini.warp.df.co$bears_presence_co <- factor(mini.warp.df.co$bears_presence_co)
@@ -220,6 +219,11 @@ post0.co <- update(post.co.int, formula = bears_presence_co ~ 1 + (1 | CCSNAME.p
 
 loo.comparison <- loo_compare(loo.0.co, loo.co.full, loo.co.offset) # this high negative value for post0 shows us the covariates contain clearly useful information for predictions
 
+
+# K-Fold Cross Validation: ------------------------------------------------
+cv10folds <- kfold_split_stratified(K=10, x=mini.warp.df.ps$dom.farms.ps)
+
+kfold.10.co <- rstanarm::kfold(post.co.offset, K=10, folds = cv10folds)
 
 
 # Plotting Mixed Effects: -------------------------------------------------

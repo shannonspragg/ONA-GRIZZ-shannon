@@ -39,6 +39,7 @@ str(warp.df)
 
 # Bring in our P(General Conflict) Raster for Extraction:
 prob.gen.conf.rast <- terra::rast("/Users/shannonspragg/ONA_GRIZZ/Predictor Rasters/prob_general_conf.tif")
+names(prob.gen.conf.rast)[names(prob.gen.conf.rast) == "lyr.1"] <- "Probability of General Conflict"
 
 
 # Import our Predictor Rasters: -------------------------------------------
@@ -65,12 +66,14 @@ dist2pa.bear.rast <- rast("/Users/shannonspragg/ONA_GRIZZ/Predictor Rasters/10k_
 
 # Grizzinc:
 grizzinc.rast <- terra::rast("/Users/shannonspragg/ONA_GRIZZ/Predictor Rasters/grizz_inc_SOI_10km.tif")
+names(grizzinc.rast)[names(grizzinc.rast) == "griz_inc"] <- "Support for Grizzly Increase"
 
 # Bear Density - Bear Habitat Suitability (BHS):
 bhs.rast <- rast("/Users/shannonspragg/ONA_GRIZZ/Predictor Rasters/bhs_SOI_10km.tif")
 
 # Biophysical Current Map (Cumulative current flow shows the total current for each landscape pixel):
 biophys.rast <- rast("/Users/shannonspragg/ONA_GRIZZ/Predictor Rasters/biophys_SOI_10km.tif") # use this one
+names(biophys.rast)[names(biophys.rast) == "cum_currmap"] <- "Biophysical Bear Current Map"
 
 # CCS Region ID:
 ccs.varint.rast <- terra::rast("/Users/shannonspragg/ONA_GRIZZ/Predictor Rasters/CCS_varint_raster.tif" )
@@ -111,7 +114,7 @@ grizzinc.co.sc <- scale2sd(warp.df$GrzzInE)
 bhs.co.sc <- scale2sd(warp.df$BHSExtr)
 biophys.co.sc <- scale2sd(warp.df$BphysEx)
 total.farms.warp.co <- warp.df$Ttl_F_C
-total.farms.sq.co <- total.farms.warp * total.farms.warp
+total.farms.sq.co <- total.farms.warp.co * total.farms.warp.co # unscaled version
 
 bears_presence_co <- warp.df$bears # Binomial bears
 dom.farms.co <- warp.df$Dm_Fr_T # Dominant farm type covariate -- non numeric
@@ -288,8 +291,8 @@ bhs.rast.sc <- bhs.sub.mean / ( 2 * bhs.sd)
 
 # Make sure extents match:
 ext(grizzinc.rast.sc) == ext(bhs.rast.sc) # TRUE
-ext(biophys.rast.sc) == ext(tot.farms.rast.sc) #TRUE
-ext(tot.farms.sq.rast.sc) == ext(cattle.ranching.rast) #TRUE
+ext(biophys.rast.sc) == ext(tot.farms.rast.co.sc) #TRUE
+ext(tot.farms.sq.rast.co.sc) == ext(cattle.ranching.rast) #TRUE
 
 # View our Full Model Coefficients:
 summary(post.co.offset)

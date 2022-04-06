@@ -173,6 +173,7 @@ summary(post.pa.full)
 
 # Save an object to a file
 saveRDS(post.pa.full, file = "post_pa_full.rds")
+post.pa.full <- readRDS(file = "post_pa_full.rds")
 
 
 plot_model(post.pa.full, sort.est = TRUE)
@@ -239,6 +240,20 @@ post0.ps <- update(post.int.only, formula = bears_presence_ps ~ 1 + (1 | CCSNAME
 loo.comparison <- loo_compare(loo.0, loo.pa.comp, loo.pa.full) # this high negative value for post0 shows us the covariates contain clearly useful information for predictions
 ```
 We conduct a leave-one-out cross validation for our three models and then compare them to the zero posterior. Above, we see that the full model and simple model's PSIS-LOO result is reliable as all Pareto k estimates are small (k< 0.5) and the Monte Carlo SE is 0.1 (Vehtari, Gelman and Gabry 2017a). The simplest model is also reliable as it has a Monte Carlo SE of 0.0 and all Pareto k estimates are small (k< 0.5). Comparing these LOO values to our baseline, we see that the theoretical expected log point wise predictive density (elpd_loo) is lowest for our full model (still lower than the compare model) and highest for our baseline posterior, indicating that the increased covariates in our models contain clearly useful information for predictions.
+
+## K-Fold Cross Validation:
+```{r K fold cross validate}
+# K Fold Cross Validation: -----------------------------------------
+# Setting up a K - fold cross validation for our general model: 
+
+# 4-fold cross-validation
+# (if possible also specify the 'cores' argument to use multiple cores) 
+
+
+(kfold1.ps <- rstanarm::kfold(post.pa.full, K = 10, cores = getOption("mc.cores", 1)))
+
+```
+
 
 ## Plotting Our Mixed Effects:
 ```{r mixed efffects, echo=FALSE}

@@ -80,18 +80,6 @@ pop.dens <- scale2sd(warp.pres.abs$Hmn_Dns)
 total.farms <- warp.pres.abs$Ttl_F_C
 total.farms.sq <- total.farms * total.farms
 
-# Note the mean and SD's that each variable was scaled by, so we can scale the rasters later:
-mean(warp.pres.abs$ds__PA_) #  3.803958
-sd(warp.pres.abs$ds__PA_)  #  4.130133  ( this is just 1 sd)
-mean(warp.pres.abs$Ttl_F_C)  # 175.0757
-sd(warp.pres.abs$Ttl_F_C)  # 171.3236
-mean(warp.pres.abs$dstn___) # 22.47916
-sd(warp.pres.abs$dstn___)  #  26.46386
-mean(warp.pres.abs$Hmn_Dns) # 13.50969
-sd(warp.pres.abs$Hmn_Dns)  # 10.56946
-mean(total.farms.sq) # 60001.49
-sd(total.farms.sq) # 122225.2
-
 
 bears_presence_ps <- warp.pres.abs$bears # Binomial bears
 dom.farms.ps <- warp.pres.abs$Dm_Fr_T # Dominant farm type covariate -- non numeric
@@ -163,7 +151,7 @@ post.pa.compare <- stan_glmer(bears_presence_ps ~ b2pa.dist.ps + b2met.dist.ps +
 post.pa.full <- stan_glmer(bears_presence_ps ~ b2pa.dist.ps + b2met.dist.ps + dom.farms.ps + total.farms.ps + total.farms.sq.ps + pop.dens + (1 | CCSNAME.ps), 
                             data = mini.warp.df.ps,
                             family = binomial(link = "logit"), # define our binomial glm
-                            prior = t_prior, prior_intercept = t_prior, QR=TRUE,
+                            prior = t_prior, prior_intercept = int_prior, QR=TRUE,
                             seed = SEED, refresh=0) # we add seed for reproducability
 
 summary(post.int.onlny)
@@ -248,9 +236,21 @@ We conduct a leave-one-out cross validation for our three models and then compar
 
 # 4-fold cross-validation
 # (if possible also specify the 'cores' argument to use multiple cores) 
-
-
 (kfold1.ps <- rstanarm::kfold(post.pa.full, K = 10, cores = getOption("mc.cores", 1)))
+
+# Try a stratified k-fold, stratifying on the CCSID variable:
+cv4folds <- kfold_split_stratified(K=4, x=mini.warp.df.ps$CCSNAME.ps)
+
+cv10folds <- kfold_split_stratified(K=10, x=mini.warp.df.ps$CCSUID.ps)
+
+# What about with dom farms:
+cv6folds <- kfold_split_stratified(K=6, x=mini.warp.df.ps$dom.farms.ps)
+
+
+# Now run K fold with stratefied variable:
+kfold.test.ps <- rstanarm::kfold(post.pa.full, K=6, folds = cv4folds)
+
+kfold.10.ps <- rstanarm::kfold(post.pa.full, K=10, folds = cv10folds)
 
 ```
 

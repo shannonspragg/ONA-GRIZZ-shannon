@@ -15,6 +15,15 @@ library(terra)
 library(stars)
 
 # Bring in the Data -------------------------------
+
+  # Set up Google Drive Link to files: (do this after fully re-running script & making sure it works)
+folder_url <- "https://drive.google.com/drive/u/0/folders/1mpUVwvzqOsUF-Kpu_uF9UdZchJLcakSi"
+folder <- drive_get(as_id(folder_url))
+gdrive_files <- drive_ls(folder)
+lapply(gdrive_files$id, function(x) drive_download(as_id(x), 
+                                                   path = paste0(here::here("/Users/shannonspragg/Desktop/Boise State/BSU Research Lab/Grizzly Project/ONA_GRIZZ_ss/ONA-GRIZZ-shannon"), 
+                                                                 gdrive_files[gdrive_files$id==x,]$name), overwrite = TRUE))
+
   # WARP All Species 1 Year:
 warp.all.sp <-read.csv("/Users/shannonspragg/ONA_GRIZZ/WARP Bears /WARP All Species Full Yr/WARP 3.24.20 to 3.31.21 full .csv")
   # BC Ecoprovinces:

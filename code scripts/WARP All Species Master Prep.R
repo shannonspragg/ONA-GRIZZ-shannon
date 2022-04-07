@@ -18,8 +18,8 @@ library(fasterize)
 library(terra)
 library(stars)
 
-# Bring in the WARP All Speciec 1 Year Data -------------------------------
-conflict.data.all<-read.csv("/Users/shannonspragg/ONA_GRIZZ/WARP Bears /WARP All Species Full Yr/WARP 3.24.20 to 3.31.21 full .csv")
+# Bring in the WARP SOI 10km Buffer Data -------------------------------
+conflict.data.all<-read.csv("/Users/shannonspragg/ONA_GRIZZ/WARP Bears /WARP Cropped - SIP/warp_crop_10km_buf.shp") 
 head(conflict.data.all)
 
 # Bring in our pres abs data frame to get variables for our absences:

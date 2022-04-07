@@ -63,7 +63,7 @@ bc.ab.PA<-st_read("bc_ab_PAs.shp")
 bc.PAs <- fc.sf %>% 
   filter(., LOC_E == "British Columbia" | LOC_E == "Alberta") %>% 
   st_make_valid()
-st_write(bc.ab.PA,"bc_ab_PAs.shp")
+st_write(bc.PAs,"bc_PAs.shp")
 plot(st_geometry(bc.ab.PA))
 
 # Read in the .shp for Canada census tracts data:

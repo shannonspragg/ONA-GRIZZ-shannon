@@ -74,6 +74,7 @@ plot(st_geometry(south.interior.ep))
 plot(st_geometry(warp.crop.50k), add= TRUE) # Here we see them within a 50k buffer
 
 
+
 # Remove Extra Columns: ---------------------------------------------------
 warp.crop.10k$CPRVNCCD <- NULL
 warp.crop.10k$FTRCD <- NULL

@@ -278,7 +278,78 @@ Here we use the coefficients resulting from the above full regression to preform
 
 Then, we extract the values of this raster to our original warp conflict report data frame (1's = bears, 0's = other species reports), to use the p(general conlfict) as a predictor in the second Bayes model of bear conflict.
 
-# Bring in Rasters:
+## Create our Varying Intercept Raster
+```{r varying intercept raster}
+# Bring in Data: ----------------------------------------------------------
+soi.ccs.crop <- st_read( "/Users/shannonspragg/ONA_GRIZZ/CAN Spatial Data/SOI CCS regions/SOI_CCS_10km.shp")
+  # Bring in one of our rasters for rasterizing polygon data later:
+soi.rast <- terra::rast("/Users/shannonspragg/ONA_GRIZZ/CAN Spatial Data/SOI Ecoprovince Boundary/SOI_10km.tif") # SOI Region 10km
+
+# Reproject the Data:
+soi.ccs.reproj <- st_make_valid(soi.ccs.crop) %>% 
+  st_transform(crs=crs(soi.rast))
+
+# Check to see if they match:
+st_crs(warp.pres.abs) == st_crs(soi.ccs.reproj) # [TRUE] 
+
+# Extracting CCS Varying Intercept from Posterior: ------------------------
+
+  # Need to make the ranef(post.pa.full) into a dataframe and join by CCS name to our warp.pres.abs:
+varying.int.means <- as.data.frame(ranef(post.pa.full))
+vary.int.subset <- varying.int.means[ , c("grp", "condval")]
+
+  # Join the tab data with spatial:  
+ccs.varint.join <- merge(soi.ccs.crop, vary.int.subset, by.x = "CCSNAME", by.y = "grp")
+
+  # Now that it's spatial, do a spatial join to assign a varying intercept mean to each point:
+warp.varint.join <- st_join(warp.pres.abs, left = TRUE, ccs.varint.join) # join points
+
+  # Clean this up
+warp.varint.join$PRNAME <- NULL
+warp.varint.join$PRNTCDVSNC <- NULL
+warp.varint.join$PRUID <- NULL
+warp.varint.join$CDUID <- NULL
+warp.varint.join$CPRVNCCD <- NULL
+warp.varint.join$FTRCD <- NULL
+warp.varint.join$CPRVNCCD <- NULL
+warp.varint.join$PRNTCDVSNC <- NULL
+warp.varint.join$FFCTVDT <- NULL
+warp.varint.join$XPRDT <- NULL
+warp.varint.join$OBJECTID <- NULL
+warp.varint.join$AREA_SQM <- NULL
+warp.varint.join$FEAT_LEN <- NULL 
+warp.varint.join$CDNAME <- NULL
+warp.varint.join$CDTYPE <- NULL
+warp.varint.join$CPRVNCNM <- NULL
+warp.varint.join$CCSNAME.x <- NULL
+warp.varint.join$CCSUID.x <- NULL
+
+  # Rename these quick:
+names(warp.varint.join)[names(warp.varint.join) == "CCSUID.y"] <- "CCSUID"
+names(warp.varint.join)[names(warp.varint.join) == "CCSNAME.y"] <- "CCSNAME"
+names(warp.varint.join)[names(warp.varint.join) == "condval"] <- "CCS Varying Int Mean"
+
+# Make our CCS Raster: ----------------------------------------------------
+
+  # Make these spatvectors:
+soi.ccs.sv <- vect(soi.ccs.reproj)
+warp.ps.sv <- vect(warp.varint.join)
+
+# Make our CCS Post Mean Raster: ------------------------------------------
+ccs.varint.means.rast <- terra::rasterize(soi.ccs.sv, soi.rast, field = "CCSMean")
+names(ccs.varint.means.rast)[names(ccs.varint.means.rast) == "PostMean"] <- "CCS Varying Intercept Means"
+
+  # Check this:
+plot(warp.ps.sv)
+plot(ccs.varint.means.rast, add=TRUE) #HECK YEAHHHH
+
+# Save our CCS Post Means Raster: -----------------------------------------
+terra::writeRaster(ccs.varint.means.rast, "/Users/shannonspragg/ONA_GRIZZ/Predictor Rasters/CCS_varint_raster.tif" )
+```
+
+
+
+## Bring in Rasters:
 ```{r bring in data 2, include=FALSE}
 # Here we bring in all of our predictor rasters for the SOI region:
 # link to data here:   https://drive.google.com/drive/u/0/folders/1T60Al9vHOF-E7ftKzvzN2CMUyF1agC-l
@@ -312,10 +383,9 @@ names(hm.dens.rast)[names(hm.dens.rast) == "gpw_v4_population_density_adju~ountr
 
 # CCS Region ID:
 ccs.varint.rast <- terra::rast("/Users/shannonspragg/ONA_GRIZZ/Predictor Rasters/CCS_varint_raster.tif" )
-names(ccs.varint.rast)[names(ccs.varint.rast) == "PostMean"] <- "CCS Varying Intercept Mean"
 ```
 
-
+## Scale Rasters:
 ```{r scale our variables}
 # Scale the Rasters:
 # Here we create a function to scale by subtracting the mean and dividing by 2 standard deviations:
@@ -361,7 +431,7 @@ hm.dens.rast.sc <- pop.sub.mean / ( 2 * pop.dens.sd)
 
 ```
 
-
+## Creating Probability of General Conflict Raster:
 ```{r raster math, include=TRUE}
 # Make sure extents match:
 ext(dist2pa.rast.general.1k) == ext(dist2met.rast) # TRUE

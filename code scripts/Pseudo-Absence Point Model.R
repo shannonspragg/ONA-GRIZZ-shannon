@@ -8,21 +8,13 @@ library(tidyverse)
 library(dplyr)
 library(raster)
 library(terra)
-#install.packages("dismo")
 library(dismo)
 library(stars)
 
 # Bring in Data: ----------------------------------------------------------
 soi.10k.buf <- st_read("/Users/shannonspragg/ONA_GRIZZ/CAN Spatial Data/SOI CCS regions/SOI_CCS_10km.shp")
-warp.ccs.df <- st_read("/Users/shannonspragg/ONA_GRIZZ/WARP Bears /WARP Cropped - SIP/warp_crop_10_ccs.shp")
+warp.all.df <-read.csv("/Users/shannonspragg/ONA_GRIZZ/WARP Bears /WARP Cropped - SIP/warp_crop_10km_buf.shp") 
 
-# Make SOI into Raster: ---------------------------------------------------
-soi.rast <- st_rasterize(soi.10k.buf)
-
-# export as tiff:
-write_stars(soi.rast, "/Users/shannonspragg/ONA_GRIZZ/CAN Spatial Data/SOI Ecoprovince Boundary/SOI_10km.tif")
-
-#bring it in:
 soi.rast <- raster("/Users/shannonspragg/ONA_GRIZZ/CAN Spatial Data/SOI Ecoprovince Boundary/SOI_10km.tif")
 
 # Generate Random Points for Pseudo-absences: -----------------------------
@@ -39,10 +31,10 @@ abs.pts.df <- data.frame(p.abs.pts)
 ################## START HERE: need to merge dataframes together despite missing columns
 
 # Make these spatial points:
-abs.pts.sf <- st_as_sf(abs.pts.df, coords= c("x","y"), crs= st_crs(warp.ccs.df))
+abs.pts.sf <- st_as_sf(abs.pts.df, coords= c("x","y"), crs= st_crs(warp.all.df))
 
 # Add the missing columns:
-add.cols <- setdiff(names(warp.ccs.df), names(abs.pts.sf))
+add.cols <- setdiff(names(warp.all.df), names(abs.pts.sf))
 
 add_columns(abs.pts.sf, bears.reps)
 
@@ -84,7 +76,7 @@ abs.pts.sf <- abs.pts.sf[ , c(2,3,4,5,6,7,8,9,10,11,12,13,14,15,16,17,18,19,20,2
 
 # Join our bear points with the absence points:
 
-all.conflict.pts.w.abs <- rbind(warp.ccs.df, abs.pts.sf)
+all.conflict.pts.w.abs <- rbind(warp.all.df, abs.pts.sf)
 
 # Plot these to check:
 plot(st_geometry(bear.pts.w.abs))

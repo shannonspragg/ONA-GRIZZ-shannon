@@ -29,8 +29,6 @@ library(pROC)
 library(bayestestR)
 
 
-
-
 # Import Data: ------------------------------------------------------------
 
 # Our just-conflict point data:
@@ -140,8 +138,6 @@ total.farms.sq.co.sc <- total.farms.co.sc*total.farms.co.sc
 mini.warp.df.co <- data.frame(bears_presence_co, b2pa.dist.co.sc, total.farms.co.sc, total.farms.sq.co.sc, dom.farms.co, 
                               grizzinc.co.sc, bhs.co.sc, biophys.co.sc, CCSNAME.co, prob.gen.conf )
 
-# Make sure this is a factor:
-mini.warp.df.co$bears_presence_co <- factor(mini.warp.df.co$bears_presence_co)
 
 # Fit the Regression: -----------------------------------------------------
 
@@ -223,8 +219,10 @@ loo.comparison <- loo_compare(loo.0.co, loo.co.full, loo.co.offset) # this high 
 # K-Fold Cross Validation: ------------------------------------------------
 cv10folds <- kfold_split_stratified(K=10, x=mini.warp.df.ps$dom.farms.ps)
 
-kfold.10.co <- rstanarm::kfold(post.co.offset, K=10, folds = cv10folds)
+kfold.10.co <- kfold(post.co.offset, K=10, cores = getOption("mc.cores", 1))
 
+# Save this as data:
+saveRDS(kfold.10.co, file = "post_co_kfold10.rds")
 
 # Plotting Mixed Effects: -------------------------------------------------
 

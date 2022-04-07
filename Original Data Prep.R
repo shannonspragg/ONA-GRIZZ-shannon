@@ -23,6 +23,11 @@ bc.ecoprovs <- st_read("/Users/shannonspragg/ONA_GRIZZ/CAN Spatial Data/BC Ecopr
 farm.type <- read.csv("/Users/shannonspragg/ONA_GRIZZ/Ag census/farm type_32100403/farm type_32100403.csv")
   # CAN Consolidated Census Subdivisions (CCS):
 can.ccs.shp<-st_read("/Users/shannonspragg/ONA_GRIZZ/CAN Spatial Data/CAN census cons subdivisions (CCS)/lccs000b16a_e.shp")
+  # Global Human Density:
+world.hum.dens <- terra::rast("/Users/shannonspragg/ONA_GRIZZ/CAN Spatial Data/Human Pop Density/gpw_v4_population_density_adjusted_to_2015_unwpp_country_totals_rev11_2020_1_deg.tif")
+  # SOI Boundary and Raster for template:
+soi.10k.boundary <- st_read("/Users/shannonspragg/ONA_GRIZZ/CAN Spatial Data/SOI Ecoprovince Boundary/SOI_10km_buf.shp")
+soi.rast <- terra::rast("/Users/shannonspragg/ONA_GRIZZ/CAN Spatial Data/SOI Ecoprovince Boundary/SOI_10km.tif") # SOI Region 10km buffer raster
 
 
 ################# We begin by filtering to our SOI ecoprovince, buffering, and cropping our conflict data to the buffered region:
@@ -179,6 +184,41 @@ dominant.farms.bc<- farm.ccs.join %>% group_by(GEO) %>% top_n(2,VALUE) %>% slice
 st_write(dominant.farms.bc,"Dominant Farm Types by CCS.shp")
 
 st_write(total.farms.bc, "Total Farm Count by CCS.shp") 
+
+
+################################# Prep Human Density Predictor:
+
+# Reproject the Data: --------------------------------------------------
+world.dens.reproj <- terra::project(world.hum.dens, crs(soi.rast))
+
+crs(world.dens.reproj) == crs(soi.rast) #TRUE
+
+soi.reproj <- st_make_valid(soi.10k.boundary) %>% 
+  st_transform(crs=crs(soi.rast))
+
+
+# Crop and match the Human Density Data to SOI: -------------------------------------
+  # Crop to SOI region:
+hum.dens.crop <- terra::crop(world.dens.reproj, soi.rast)
+  # Resample to match template raster:
+hm.dens.rsmple <- resample(hum.dens.crop, soi.rast, method='bilinear')
+
+# Overlay the SOI Boundary: -----------------------------------------------
+soi.bound.vect <- vect(soi.reproj)
+
+plot(hm.dens.rsmple)
+plot(soi.bound.vect, add=TRUE) # We see they're projected properly and have a nice overlay going
+
+hm.dens.soi <- terra::mask(hm.dens.rsmple, soi.bound.vect) # BEA-UTIFUL!
+  # Check how this looks:
+str(hm.dens.soi) 
+plot(hm.dens.soi)
+
+# Fix the column names:
+names(hm.dens.soi)[names(hm.dens.soi) == "gpw_v4_population_density_adju~ountry_totals_rev11_2020_1_deg"] <- "Human Population Density by Nearest km"
+
+# Save Raster as .tif for later: ----------------------------------------------------
+terra::writeRaster(hm.dens.soi, "/Users/shannonspragg/ONA_GRIZZ/Predictor Rasters/human_dens_SOI_10km.tif")
 
 
 ################################# Lastly, we will filter the CAN Protected Areas down to BC:

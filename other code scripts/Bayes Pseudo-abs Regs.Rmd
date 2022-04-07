@@ -88,7 +88,6 @@ dom.farms.ps <- as.factor(warp.pres.abs$Dm_Fr_T) # Making this work as a factor
 warp.pres.abs$CCSNAME <- as.factor(warp.pres.abs$CCSNAME)
 warp.pres.abs$CCSUID <- as.factor(warp.pres.abs$CCSUID)
 
-CCSUID.ps <- warp.pres.abs$CCSUID
 CCSNAME.ps <- warp.pres.abs$CCSNAME
 
 # Add an QUADRATIC term for Farm Count: -----------------------------------
@@ -105,8 +104,6 @@ We can use the scale function to center our predictors by subtracting the means 
 # Make a mini data frame with just our predictors (no spatial info):
 mini.warp.df.ps <-  data.frame(bears_presence_ps, b2pa.dist.ps, b2met.dist.ps, total.farms.sq.ps, total.farms.ps, dom.farms.ps, CCSNAME.ps, pop.dens)
 
-# Make our outcome to be factor type and create x and y variables:
-#mini.warp.df.ps$bears_presence_ps <- factor(mini.warp.df.ps$bears_presence_ps)
 str(mini.warp.df.ps)
 ```
 Here we produce a mini data frame that excludes the spatial geometry, but includes all of our critical predictors.

@@ -27,7 +27,6 @@ can.ccs.shp<-st_read("/Users/shannonspragg/ONA_GRIZZ/CAN Spatial Data/CAN census
 world.hum.dens <- terra::rast("/Users/shannonspragg/ONA_GRIZZ/CAN Spatial Data/Human Pop Density/gpw_v4_population_density_adjusted_to_2015_unwpp_country_totals_rev11_2020_1_deg.tif")
   # SOI Boundary and Raster for template:
 soi.10k.boundary <- st_read("/Users/shannonspragg/ONA_GRIZZ/CAN Spatial Data/SOI Ecoprovince Boundary/SOI_10km_buf.shp")
-soi.rast <- terra::rast("/Users/shannonspragg/ONA_GRIZZ/CAN Spatial Data/SOI Ecoprovince Boundary/SOI_10km.tif") # SOI Region 10km buffer raster
 
 
 ################# We begin by filtering to our SOI ecoprovince, buffering, and cropping our conflict data to the buffered region:

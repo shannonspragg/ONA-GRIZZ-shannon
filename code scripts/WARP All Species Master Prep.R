@@ -1,9 +1,7 @@
 # Creating a WARP All Species Master Data frames ----------------------------
-# This is going to be a longer script, but hopefully we can condense this efficiently 
-# given the cleaned up scripts this will be compiled from.
-# The following code will be re-running the variables (dist to PA's, dist to Metro, 
-# Farm Type, and Farm count) for the all-species full year data and then compiling that 
-# into a full-species master df for the binomial regression
+  ## Here we add in the following predictor variables: distance to protected area, distance to metro area, dominant farm type,
+  #  total farm count, and ccs region name/ID. The result of this script should be two semi-complete "master" data frames: one for
+  #  the general conflict regression (with pres-abs points), and the second for the bear conflict regression (warp-only points)
 
 
 # Loadport Packages -------------------------------------------------------
@@ -24,7 +22,7 @@ library(measurements)
 warp.all<-read.csv("/Users/shannonspragg/ONA_GRIZZ/WARP Bears /WARP Cropped - SIP/warp_crop_10km_buf.shp") 
 head(warp.all)
   # Bring in our pres abs data frame to get variables for our absences:
-warp.pres.abs <- st_read("/Users/shannonspragg/ONA_GRIZZ/WARP Bears /warp.need.farms.shp")
+warp.pres.abs <- st_read("/Users/shannonspragg/ONA_GRIZZ/WARP Bears /WARP Cropped - SIP/warp_pres.abs.shp")
 
 
 # Bring in the Variable Data -----------------
@@ -154,21 +152,12 @@ head(pres.abs.reproj)
   # This added the dist to metro areas column to our data
 
 
-# Crop Our Data to the SOI Boundary: --------------------------------------
-
-bears.reproj.c <- st_crop(bears.reproj, soi.bound.reproj) # not soi.10k.boundary - right?
-pres.abs.reproj.c <- st_crop(pres.abs.reproj, soi.bound.reproj)
-
-  # Plot to see how these look
-plot(st_geometry(bears.reproj.c))
-plot(st_geometry(pres.abs.reproj.c))
-
 # Check for NA's quick:
-which(is.na(bears.reproj.c$ds__PA_))
-which(is.na(bears.reproj.c$dstn___))
+which(is.na(bears.reproj$ds__PA_))
+which(is.na(bears.reproj$dstn___))
 
-which(is.na(pres.abs.reproj.c$ds__PA_))
-which(is.na(pres.abs.reproj.c$dstn___))
+which(is.na(pres.abs.reproj$ds__PA_))
+which(is.na(pres.abs.reproj$dstn___))
 
 
 ############################## Adding the Agriculture Predictors to Our Data:
@@ -285,11 +274,11 @@ dom.farm.rast.check <- rast("/Users/shannonspragg/ONA_GRIZZ/Predictor Rasters/do
 
 # Buffer WARP Points Before Attributing Farm Values -----------------------
   # Here we buffer the WARP and pres-abs points by 5000m (5km) before extracting the attributes from the farm polygons
-bears.buf <- bears.reproj.c %>% 
+bears.buf <- bears.reproj %>% 
   st_buffer(., 5000)
 plot(st_geometry(bears.buf)) # Check the buffers
 
-pres.abs.buf <- pres.abs.reproj.c %>% 
+pres.abs.buf <- pres.abs.reproj %>% 
   st_buffer(., 5000)
 plot(st_geometry(pres.abs.buf)) # Check the buffers
 
@@ -297,7 +286,7 @@ plot(st_geometry(pres.abs.buf)) # Check the buffers
 bears.sv.buf <- vect(bears.buf)
 pres.abs.sv.buf <- vect(pres.abs.buf)
 
-# Prep Variable 3: the Dominant Ag Type by CCS ----------------------------
+# Prep Variable 3: the Dominant Ag Type & Total Farm Count by CCS ----------------------------
   # Here I will extract the mean values from each raster to the buffered points
 
   # First, for our WARP data:
@@ -311,23 +300,114 @@ pres.abs.farm.type.ext <- terra::extract(farm.type.rast, pres.abs.sv.buf, modal,
 pres.abs.total.farm.ext <- terra::extract(farm.count.rast, pres.abs.sv.buf, mean, na.rm = TRUE) 
 
 # Create New Column(s) for Extracted Values:
-bears.reproj.c$Dm_Fr_T <- bears.farm.type.ext[,2]
-bears.reproj.c$Ttl_F_C <- bears.total.farm.ext[,2]
+bears.reproj$Dm_Fr_T <- bears.farm.type.ext[,2]
+bears.reproj$Ttl_F_C <- bears.total.farm.ext[,2]
 
-pres.abs.reproj.c$Dm_Fr_T <- pres.abs.farm.type.ext[,2]
-pres.abs.reproj.c$Ttl_F_C <- pres.abs.total.farm.ext[,2]
+pres.abs.reproj$Dm_Fr_T <- pres.abs.farm.type.ext[,2]
+pres.abs.reproj$Ttl_F_C <- pres.abs.total.farm.ext[,2]
 
 # Check for NA's quick:
-which(is.na(bears.reproj.c$Dm_Fr_T))
-which(is.na(bears.reproj.c$Ttl_F_C))
+which(is.na(bears.reproj$Dm_Fr_T))
+which(is.na(bears.reproj$Ttl_F_C))
 
-which(is.na(pres.abs.reproj.c$Dm_Fr_T))
-which(is.na(pres.abs.reproj.c$Ttl_F_C))
+which(is.na(pres.abs.reproj$Dm_Fr_T))
+which(is.na(pres.abs.reproj$Ttl_F_C))
+
+############################ Next, Add in the CCS Region Names to the Data:
 
 
+# Project the CCS Regions to match our data: ------------------------------
+bc.ccs.reproj <- st_transform(bc.ccs, st_crs(soi.bound.reproj))
+
+  # Check to see if the projections match:
+st_crs(bc.ccs.reproj) == st_crs(soi.bound.reproj) # [TRUE] 
+
+st_crs(bears.reproj) == st_crs(bc.ccs.crop) # [TRUE] 
+st_crs(pres.abs.reproj) == st_crs(bc.ccs.crop) # [TRUE] 
+
+  # Plot these together to make sure:
+plot(st_geometry(bc.ccs.reproj))
+plot(st_geometry(soi.bound.reproj), add=TRUE)
+
+plot(st_geometry(soi.bound.reproj))
+plot(st_geometry(bears.reproj), add=TRUE)
+
+# Crop CCS Down to SOI 10km Extent: --------------------------------------------
+soi.ccs.crop <- st_intersection(bc.ccs.reproj, soi.10k.buf)
+
+  # Write this as a .shp for later:
+st_write(soi.ccs.crop, "/Users/shannonspragg/ONA_GRIZZ/CAN Spatial Data/SOI CCS regions/SOI_CCS_10km.shp")
+
+# Assign the WARP Points to a CCS Region: ---------------------------------
+  ## Here we want to overlay the points with the regions, adding a column in the warp data that is CCS region ID, 
+  #  make sure this is a factor, to fit this as a varying intercept
+
+  # Assign our points to a CCS category:
+warp.ccs.join <- st_join(bears.reproj, left = TRUE, soi.ccs.crop) # join points
+
+pres.abs.ccs.join <- st_join(pres.abs.reproj, left = TRUE, soi.ccs.crop) # join points
+
+head(warp.ccs.join) # Assigned points to a CCS category
+head(pres.abs.ccs.join) # nice
+
+  # Delete the columns we don't want:
+warp.ccs.join$PRNAME <- NULL
+warp.ccs.join$PRNTCDVSNC <- NULL
+warp.ccs.join$PRUID <- NULL
+warp.ccs.join$CDUID <- NULL
+warp.ccs.join$CPRVNCCD <- NULL
+warp.ccs.join$FTRCD <- NULL
+warp.ccs.join$CPRVNCCD <- NULL
+warp.ccs.join$PRNTCDVSNC <- NULL
+warp.ccs.join$FFCTVDT <- NULL
+warp.ccs.join$XPRDT <- NULL
+warp.ccs.join$OBJECTID <- NULL
+warp.ccs.join$AREA_SQM <- NULL
+warp.ccs.join$FEAT_LEN <- NULL 
+warp.ccs.join$CDNAME <- NULL
+warp.ccs.join$CDTYPE <- NULL
+warp.ccs.join$CPRVNCNM <- NULL
+warp.ccs.join$CCSNAME.x <- NULL
+warp.ccs.join$CCSUID.x <- NULL
+
+pres.abs.ccs.join$PRNAME <- NULL
+pres.abs.ccs.join$PRNTCDVSNC <- NULL
+pres.abs.ccs.join$PRUID <- NULL
+pres.abs.ccs.join$CDUID <- NULL
+pres.abs.ccs.join$CPRVNCCD <- NULL
+pres.abs.ccs.join$FTRCD <- NULL
+pres.abs.ccs.join$CPRVNCCD <- NULL
+pres.abs.ccs.join$PRNTCDVSNC <- NULL
+pres.abs.ccs.join$FFCTVDT <- NULL
+pres.abs.ccs.join$XPRDT <- NULL
+pres.abs.ccs.join$OBJECTID <- NULL
+pres.abs.ccs.join$AREA_SQM <- NULL
+pres.abs.ccs.join$FEAT_LEN <- NULL 
+pres.abs.ccs.join$CDNAME <- NULL
+pres.abs.ccs.join$CDTYPE <- NULL
+pres.abs.ccs.join$CPRVNCNM <- NULL
+pres.abs.ccs.join$CCSNAME.x <- NULL
+pres.abs.ccs.join$CCSUID.x <- NULL
+
+  # Rename these quick:
+names(warp.ccs.join)[names(warp.ccs.join) == "CCSUID.y"] <- "CCSUID"
+names(warp.ccs.join)[names(warp.ccs.join) == "CCSNAME.y"] <- "CCSNAME"
+names(pres.abs.ccs.join)[names(pres.abs.ccs.join) == "CCSUID.y"] <- "CCSUID"
+names(pres.abs.ccs.join)[names(pres.abs.ccs.join) == "CCSNAME.y"] <- "CCSNAME"
+
+head(warp.ccs.join)
+head(pres.abs.ccs.join)
+
+# Check for NA's: -------------------------------------------------------
+
+which(is.na(warp.ccs.join$CCSNAME)) # no NAs
+which(is.na(warp.ccs.join$CCSUID)) # yay!!
+
+which(is.na(pres.abs.ccs.join$CCSNAME)) # no NAs
+which(is.na(pres.abs.ccs.join$CCSUID)) # yay!!
 
 # WARP All Species Master Data Frame --------------------------------------
   # Save the resulting data frames here:
-st_write(bears.reproj.c, "/Users/shannonspragg/ONA_GRIZZ/WARP Bears /warp.pres.abs.need.CCS.shp")
-st_write(pres.abs.reproj.c, "/Users/shannonspragg/ONA_GRIZZ/WARP Bears /warp.pres.abs.need.CCS.shp")
+st_write(warp.ccs.join, "/Users/shannonspragg/ONA_GRIZZ/WARP Bears /warp.master.shp")
+st_write(pres.abs.ccs.join, "/Users/shannonspragg/ONA_GRIZZ/WARP Bears /pres.abs.master.shp")
 

@@ -54,6 +54,7 @@ soi.10k.buf <- st_buffer(soi.region, 10000)
 st_write(soi.10k.buf, "/Users/shannonspragg/ONA_GRIZZ/CAN Spatial Data/SOI Ecoprovince Boundary/SOI_10km_buf.shp")
 
 
+
 # Crop CCS Down to SOI 10km Extent (skip): --------------------------------------------
 soi.ccs.crop <- st_intersection(bc.ccs.reproj, soi.10k.buf)
 

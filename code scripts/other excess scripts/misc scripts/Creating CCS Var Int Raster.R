@@ -151,13 +151,13 @@ warp.ps.sv <- vect(warp.varint.join)
 soi.ccs.rast <- terra::rasterize(soi.ccs.sv, soi.rast, field = "CCSNAME")
 
 
-# Make Raster for our Posterior Means for CCS Varying Intercept: ---------------------
+# Make Raster for our Posterior Means for CCS Varying Intercept (SKIP): ---------------------
 varint.means.rast <- terra::rasterize(warp.ps.sv, soi.rast, field = "CCSVrIE")
 
 # Fix the column name:
 names(varint.means.rast)[names(varint.means.rast) == "SOI_10km"] <- "CCS Varying Intercept Mean Estimate"
 
-# Extract Values of Posterior Means to CCS regions: --------------------------------------
+# Extract Values of Posterior Means to CCS regions: -
 
 warp.varint.mean.ext <- terra::extract(varint.means.rast, soi.ccs.sv, mean, na.rm = TRUE) 
 

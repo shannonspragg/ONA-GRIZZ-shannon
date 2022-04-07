@@ -74,14 +74,21 @@ st_crs(metro.reproj) == st_crs(total.farms.reproj) # [TRUE]
 ############################ Adding the Distance Variables to the Data:
 
 # Prep Variable 1: Dist to PA's -------------------------------------------
-  #Calculation of the distance between the PA's and our points
+  # Start by Filtering our PA's:
+
+  # Filter to those larger than 1,000 sq ha for general species (pres-abs):
+bc.PAs.1k.ha <- filter(bc.PAs.reproj, O_AREA > 1000) # Our 1k for general species
+  # Filter to those larger than 10,000 sq ha for bears (warp):
+bc.PAs.10k.ha <- filter(bc.PAs.reproj, O_AREA > 10000) # Our 10k for bears only
+
+#Calculation of the distance between the PA's and our points
 
   # Do this for our WARP only data:
-dist.pts2pas.warp <- st_distance(bears.reproj, bc.PAs.reproj)
+dist.pts2pas.warp <- st_distance(bears.reproj, bc.PAs.10k.ha)
 head(dist.pts2pas.warp)
 
   # And for our pres-abs data:
-dist.pts2pas.presabs <- st_distance(pres.abs.reproj, bc.PAs.reproj)
+dist.pts2pas.presabs <- st_distance(pres.abs.reproj, bc.PAs.1k.ha)
 head(dist.pts2pas.presabs)
 
 

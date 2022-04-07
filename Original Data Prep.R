@@ -27,6 +27,21 @@ can.ccs.shp<-st_read("/Users/shannonspragg/ONA_GRIZZ/CAN Spatial Data/CAN census
 
 ################# We begin by filtering to our SOI ecoprovince, buffering, and cropping our conflict data to the buffered region:
 
+
+# Prepping the WARP Data: -------------------------------
+# Merge the two encounter columns into one total encounter column:
+warp.all.sp$total_encounter<-warp.all.sp$encounter_adults + warp.all.sp$encounter_young
+head(warp.all.sp)
+
+# Convert selected species to 1's and all others to 0's:
+warp.all.sp<- warp.all.sp %>% 
+  mutate(warp.all.sp, bears = if_else(species_name == "BLACK BEAR" | species_name == "GRIZZLY BEAR", 1, 0))
+head(warp.all.sp) # Check this to make sure it looks good
+
+# Ensure this is a sf data frame:
+str(warp.all.sp)
+#warp.all.sp <- as(warp.all.sp, "sf")
+
 # Filter down to Southern Interior Ecoprovince: ---------------------------
   # Here we select for just the southern interior province
 south.interior.ep <- bc.ecoprovs %>% filter(bc.ecoprovs$CPRVNCNM == "SOUTHERN INTERIOR")
@@ -57,6 +72,16 @@ south.int.10k.buf <- st_buffer(south.interior.ep, 10000)
 
 plot(st_geometry(south.int.10k.buf))
 plot(st_geometry(south.interior.ep), add= TRUE) # Here we see it with a 10k buffer
+
+  # Save this buffered SOI Boundary:
+st_write(south.int.10k.buf, "/Users/shannonspragg/ONA_GRIZZ/CAN Spatial Data/SOI Ecoprovince Boundary/SOI_10km_buf.shp")
+
+  # Write this as a Raster for later:
+soi.rast <- st_rasterize(soi.10k.buf)
+
+# Export as tiff:
+write_stars(soi.rast, "/Users/shannonspragg/ONA_GRIZZ/CAN Spatial Data/SOI Ecoprovince Boundary/SOI_10km.tif")
+
 
 # Reports Within a 10k Buffer: --------------------------------------------
   # Let's check how many total and just bear reports we include with a 10k buffer:

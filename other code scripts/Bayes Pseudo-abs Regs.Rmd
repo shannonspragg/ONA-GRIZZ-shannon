@@ -157,8 +157,8 @@ summary(post.pa.compare)
 summary(post.pa.full)
 
 # Save an object to a file
-saveRDS(post.pa.full, file = "post_pa_full.rds")
-post.pa.full <- readRDS(file = "post_pa_full.rds")
+saveRDS(post.pa.full, file = "/Users/shannonspragg/ONA_GRIZZ/Data/processed/post_pa_full.rds")
+post.pa.full <- readRDS(file = "/Users/shannonspragg/ONA_GRIZZ/Data/processed/post_pa_full.rds")
 
 
 plot_model(post.pa.full, sort.est = TRUE)
@@ -235,7 +235,9 @@ kfold.10.ps <-kfold(post.pa.full, K=10, cores = getOption("mc.cores", 1), save_f
 cv10folds.ccs <- kfold_split_stratified(K=10, x=mini.warp.df.ps$CCSNAME.ps)
 
 # Save this as data:
-saveRDS(kfold.10.ps, file = "post_pa_kfold10.rds")
+saveRDS(kfold.10.ps, file = "/Users/shannonspragg/ONA_GRIZZ/Data/processed/post_pa_kfold10.rds")
+kfold.10.ps <- readRDS(file = "/Users/shannonspragg/ONA_GRIZZ/Data/processed/post_pa_kfold10.rds")
+
 
 ```
 

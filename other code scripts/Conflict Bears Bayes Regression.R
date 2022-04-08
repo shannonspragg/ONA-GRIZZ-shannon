@@ -171,9 +171,9 @@ post.co.offset <- stan_glmer(bears_presence_co ~ b2pa.dist.co.sc + dom.farms.co 
                              seed = SEED, refresh=0) # we add seed for reproducibility
 
 # Save an object to a file
-saveRDS(post.co.offset, file = "post_co_offset.rds")
+saveRDS(post.co.offset, file = "/Users/shannonspragg/ONA_GRIZZ/Data/processed/post_co_offset.rds")
 # Restore the object
-post.co.offset <- readRDS(file = "post_co_offset.rds")
+post.co.offset <- readRDS(file = "/Users/shannonspragg/ONA_GRIZZ/Data/processed/post_co_offset.rds")
 
 ##### Plot the posterior for just fixed effects of our different variables:
 plot_model(post.co.full, sort.est = TRUE) # This plots just fixed effects

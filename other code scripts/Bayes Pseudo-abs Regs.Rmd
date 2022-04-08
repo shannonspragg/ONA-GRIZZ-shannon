@@ -255,7 +255,7 @@ kfold.10.ps <- readRDS(file = "/Users/shannonspragg/ONA_GRIZZ/Data/processed/pos
 plot_model(post.pa.full, type = "pred", title="Predicted Probabilities of General Conflict Presence",
            axis.labels=c("Conflict Presence", "Distance to PA" ,"Distance to Metro" ,"Dominant Farm Type", "Total Farm Count", "[Total Farm Count]^2", "Population Density" ))
 
-plot_model(post.pa.full, type = "pred", title="Predicted Probabilities of General Conflict Presence", terms = c("b2pa.dist.ps", "b2met.dist.ps", "pop.dens", "dom.farms.ps"))
+plot_model(post.pa.full, type = "pred", terms = c("b2pa.dist.ps", "b2met.dist.ps", "pop.dens", "dom.farms.ps"))
 
 
 # Basic Mixed Effect Plot:

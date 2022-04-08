@@ -42,18 +42,27 @@ soi.10k.boundary <- st_read("/Users/shannonspragg/ONA_GRIZZ/CAN Spatial Data/SOI
 
 
 # Prepping the WARP Data: -------------------------------
-# Merge the two encounter columns into one total encounter column:
+  # Merge the two encounter columns into one total encounter column:
 warp.all.sp$total_encounter<-warp.all.sp$encounter_adults + warp.all.sp$encounter_young
 head(warp.all.sp)
 
-# Convert selected species to 1's and all others to 0's:
+  # Convert selected species to 1's and all others to 0's:
 warp.all.sp<- warp.all.sp %>% 
   mutate(warp.all.sp, bears = if_else(species_name == "BLACK BEAR" | species_name == "GRIZZLY BEAR", 1, 0))
 head(warp.all.sp) # Check this to make sure it looks good
 
-# Ensure this is a sf data frame:
+  # Making Conflict Data a Spatial Dataframe 
+
+bc.sp<-structure(warp.all.sp,longitude= "encounter_lng", latitude= "encounter_lat", class="data.frame")
+head(bc.sp)
+xy<-bc.sp[,c(8,7)]
+bears.spdf<-SpatialPointsDataFrame(coords = xy,data = bc.sp,
+                                   proj4string = CRS("+proj=longlat +datum=WGS84 +ellps=WGS84 +towgs84=0,0,0"))
+str(bears.spdf)
+
+  # Ensure this is a sf data frame:
+warp.all.sp <- as(bears.spdf, "sf")
 str(warp.all.sp)
-#warp.all.sp <- as(warp.all.sp, "sf")
 
 # Filter down to Southern Interior Ecoprovince: ---------------------------
   # Here we select for just the southern interior province
@@ -64,6 +73,10 @@ south.interior.ep <- bc.ecoprovs %>% filter(bc.ecoprovs$CPRVNCNM == "SOUTHERN IN
 
 
 # Check Projections: ------------------------------------------------------
+st_crs(warp.all.sp) == st_crs(south.interior.ep) #FALSE
+
+warp.all.sp <- st_transform(warp.all.sp, st_crs(south.interior.ep))
+
 st_crs(warp.all.sp) == st_crs(south.interior.ep) #TRUE
 
   # Plot these together to see overlap:
@@ -71,15 +84,9 @@ plot(st_geometry(south.interior.ep))
 plot(st_geometry(warp.all.sp), add= TRUE)
 
 # Crop WARP Points to SOI Boundary -------------------------------------------- 
-  # Now we crop the WARP points to those within our southern interior ecoprovince
+  # Now we crop the WARP points to those within our southern interior ecoprovince buffer
 
-warp.crop <- st_intersection(warp.all.sp, south.interior.ep) # 5,335 total reports
-
-  # Let's see how many bears reports this has:
-warp.crop %>% filter(warp.crop$spcs_nm == "BLACK BEAR" | warp.crop$spcs_nm == "GRIZZLY BEAR") # 1890 bears out of 5335 total reports
-
-
-# Buffering EcoProvince by 10km: ---------------------------------
+  # Buffering EcoProvince by 10km:
   # Now let's butter our ecoprovince and see how many more reports it captures with the buffers:
 south.int.10k.buf <- st_buffer(south.interior.ep, 10000)
 
@@ -90,18 +97,17 @@ plot(st_geometry(south.interior.ep), add= TRUE) # Here we see it with a 10k buff
 st_write(south.int.10k.buf, "/Users/shannonspragg/ONA_GRIZZ/CAN Spatial Data/SOI Ecoprovince Boundary/SOI_10km_buf.shp")
 
   # Write this as a Raster for later:
-soi.rast <- st_rasterize(soi.10k.buf)
+soi.rast <- st_rasterize(south.int.10k.buf)
 
 # Export as tiff:
 write_stars(soi.rast, "/Users/shannonspragg/ONA_GRIZZ/CAN Spatial Data/SOI Ecoprovince Boundary/SOI_10km.tif")
 
-
-# Reports Within a 10k Buffer: --------------------------------------------
+  # Reports Within a 10k Buffer: 
   # Let's check how many total and just bear reports we include with a 10k buffer:
 warp.crop.10k <- st_intersection(warp.all.sp, south.int.10k.buf) # This gives 5,606 total reports
 
   # Let's see how many bears this has:
-warp.crop.10k %>% filter(warp.crop.10k$spcs_nm == "BLACK BEAR" | warp.crop.10k$spcs_nm == "GRIZZLY BEAR") # 2,062 bears out of 5,606 total reports
+warp.crop.10k %>% filter(warp.crop.10k$species_name == "BLACK BEAR" | warp.crop.10k$species_name == "GRIZZLY BEAR") # 2,062 bears out of 5,606 total reports
   # This buffer includes a better sample size for bears and total reports 
 
 # Remove Extra Columns: ---------------------------------------------------
@@ -159,15 +165,18 @@ bc.farm.2016.ccs<-bc.farm.filter.ccs %>%
   # Here we separate out the CCS code into new column for join with CCS .shp:
 bc.ccs$CCSUID.crop<- str_sub(bc.ccs$CCSUID,-5,-1) # Now we have a matching 6 digits
 unique(bc.ccs$CCSUID.crop) #This is a 5 digit code
-str(bc.farm.2016.ccs) # CHeck the structure before joining
+str(bc.farm.2016.ccs) # Check the structure before joining
 
+bc.farm.2016.ccs$CCSUID.crop<- str_sub(bc.farm.2016.ccs$GEO,-6,-2) # Now we have a matching 6 digits
+unique(bc.farm.2016.ccs$CCSUID.crop) #This is a 5 digit code
+str(bc.farm.2016.ccs) # Check the structure before joining
 
 # Joining the CCS with the Farm Type: -------------------------------------
   # Join the BC CCS with Ag Files:
 farm.ccs.join <- merge(bc.farm.2016.ccs, bc.ccs, by.x = "CCSUID.crop", by.y = "CCSUID.crop") 
 
 # Double check that this is the correct structure:
-str(farm.ccs.join) # Here we have a farm type data frame with Multipolygon geometry - check!
+head(farm.ccs.join) # Here we have a farm type data frame with Multipolygon geometry - check!
 
 ######################## Next, we prepare the Dominant Farm Type and Total Farm Count by CCS Region:
 

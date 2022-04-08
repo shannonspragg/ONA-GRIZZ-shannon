@@ -255,7 +255,7 @@ kfold.10.ps <- readRDS(file = "/Users/shannonspragg/ONA_GRIZZ/Data/processed/pos
 plot_model(post.pa.full, type = "pred", title="Predicted Probabilities of General Conflict Presence",
            axis.labels=c("Conflict Presence", "Distance to PA" ,"Distance to Metro" ,"Dominant Farm Type", "Total Farm Count", "[Total Farm Count]^2", "Population Density" ))
 
-plot_model(post.pa.full, type = "pred", terms = c("b2pa.dist.ps", "b2met.dist.ps", "pop.dens", "dom.farms.ps"))
+plot_model(post.pa.full, type = "pred", title="Predicted Probabilities of General Conflict Presence", terms = c("b2pa.dist.ps", "b2met.dist.ps", "pop.dens", "dom.farms.ps"))
 
 
 # Basic Mixed Effect Plot:
@@ -463,7 +463,7 @@ plot(conf.rast.stack) # plot these all to check
 
 # Create P(all conflict) raster with our regression coefficients and rasters:
     # Prob_conf_rast = Int.val + CCS + B_1est * PopDens…
-conflict_rast <- -2.9425813 + ccs.varint.rast + (-0.1797018 * dist2pa.rast.sc) + (-1.0084639 * dist2metro.rast.sc) + (0.1002309 * tot.farms.rast.sc) + (0.3080237 * tot.farms.sq.rast.sc) + (0.6594957 * hm.dens.rast.sc) + (-0.4220399 * cattle.ranching.rast) + (0.9789048 * fruit.tree.nut.rast) + (1.4487436 * other.animal.rast) + (1.1891119 * other.crop.rast) + (0.3190336 * veg.mel.rast)
+conflict_rast <- -3.2055204 + ccs.varint.rast + (-1.3828608 * dist2pa.rast.sc) + (-1.2770144 * dist2metro.rast.sc) + (-0.2812924 * tot.farms.rast.sc) + (0.4672799 * tot.farms.sq.rast.sc) + (0.7252248 * hm.dens.rast.sc) + (-0.3491539 * cattle.ranching.rast) + (1.0034481  * fruit.tree.nut.rast) + (1.4657681 * other.animal.rast) + (1.5591872 * other.crop.rast) + (0.2028940 * veg.mel.rast)
 
 # Convert the Raster to the Probability Scale:
 p_conf_rast <- app(conflict_rast, fun=plogis)

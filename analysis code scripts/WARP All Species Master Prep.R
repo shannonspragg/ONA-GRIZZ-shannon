@@ -27,7 +27,7 @@ warp.pres.abs <- st_read("/Users/shannonspragg/ONA_GRIZZ/Data/processed/warp_pre
 
 # Bring in the Variable Data -----------------
   # Our SOI 10km Buffered Boundary:
-soi.10k.boundary <- st_read("/Users/shannonspragg/ONA_GRIZZ/CAN Spatial Data/SOI Ecoprovince Boundary/SOI_10km_buf.shp")
+soi.10k.boundary <- st_read("/Users/shannonspragg/ONA_GRIZZ/Data/processed/SOI_10km_buf.shp")
   # Filtered BC Protected Areas:
 bc.PAs <- st_read("/Users/shannonspragg/ONA_GRIZZ/CAN Spatial Data/BC protected areas/BC PAs.shp")
 bc.PAs <- st_read("/Users/shannonspragg/ONA_GRIZZ/Data/original/CAN Protected Areas/Parks_Combined2.shp") # Clayton's data
@@ -36,17 +36,17 @@ bc.PAs <- st_read("/Users/shannonspragg/ONA_GRIZZ/Data/original/CAN Protected Ar
 bc.metro<-st_read("/Users/shannonspragg/ONA_GRIZZ/CAN Spatial Data/BC census metro areas/CEN_CENSUS_METRO_AREAS_SVW/CNCNSSMTRR_polygon.shp")
 str(bc.metro) # check this
   # DOminant Farm Type by CCS Region:
-dominant.farms.bc <-st_read("/Users/shannonspragg/ONA_GRIZZ/Ag census/Ag Census Dominant Farm Type /Dominant Farm Type by CCS/Dominant Farm Types by CCS.shp")
+dominant.farms.bc <-st_read("/Users/shannonspragg/ONA_GRIZZ/Data/processed/Dominant Farm Types by CCS.shp")
 str(dominant.farms.bc)
   # Total Farm Count by CCS Region:
-total.farms.bc <-st_read("/Users/shannonspragg/ONA_GRIZZ/Ag census/Ag Census Dominant Farm Type /Total Farm Type by CCS/Total Farm Count by CCS.shp")
+total.farms.bc <-st_read("/Users/shannonspragg/ONA_GRIZZ/Data/processed/Total Farm Count by CCS.shp")
 str(total.farms.bc)
   # BC CCS Regions:
 bc.ccs<-st_read("/Users/shannonspragg/ONA_GRIZZ/CAN Spatial Data/BC census subdivs/BC CCS.shp")
 str(bc.ccs)
 
   # SOI Raster for rasterizing later:
-soi.rast <- terra::rast("/Users/shannonspragg/ONA_GRIZZ/CAN Spatial Data/SOI Ecoprovince Boundary/SOI_10km.tif") # SOI Region 10km buffer raster
+soi.rast <- terra::rast("/Users/shannonspragg/ONA_GRIZZ/Data/processed/SOI_10km.tif") # SOI Region 10km buffer raster
 
 
 # Reproject All Data ------------------------------------------------------

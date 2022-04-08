@@ -202,9 +202,9 @@ dominant.farms.bc<- farm.ccs.join %>% group_by(GEO) %>% top_n(2,VALUE) %>% slice
 head(dominant.farms.bc)
 
 # Save these as .shp's for later:
-st_write(dominant.farms.bc,"Dominant Farm Types by CCS.shp")
+st_write(dominant.farms.bc,"/Users/shannonspragg/ONA_GRIZZ/Data/processed/Dominant Farm Types by CCS.shp")
 
-st_write(total.farms.bc, "Total Farm Count by CCS.shp") 
+st_write(total.farms.bc, "/Users/shannonspragg/ONA_GRIZZ/Data/processed/Total Farm Count by CCS.shp") 
 
 
 ################################# Prep Human Density Predictor:

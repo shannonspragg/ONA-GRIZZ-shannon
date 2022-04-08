@@ -36,7 +36,8 @@ can.ccs.shp<-st_read("/Users/shannonspragg/ONA_GRIZZ/CAN Spatial Data/CAN census
 world.hum.dens <- terra::rast("/Users/shannonspragg/ONA_GRIZZ/CAN Spatial Data/Human Pop Density/gpw_v4_population_density_adjusted_to_2015_unwpp_country_totals_rev11_2020_1_deg.tif")
   # SOI Boundary and Raster for template:
 soi.10k.boundary <- st_read("/Users/shannonspragg/ONA_GRIZZ/CAN Spatial Data/SOI Ecoprovince Boundary/SOI_10km_buf.shp")
-
+  # BC Provincial & National Parks:
+bc.PAs <- st_read("/Users/shannonspragg/ONA_GRIZZ/Data/original/CAN Protected Areas/Parks_Combined2.shp")
 
 ################# We begin by filtering to our SOI ecoprovince, buffering, and cropping our conflict data to the buffered region:
 
@@ -94,13 +95,15 @@ plot(st_geometry(south.int.10k.buf))
 plot(st_geometry(south.interior.ep), add= TRUE) # Here we see it with a 10k buffer
 
   # Save this buffered SOI Boundary:
-st_write(south.int.10k.buf, "/Users/shannonspragg/ONA_GRIZZ/CAN Spatial Data/SOI Ecoprovince Boundary/SOI_10km_buf.shp")
+st_write(south.int.10k.buf, "/Users/shannonspragg/ONA_GRIZZ/Data/processed/SOI_10km_buf.shp")
 
   # Write this as a Raster for later:
-soi.rast <- st_rasterize(south.int.10k.buf)
+soi.vect <- vect(south.int.10k.buf)
+soi.rast.templ <- rast(soi.vect, nrows= 218, ncols=298, nlyrs=1, xmin=1149612, xmax=1585533, ymin=453864.2, ymax=772759.3)
+soi.rast <- rasterize(soi.vect, soi.rast.templ, field = "OBJECTID")
 
 # Export as tiff:
-write_stars(soi.rast, "/Users/shannonspragg/ONA_GRIZZ/CAN Spatial Data/SOI Ecoprovince Boundary/SOI_10km.tif")
+writeRaster(soi.rast, "/Users/shannonspragg/ONA_GRIZZ/Data/processed/SOI_10km.tif")
 
   # Reports Within a 10k Buffer: 
   # Let's check how many total and just bear reports we include with a 10k buffer:
@@ -123,7 +126,7 @@ warp.crop.10k$AREA_SQM <- NULL
 warp.crop.10k$FEAT_LEN <- NULL
 
 # Save our Cropped WARP DF ------------------------------------------------
-st_write(warp.crop.10k, "/Users/shannonspragg/ONA_GRIZZ/WARP Bears /WARP Cropped - SIP/warp_crop_10km_buf.shp")
+st_write(warp.crop.10k, "/Users/shannonspragg/ONA_GRIZZ/Data/processed/warp_crop_10km_buf.shp")
 
 
 ####################### Now, we will filter the CCS regions and Agriculture Data to BC:
@@ -176,7 +179,7 @@ str(bc.farm.2016.ccs) # Check the structure before joining
 farm.ccs.join <- merge(bc.farm.2016.ccs, bc.ccs, by.x = "CCSUID.crop", by.y = "CCSUID.crop") 
 
 # Double check that this is the correct structure:
-head(farm.ccs.join) # Here we have a farm type data frame with Multipolygon geometry - check!
+head(farm.ccs.join) # Here we have a farm type data frame with Multi-polygon geometry - check!
 
 ######################## Next, we prepare the Dominant Farm Type and Total Farm Count by CCS Region:
 
@@ -193,9 +196,10 @@ str(top.two.ccs.farm.types) # check to see that this worked
 # Subset the Farm Join & Print --------------------------------------------
   # Extract Total Farm Counts by CCS: (Do this with the dominant farms too)
 total.farms.bc<- farm.ccs.join %>% group_by(GEO) %>% top_n(2,VALUE) %>% slice_min(., order_by = "VALUE") # This successfully gives us total farm count by CCS region
-
+head(total.farms.bc)
 # Do this to get our dominant (most frequent) farm types by CCS region:
 dominant.farms.bc<- farm.ccs.join %>% group_by(GEO) %>% top_n(2,VALUE) %>% slice_tail() # This gives us the dominant type WITHOUT the total farms 
+head(dominant.farms.bc)
 
 # Save these as .shp's for later:
 st_write(dominant.farms.bc,"Dominant Farm Types by CCS.shp")
@@ -206,7 +210,9 @@ st_write(total.farms.bc, "Total Farm Count by CCS.shp")
 ################################# Prep Human Density Predictor:
 
 # Reproject the Data: --------------------------------------------------
+
 world.dens.reproj <- terra::project(world.hum.dens, crs(soi.rast))
+plot(world.dens.reproj)
 
 crs(world.dens.reproj) == crs(soi.rast) #TRUE
 
@@ -235,13 +241,13 @@ plot(hm.dens.soi)
 names(hm.dens.soi)[names(hm.dens.soi) == "gpw_v4_population_density_adju~ountry_totals_rev11_2020_1_deg"] <- "Human Population Density by Nearest km"
 
 # Save Raster as .tif for later: ----------------------------------------------------
-terra::writeRaster(hm.dens.soi, "/Users/shannonspragg/ONA_GRIZZ/Predictor Rasters/human_dens_SOI_10km.tif")
+terra::writeRaster(hm.dens.soi, "/Users/shannonspragg/ONA_GRIZZ/Data/processed/human_dens_SOI_10km.tif")
 
 
 ################################# Lastly, we will filter the CAN Protected Areas down to BC:
 
   # Load in our Protected Areas Database:
-fgdb <- "/Users/shannonspragg/ONA_GRIZZ/CAN Spatial Data/CPCAD-BDCAPC_Dec2020.gdb"
+fgdb <- "/Users/shannonspragg/ONA_GRIZZ/Data/original/CAN Protected Areas/CPCAD-BDCAPC_Dec2020.gdb"
 
   # List all feature classes in a file geodatabase
 subset(ogrDrivers(), grepl("GDB", name))
@@ -258,5 +264,9 @@ bc.PAs <- fc.sf %>%
   st_make_valid()
 
   # Save for later:
-st_write(bc.PAs,"bc_PAs.shp")
+st_write(bc.PAs,"/Users/shannonspragg/ONA_GRIZZ/Data/processed/bc_PAs.shp")
+
+  # Bring in Protected Areas: Provincial & National Parks
+
+
 

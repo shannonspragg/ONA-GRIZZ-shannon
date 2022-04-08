@@ -19,10 +19,10 @@ library(measurements)
 
 # Bring in the Points Data -------------------------------
   #  WARP SOI 10km Buffer Data:
-warp.all<-read.csv("/Users/shannonspragg/ONA_GRIZZ/WARP Bears /WARP Cropped - SIP/warp_crop_10km_buf.shp") 
+warp.all<-st_read("/Users/shannonspragg/ONA_GRIZZ/Data/processed/warp_crop_10km_buf.shp") 
 head(warp.all)
   # Bring in our pres abs data frame to get variables for our absences:
-warp.pres.abs <- st_read("/Users/shannonspragg/ONA_GRIZZ/WARP Bears /WARP Cropped - SIP/warp_pres.abs.shp")
+warp.pres.abs <- st_read("/Users/shannonspragg/ONA_GRIZZ/Data/processed/warp_pres.abs.shp")
 
 
 # Bring in the Variable Data -----------------
@@ -30,15 +30,17 @@ warp.pres.abs <- st_read("/Users/shannonspragg/ONA_GRIZZ/WARP Bears /WARP Croppe
 soi.10k.boundary <- st_read("/Users/shannonspragg/ONA_GRIZZ/CAN Spatial Data/SOI Ecoprovince Boundary/SOI_10km_buf.shp")
   # Filtered BC Protected Areas:
 bc.PAs <- st_read("/Users/shannonspragg/ONA_GRIZZ/CAN Spatial Data/BC protected areas/BC PAs.shp")
+bc.PAs <- st_read("/Users/shannonspragg/ONA_GRIZZ/Data/original/CAN Protected Areas/Parks_Combined2.shp") # Clayton's data
+
   # BC Metropolitan Areas:
 bc.metro<-st_read("/Users/shannonspragg/ONA_GRIZZ/CAN Spatial Data/BC census metro areas/CEN_CENSUS_METRO_AREAS_SVW/CNCNSSMTRR_polygon.shp")
 str(bc.metro) # check this
   # DOminant Farm Type by CCS Region:
-bc.dom.farms<-st_read("/Users/shannonspragg/ONA_GRIZZ/Ag census/Ag Census Dominant Farm Type /Dominant Farm Type by CCS/Dominant Farm Types by CCS.shp")
-str(bc.dom.farms)
+dominant.farms.bc <-st_read("/Users/shannonspragg/ONA_GRIZZ/Ag census/Ag Census Dominant Farm Type /Dominant Farm Type by CCS/Dominant Farm Types by CCS.shp")
+str(dominant.farms.bc)
   # Total Farm Count by CCS Region:
-bc.total.farms<-st_read("/Users/shannonspragg/ONA_GRIZZ/Ag census/Ag Census Dominant Farm Type /Total Farm Type by CCS/Total Farm Count by CCS.shp")
-str(bc.total.farms)
+total.farms.bc <-st_read("/Users/shannonspragg/ONA_GRIZZ/Ag census/Ag Census Dominant Farm Type /Total Farm Type by CCS/Total Farm Count by CCS.shp")
+str(total.farms.bc)
   # BC CCS Regions:
 bc.ccs<-st_read("/Users/shannonspragg/ONA_GRIZZ/CAN Spatial Data/BC census subdivs/BC CCS.shp")
 str(bc.ccs)

@@ -47,6 +47,8 @@ library(rsq)
 library(tidybayes)
 library(pROC)
 library(bayestestR)
+#install.packages("brms")
+library(brms)
 library(randomForest)
 ```
 
@@ -81,7 +83,7 @@ total.farms <- warp.pres.abs$Ttl_F_C
 total.farms.sq <- total.farms * total.farms
 
 
-bears_presence_ps <- warp.pres.abs$bears # Binomial bears
+conflict_presence_ps <- warp.pres.abs$bears # Binomial bears --> for this data, 1'a are all wildlife
 dom.farms.ps <- warp.pres.abs$Dm_Fr_T # Dominant farm type covariate -- non numeric
 dom.farms.ps <- as.factor(warp.pres.abs$Dm_Fr_T) # Making this work as a factor
 
@@ -102,7 +104,7 @@ We can use the scale function to center our predictors by subtracting the means 
 ```{r mini df, echo=FALSE}
 # Fit Model with Rstanarm: ------------------------------------------------
 # Make a mini data frame with just our predictors (no spatial info):
-mini.warp.df.ps <-  data.frame(bears_presence_ps, b2pa.dist.ps, b2met.dist.ps, total.farms.sq.ps, total.farms.ps, dom.farms.ps, CCSNAME.ps, pop.dens)
+mini.warp.df.ps <-  data.frame(conflict_presence_ps, b2pa.dist.ps, b2met.dist.ps, total.farms.sq.ps, total.farms.ps, dom.farms.ps, CCSNAME.ps, pop.dens)
 
 str(mini.warp.df.ps)
 ```
@@ -119,7 +121,7 @@ int_prior <- normal(location = 0, scale = NULL, autoscale = FALSE)
 # Build our posterior distribution: stan_glm returns the posterior dist for parameters describing the uncertainty related to unknown parameter values
 
 # Start with our Null (Intercept-Only) Model:
-post.int.only <- stan_glmer(bears_presence_ps ~ 1 + (1 | CCSNAME.ps), 
+post.int.only <- stan_glmer(conflict_presence_ps ~ 1 + (1 | CCSNAME.ps), 
                   data = mini.warp.df.ps,
                   family = binomial(link = "logit"), # define our binomial glm
                   prior = t_prior, prior_intercept = int_prior, 
@@ -127,7 +129,7 @@ post.int.only <- stan_glmer(bears_presence_ps ~ 1 + (1 | CCSNAME.ps),
                   seed = SEED, refresh=0) # we add seed for reproducability
 
 # Look at our simple model:
-post.pa.simple <- stan_glmer(bears_presence_ps ~ pop.dens + (1 | CCSNAME.ps), 
+post.pa.simple <- stan_glmer(conflict_presence_ps ~ pop.dens + (1 | CCSNAME.ps), 
                   data = mini.warp.df.ps,
                   family = binomial(link = "logit"), # define our binomial glm
                   prior = t_prior, prior_intercept = int_prior, 
@@ -136,7 +138,7 @@ post.pa.simple <- stan_glmer(bears_presence_ps ~ pop.dens + (1 | CCSNAME.ps),
 
 # Build out our Comparison Model (to compare to Global):
   # For this one, we leave out the FarmCount quad term
-post.pa.compare <- stan_glmer(bears_presence_ps ~ b2pa.dist.ps + b2met.dist.ps + dom.farms.ps + total.farms.ps + pop.dens + (1 | CCSNAME.ps), 
+post.pa.compare <- stan_glmer(conflict_presence_ps ~ b2pa.dist.ps + b2met.dist.ps + dom.farms.ps + total.farms.ps + pop.dens + (1 | CCSNAME.ps), 
                             data = mini.warp.df.ps,
                             family = binomial(link = "logit"), # define our binomial glm
                             prior = t_prior, prior_intercept = int_prior,
@@ -145,7 +147,7 @@ post.pa.compare <- stan_glmer(bears_presence_ps ~ b2pa.dist.ps + b2met.dist.ps +
 # If this has a bulk ESS error... need to run chains for longer
 
 # Global Model: including all of our predictors 
-post.pa.full <- stan_glmer(bears_presence_ps ~ b2pa.dist.ps + b2met.dist.ps + dom.farms.ps + total.farms.ps + total.farms.sq.ps + pop.dens + (1 | CCSNAME.ps), 
+post.pa.full <- stan_glmer(conflict_presence_ps ~ b2pa.dist.ps + b2met.dist.ps + dom.farms.ps + total.farms.ps + total.farms.sq.ps + pop.dens + (1 | CCSNAME.ps), 
                             data = mini.warp.df.ps,
                             family = binomial(link = "logit"), # define our binomial glm
                             prior = t_prior, prior_intercept = int_prior, QR=TRUE,
@@ -158,8 +160,10 @@ summary(post.pa.full)
 
 # Save an object to a file
 saveRDS(post.pa.full, file = "/Users/shannonspragg/ONA_GRIZZ/Data/processed/post_pa_full.rds")
-post.pa.full <- readRDS(file = "/Users/shannonspragg/ONA_GRIZZ/Data/processed/post_pa_full.rds")
+saveRDS(post.int.only, file = "/Users/shannonspragg/ONA_GRIZZ/Data/processed/post_pa_int.rds")
 
+post.pa.full <- readRDS(file = "/Users/shannonspragg/ONA_GRIZZ/Data/processed/post_pa_full.rds")
+post.int.only <- readRDS(file = "/Users/shannonspragg/ONA_GRIZZ/Data/processed/post_pa_int.rds")
 
 plot_model(post.pa.full, sort.est = TRUE)
 
@@ -179,12 +183,16 @@ Here we set our initial priors to students t with 7 degrees of freedom, and a sc
 ## Find the Area Under the Curve for our Posterior Distributions:
 
 ```{r roc plot, echo=FALSE}
-thi0.82
+# Plot ROC for the Simple Posterior:
+par(pty="s") # sets our graph to square
+roc(conflict_presence_ps, post.pa.full$fitted.values, plot=TRUE, legacy.axes=TRUE, percent=TRUE ,
+    xlab= "False Positive Percentage", ylab= "True Positive Percentage",
+    col="#377eb8", lwd=4, print.auc=TRUE) # this gives us the ROC curve , in 3544 controls (bears 0) < 2062 cases (bears 1), Area under curve = 0.
 
 # Add ROC curve for our full pseudo-abs model:
-plot.roc(bears_presence_ps, post.int.only$fitted.values, percent=TRUE, col='#4daf4a', lwd=4, print.auc=TRUE, add=TRUE, print.auc.y=60)
+plot.roc(conflict_presence_ps, post.int.only$fitted.values, percent=TRUE, col='#4daf4a', lwd=4, print.auc=TRUE, add=TRUE, print.auc.y=60)
 
-plot.roc(bears_presence_ps, post.pa.simplest$fitted.values, percent=TRUE, col='red', lwd=4, print.auc=TRUE, add=TRUE, print.auc.y=40)
+plot.roc(conlfict_presence_ps, post.pa.simplest$fitted.values, percent=TRUE, col='red', lwd=4, print.auc=TRUE, add=TRUE, print.auc.y=40)
 
 legend("bottomright", legend=c("Full Pseudo-abs Regression", "Simple Pseudo-Abs Regression", "Simplest Pseudo-abs Regression"),
        col=c("#377eb8", "#4daf4a", "red"), lwd = 4)
@@ -243,6 +251,13 @@ kfold.10.ps <- readRDS(file = "/Users/shannonspragg/ONA_GRIZZ/Data/processed/pos
 
 ## Plotting Our Mixed Effects:
 ```{r mixed efffects, echo=FALSE}
+# Plotting Marginal Effects:
+plot_model(post.pa.full, type = "pred", title="Predicted Probabilities of General Conflict Presence",
+           axis.labels=c("Conflict Presence", "Distance to PA" ,"Distance to Metro" ,"Dominant Farm Type", "Total Farm Count", "[Total Farm Count]^2", "Population Density" ))
+
+plot_model(post.pa.full, type = "pred", terms = c("b2pa.dist.ps", "b2met.dist.ps", "pop.dens", "dom.farms.ps"))
+
+
 # Basic Mixed Effect Plot:
 sjPlot::plot_model(post.pa.full)
 
@@ -250,11 +265,11 @@ sjPlot::plot_model(post.pa.full)
 # Notes: axis labels should be in order from bottom to top. 
 # To see the values of the effect size and p-value, set show.values and show.p= TRUE
 post1.effects.plot <- sjPlot::plot_model(post.pa.full, 
-                   axis.labels=c("CS Biophysical (HII + topo ruggedness)","Bear Habitat Suitability", "Grizz Increase", "Total Farm Count ^2" ,"Total Farm Count" ,"Vegetable & Melon Farming" ,
+                   axis.labels=c( "Total Farm Count ^2" ,"Total Farm Count" ,"Vegetable & Melon Farming" ,
                                  "Other Crop Farming (tobacco, peanut, sugar-cane, hay, herbs & spices) ", "Other Animal Production (bees & honey, equine, fur-bearers)" , "Fruit & Tree Nut Farming" , "Cattle Ranching & Farming" ,
                                    "Distance to Metro Area (km)" , "Distance to Protected Area (km)"),
                    show.values=TRUE, show.p=FALSE,
-                   title="Effects of Social & Environmental Variables on Bear Conflict")
+                   title="Effects of Social & Environmental Variables on Wildlife Conflict")
 
 ##### Model Table of Effect Size:
 sjPlot::tab_model(post.pa.full)
@@ -266,7 +281,7 @@ post1.effects.tab <- sjPlot::tab_model(post1,
                   show.re.var= TRUE, show.se = TRUE , show.p = TRUE , show.r2 = TRUE, show.aic = TRUE , 
                   pred.labels =c("(Intercept)" , "Distance to Protected Area (km)", "Distance to Metro Area (km)", "Cattle Ranching & Farming" , "Fruit & Tree Nut Farming" ,"Other Animal Production (bees & honey, equine, fur-bearers)" ,
                                  "Other Crop Farming (tobacco, peanut, sugar-cane, hay, herbs & spices) ", "Vegetable & Melon Farming" , "Total Farm Count" , "Total Farm Count ^2" , "Grizz Increase", "Bear Habitat Suitability", "CS Biophysical (HII + topo ruggedness)"),
-                                 dv.labels= "Effects of Social & Environmental Variables on Bear Conflict")
+                                 dv.labels= "Effects of Social & Environmental Variables on Wildlife Conflict")
 
 ```
 

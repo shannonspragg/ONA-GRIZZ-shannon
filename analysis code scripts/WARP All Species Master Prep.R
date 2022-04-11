@@ -42,7 +42,7 @@ str(dominant.farms.bc)
 total.farms.bc <-st_read("/Users/shannonspragg/ONA_GRIZZ/Data/processed/Total Farm Count by CCS.shp")
 str(total.farms.bc)
   # BC CCS Regions:
-bc.ccs<-st_read("/Users/shannonspragg/ONA_GRIZZ/CAN Spatial Data/BC census subdivs/BC CCS.shp")
+bc.ccs<-st_read("//Users/shannonspragg/ONA_GRIZZ/Data/processed/BC CCS.shp")
 str(bc.ccs)
 
   # SOI Raster for rasterizing later:
@@ -61,9 +61,9 @@ bc.PAs.reproj <- st_make_valid(bc.PAs) %>%
 metro.reproj <- st_make_valid(bc.metro) %>% 
   st_transform(crs=crs(soi.rast))
 
-farms.reproj <- st_make_valid(bc.dom.farms) %>% 
+farms.reproj <- st_make_valid(dominant.farms.bc) %>% 
   st_transform(crs=crs(soi.rast))
-total.farms.reproj <- st_make_valid(bc.total.farms) %>% 
+total.farms.reproj <- st_make_valid(total.farms.bc) %>% 
   st_transform(crs=crs(soi.rast))
 soi.bound.reproj <- st_make_valid(soi.10k.boundary) %>% 
   st_transform(crs=crs(soi.rast))
@@ -77,20 +77,21 @@ st_crs(metro.reproj) == st_crs(total.farms.reproj) # [TRUE]
 
 # Prep Variable 1: Dist to PA's -------------------------------------------
   # Start by Filtering our PA's:
+  ## NOTE: if using Clayton's data, skip filter part
 
   # Filter to those larger than 1,000 sq ha for general species (pres-abs):
-bc.PAs.1k.ha <- filter(bc.PAs.reproj, O_AREA > 1000) # Our 1k for general species
+#bc.PAs.1k.ha <- filter(bc.PAs.reproj, O_AREA > 1000) # Our 1k for general species
   # Filter to those larger than 10,000 sq ha for bears (warp):
-bc.PAs.10k.ha <- filter(bc.PAs.reproj, O_AREA > 10000) # Our 10k for bears only
+#bc.PAs.10k.ha <- filter(bc.PAs.reproj, O_AREA > 10000) # Our 10k for bears only
 
 #Calculation of the distance between the PA's and our points
 
   # Do this for our WARP only data:
-dist.pts2pas.warp <- st_distance(bears.reproj, bc.PAs.10k.ha)
+dist.pts2pas.warp <- st_distance(bears.reproj, bc.PAs.reproj)
 head(dist.pts2pas.warp)
 
   # And for our pres-abs data:
-dist.pts2pas.presabs <- st_distance(pres.abs.reproj, bc.PAs.1k.ha)
+dist.pts2pas.presabs <- st_distance(pres.abs.reproj, bc.PAs.reproj)
 head(dist.pts2pas.presabs)
 
 
@@ -102,28 +103,24 @@ min.dist.presabs <- apply(dist.pts2pas.presabs, 1, min)
 str(min.dist.presabs)
 
   # Add Distance Variable into Datatable:
-bears.reproj$ds__PA_<-min.dist.warp   # Adjust to match col name 
+bears.reproj$dist_to_PA<-min.dist.warp   
 head(bears.reproj)
 
-pres.abs.reproj$ds__PA_<-min.dist.presabs
+pres.abs.reproj$dist_to_PA<-min.dist.presabs
 head(pres.abs.reproj)
 
   # Remove the units from the values (note: in meters)
-as.numeric(bears.reproj$ds__PA_)
-as.numeric(pres.abs.reproj$ds__PA_)
+as.numeric(bears.reproj$dist_to_PA)
+as.numeric(pres.abs.reproj$dist_to_PA)
 
   # Convert units from meters to km:
-dist_in_km_w<-conv_unit(bears.reproj$ds__PA_,"m","km")
-str(dist_in_km_w)
-bears.reproj$ds__PA_<-dist_in_km_w
-str(bears.reproj) #check data
+bears.reproj$dist_to_PA<-conv_unit(bears.reproj$dist_to_PA,"m","km")
+head(bears.reproj)
 
-dist_in_km_p<-conv_unit(pres.abs.reproj$ds__PA_,"m","km")
-str(dist_in_km_p)
-pres.abs.reproj$ds__PA_<-dist_in_km_p
-str(pres.abs.reproj) # check data
+pres.abs.reproj$dist_to_PA<-conv_unit(pres.abs.reproj$dist_to_PA,"m","km")
+head(pres.abs.reproj)
 
-# Now each df has our Dist to PA column added in
+# Now each df has our Dist to PA column added in, and in km units
 
 # Prep Variable 2: Dist to Metro Areas ------------------------------------
   #Calculation of the distance between the metro areas and our points
@@ -134,39 +131,39 @@ head(dist.pts2met.warp)
 
   # And the pres-abs data:
 dist.pts2met.presabs <- st_distance(pres.abs.reproj, metro.reproj)
-head(dist.pts2met.pres.abs)
+head(dist.pts2met.presabs)
 
   # Must find the minimum distance to PA's (Distance from conflict point to nearest PA)
 min.dist.met.warp <- apply(dist.pts2met.warp, 1, min)
 min.dist.met.presabs <- apply(dist.pts2met.presabs, 1, min)
 
   # Add Distance Variable into Data table
-bears.reproj$dstn___<-min.dist.met.warp
+bears.reproj$dist_to_Metro<-min.dist.met.warp
 head(bears.reproj)
 
-pres.abs.reproj$dstn___<-min.dist.met.presabs
+pres.abs.reproj$dist_to_Metro<-min.dist.met.presabs
 head(pres.abs.reproj)
 
   # Remove the units from the values (note: in meters)
-as.numeric(bears.reproj$dstn___)  # Make sure col name matches data
-as.numeric(pres.abs.reproj$dstn___)
+as.numeric(bears.reproj$dist_to_Metro)  # Make sure col name matches data
+as.numeric(pres.abs.reproj$dist_to_Metro)
 
   # Convert units from meters to km:
-bears.reproj$dstn___<-conv_unit(bears.reproj$dstn___,"m","km")
+bears.reproj$dist_to_Metro<-conv_unit(bears.reproj$dist_to_Metro,"m","km")
 head(bears.reproj)
 
-pres.abs.reproj$dstn___<-conv_unit(pres.abs.reproj$dstn___,"m","km")
+pres.abs.reproj$dist_to_Metro<-conv_unit(pres.abs.reproj$dist_to_Metro,"m","km")
 head(pres.abs.reproj)
 
   # This added the dist to metro areas column to our data
 
 
-# Check for NA's quick:
-which(is.na(bears.reproj$ds__PA_))
-which(is.na(bears.reproj$dstn___))
+  # Check for NA's quick:
+which(is.na(bears.reproj$dist_to_PA))
+which(is.na(bears.reproj$dist_to_Metro))
 
-which(is.na(pres.abs.reproj$ds__PA_))
-which(is.na(pres.abs.reproj$dstn___))
+which(is.na(pres.abs.reproj$dist_to_PA))
+which(is.na(pres.abs.reproj$dist_to_Metro))
 
 
 ############################## Adding the Agriculture Predictors to Our Data:
@@ -182,26 +179,36 @@ tot.farms.soi.crop <- st_intersection(total.farms.reproj, soi.bound.reproj)
 plot(st_geometry(tot.farms.soi.crop))
 plot(st_geometry(soi.bound.reproj), add=TRUE) # This works
 
-  # Isolate Farm Type Subsets:
-beef.cattle <- dplyr::filter(farm.type.soi.crop, N_A_I_C == "Beef cattle ranching and farming, including feedlots [112110]") 
-cattle.ranch <- dplyr::filter(farm.type.soi.crop, N_A_I_C == "Cattle ranching and farming [1121]") 
-other.animal <- dplyr::filter(farm.type.soi.crop, N_A_I_C == "Other animal production [1129]") 
-fruit.tree.nut <- dplyr::filter(farm.type.soi.crop, N_A_I_C == "Fruit and tree nut farming [1113]") 
-other.crop <- dplyr::filter(farm.type.soi.crop, N_A_I_C == "Other crop farming [1119]") 
-greenhouse <- dplyr::filter(farm.type.soi.crop, N_A_I_C == "Greenhouse, nursery and floriculture production [1114]") 
-veg.melon <- dplyr::filter(farm.type.soi.crop, N_A_I_C == "Vegetable and melon farming [1112]") 
+  # Condense Farm Types to Animal & Ground Crop Production:
+animal.product.farming <- dplyr::filter(farm.type.soi.crop, N_A_I_C == "Beef cattle ranching and farming, including feedlots [112110]" | N_A_I_C == "Cattle ranching and farming [1121]" | N_A_I_C == "Other animal production [1129]") 
+ground.crop.production <- dplyr::filter(farm.type.soi.crop, N_A_I_C == "Fruit and tree nut farming [1113]" | N_A_I_C == "Greenhouse, nursery and floriculture production [1114]" | N_A_I_C == "Vegetable and melon farming [1112]")
+
+  ########## Calculate the density of our farm types:
+
+  # We do so by dividing the count of farms by the overall area of the farm type categories:
+
+  # Put our area units in kilometers 
+as.numeric(animal.product.farming$AREA_SQM)
+animal.product.farming$AREA_SQ_KM<-conv_unit(animal.product.farming$AREA_SQM,"m","km")
+head(animal.product.farming)
+as.numeric(ground.crop.production$AREA_SQM)
+ground.crop.production$AREA_SQ_KM<-conv_unit(ground.crop.production$AREA_SQM,"m","km")
+head(ground.crop.production)
+
+  # Now we make a new col with our farms per sq km:
+animal.product.farming$Farms_per_sq_km <- animal.product.farming$VALUE / animal.product.farming$AREA_SQ_KM
+head(animal.product.farming)
+
+ground.crop.production$Farms_per_sq_km <- ground.crop.production$VALUE / ground.crop.production$AREA_SQ_KM
+head(ground.crop.production)
+
 
   # Make farm type a spatvector:
 farm.type.soi.sv <- vect(farm.type.soi.crop)
 
   # And our sub categories as spat vectors:
-beef.cat.sv <- vect(beef.cattle)
-cat.ranch.sv <- vect(cattle.ranch)
-other.animal.sv <- vect(other.animal)
-fruit.tree.sv <- vect(fruit.tree.nut)
-other.crop.sv <- vect(other.crop)
-greenhouse.sv <- vect(greenhouse)
-veg.mel.sv <- vect(veg.melon)
+animal.prod.sv <- vect(animal.product.farming)
+ground.crop.sv <- vect(ground.crop.production)
 
   # Now farm count:
 farm.count.soi.sv <- vect(tot.farms.soi.crop)
@@ -215,70 +222,31 @@ farm.count.rast <- terra::rasterize(farm.count.soi.sv, soi.rast, field = "VALUE"
 plot(farm.count.rast)
 
   # And our subset rasters:
-beef.cattle.rast <- terra::rasterize(beef.cat.sv, soi.rast)
-cattle.ranch.rast <- terra::rasterize(cat.ranch.sv, soi.rast, field = "N_A_I_C")
-other.animal.rast <- terra::rasterize(other.animal.sv, soi.rast, field = "N_A_I_C")
-fruit.treenut.rast <- terra::rasterize(fruit.tree.sv, soi.rast, field = "N_A_I_C")
-other.crop.rast <- terra::rasterize(other.crop.sv, soi.rast, field = "N_A_I_C")
-greenhouse.rast <- terra::rasterize(greenhouse.sv, soi.rast, field = "N_A_I_C")
-veg.mel.rast <- terra::rasterize(veg.mel.sv, soi.rast, field = "N_A_I_C")
-
+animal.prod.rast <- terra::rasterize(animal.prod.sv, soi.rast, field = "Farms_per_sq_km")
+ground.crop.rast <- terra::rasterize(ground.crop.sv, soi.rast, field = "Farms_per_sq_km")
 
   # Fix the column names:
 names(farm.type.rast)[names(farm.type.rast) == "N_A_I_C"] <- "Dominant Farm Type by CCS"
 
-names(beef.cattle.rast)[names(beef.cattle.rast) == "N_A_I_C"] <- "Beef cattle ranching and farming, including feedlots [112110]"
-names(cattle.ranch.rast)[names(cattle.ranch.rast) == "N_A_I_C"] <- "Cattle ranching and farming [1121]"
-names(other.animal.rast)[names(other.animal.rast) == "N_A_I_C"] <- "Other animal production [1129]"
-names(fruit.treenut.rast)[names(fruit.treenut.rast) == "N_A_I_C"] <- "Fruit and tree nut farming [1113]"
-names(other.crop.rast)[names(other.crop.rast) == "N_A_I_C"] <- "Other crop farming [1119]"
-names(greenhouse.rast)[names(greenhouse.rast) == "N_A_I_C"] <- "Greenhouse, nursery and floriculture production [1114]"
-names(veg.mel.rast)[names(veg.mel.rast) == "N_A_I_C"] <- "Vegetable and melon farming [1112]" 
+names(animal.prod.rast)[names(animal.prod.rast) == "Farms_per_sq_km"] <- "Density of Animal Product & Meat Farming / sq km"
+names(ground.crop.rast)[names(ground.crop.rast) == "Farms_per_sq_km"] <- "Density of Ground Crop & Produce Farming / sq km"
 
 names(farm.count.rast)[names(farm.count.rast) == "VALUE"] <- "Total Farm Count by CCS"
 
   # Merge these back to SOI Rasters (so we have values for the SOI region outside each farm type area):
-beef.cattle.soi <- merge(beef.cattle.rast, soi.rast)
-beef.cattle.soi[beef.cattle.soi == 0] <- 1
-beef.cattle.soi[beef.cattle.soi == 327] <- 0
+animal.product.soi <- merge(animal.prod.rast, soi.rast)
+animal.product.soi[animal.product.soi == 327] <- 0
 
-cattle.ranch.soi <- merge(cattle.ranch.rast, soi.rast)
-cattle.ranch.soi[cattle.ranch.soi == 0] <- 1
-cattle.ranch.soi[cattle.ranch.soi == 327] <- 0
+ground.crop.soi <- merge(ground.crop.rast, soi.rast)
+ground.crop.soi[ground.crop.soi == 327] <- 0
 
-other.animal.soi <- merge(other.animal.rast, soi.rast)
-other.animal.soi[other.animal.soi == 0] <- 1
-other.animal.soi[other.animal.soi == 327] <- 0
-
-fruit.treenut.soi <- merge(fruit.treenut.rast, soi.rast)
-fruit.treenut.soi[fruit.treenut.soi == 0] <- 1
-fruit.treenut.soi[fruit.treenut.soi == 327] <- 0
-
-other.crop.soi <- merge(other.crop.rast, soi.rast)
-other.crop.soi[other.crop.soi == 0] <- 1
-other.crop.soi[other.crop.soi == 327] <- 0
-
-greenhouse.soi <- merge(greenhouse.rast, soi.rast)
-greenhouse.soi[greenhouse.soi == 0] <- 1
-greenhouse.soi[greenhouse.soi == 327] <- 0
-
-veg.mel.soi <- merge(veg.mel.rast, soi.rast)
-veg.mel.soi[veg.mel.soi == 0] <- 1
-veg.mel.soi[veg.mel.soi == 327] <- 0
 
   # Save these Farm Rasters:
-terra::writeRaster(farm.type.rast, "/Users/shannonspragg/ONA_GRIZZ/Predictor Rasters/dom_farm_type_raster.tif")
-terra::writeRaster(farm.count.rast, "/Users/shannonspragg/ONA_GRIZZ/Predictor Rasters/total_farm_count_raster.tif" )
+terra::writeRaster(farm.type.rast, "/Users/shannonspragg/ONA_GRIZZ/Data/processed/dom_farm_type_raster.tif")
+terra::writeRaster(farm.count.rast, "/Users/shannonspragg/ONA_GRIZZ/Data/processed/total_farm_count_raster.tif" )
 
-terra::writeRaster(beef.cattle.soi, "/Users/shannonspragg/ONA_GRIZZ/Predictor Rasters/beef_cattle_raster.tif")
-terra::writeRaster(cattle.ranch.soi, "/Users/shannonspragg/ONA_GRIZZ/Predictor Rasters/cattle_ranching_raster.tif")
-terra::writeRaster(other.animal.soi, "/Users/shannonspragg/ONA_GRIZZ/Predictor Rasters/other_animal_prod_raster.tif")
-terra::writeRaster(fruit.treenut.soi, "/Users/shannonspragg/ONA_GRIZZ/Predictor Rasters/fruit_treenut_raster.tif")
-terra::writeRaster(other.crop.soi, "/Users/shannonspragg/ONA_GRIZZ/Predictor Rasters/other_crop_prod_raster.tif")
-terra::writeRaster(greenhouse.soi, "/Users/shannonspragg/ONA_GRIZZ/Predictor Rasters/greenhouse_crop_raster.tif")
-terra::writeRaster(veg.mel.soi, "/Users/shannonspragg/ONA_GRIZZ/Predictor Rasters/veg_melon_raster.tif")
-
-dom.farm.rast.check <- rast("/Users/shannonspragg/ONA_GRIZZ/Predictor Rasters/dom_farm_type_raster.tif")
+terra::writeRaster(animal.product.soi, "/Users/shannonspragg/ONA_GRIZZ/Data/processed/animal_production_density_raster.tif")
+terra::writeRaster(ground.crop.soi, "/Users/shannonspragg/ONA_GRIZZ/Data/processed/ground_crop_density_raster.tif" )
 
 
 # Buffer WARP Points Before Attributing Farm Values -----------------------

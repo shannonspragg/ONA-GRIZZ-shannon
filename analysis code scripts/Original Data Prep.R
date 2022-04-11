@@ -38,6 +38,8 @@ world.hum.dens <- terra::rast("/Users/shannonspragg/ONA_GRIZZ/CAN Spatial Data/H
 soi.10k.boundary <- st_read("/Users/shannonspragg/ONA_GRIZZ/CAN Spatial Data/SOI Ecoprovince Boundary/SOI_10km_buf.shp")
   # BC Provincial & National Parks:
 bc.PAs <- st_read("/Users/shannonspragg/ONA_GRIZZ/Data/original/CAN Protected Areas/Parks_Combined2.shp")
+  # Grizzly Population Units:
+grizz.units <- st_read("/Users/shannonspragg/ONA_GRIZZ/Data/original/Grizz Pop Units/GBPU_BC_polygon.shp")
 
 ################# We begin by filtering to our SOI ecoprovince, buffering, and cropping our conflict data to the buffered region:
 
@@ -145,21 +147,19 @@ bc.ccs<-can.ccs.sf %>%
 # Save this for later:
 st_write(bc.ccs, "/Users/shannonspragg/ONA_GRIZZ/Data/processed/BC CCS.shp")
 
-# Filter the Ag Files down to just BC districts:
+
+# Filter the Ag Files down to just BC districts: --------------------------
   # See here: https://www.statology.org/filter-rows-that-contain-string-dplyr/  searched: 'Return rows with partial string, filter dplyr'
 farm.type.bc <- farm.type %>% filter(grepl("British Columbia", farm.type$GEO)) 
 
-# Filtering to just the BC regions with a CCS number (so we can join to the CCS spatial data):
+  # Filtering to just the BC regions with a CCS number (so we can join to the CCS spatial data):
 bc.farm.filter.ccs<-farm.type.bc %>%
   filter(., grepl("*CCS59*", farm.type.bc$GEO))
 
-# Save this for later:
-  # write_csv(bc.farm.filter.ccs, "bc_farms_filtered.ccs.csv")
-
-# Check to see what specific farm types exist in BC:
+  # Check to see what specific farm types exist in BC:
 unique(farm.type.bc$North.American.Industry.Classification.System..NAICS.) # There are 43 unique farm types in BC
 
-# Filter for just the 2016 census results (the data had 2011 and 2016):
+  # Filter for just the 2016 census results (the data had 2011 and 2016):
 bc.farm.2016.ccs<-bc.farm.filter.ccs %>%
   filter(., grepl("2016", bc.farm.filter.ccs$REF_DATE)) # Now there are 344 observations
 
@@ -178,33 +178,80 @@ str(bc.farm.2016.ccs) # Check the structure before joining
   # Join the BC CCS with Ag Files:
 farm.ccs.join <- merge(bc.farm.2016.ccs, bc.ccs, by.x = "CCSUID.crop", by.y = "CCSUID.crop") 
 
-# Double check that this is the correct structure:
-head(farm.ccs.join) # Here we have a farm type data frame with Multi-polygon geometry - check!
+  # Double check that this is the correct structure:
+farm.ccs.sf <- st_as_sf(farm.ccs.join)
+head(farm.ccs.sf) # Here we have a farm type data frame with Multi-polygon geometry - check!
 
-######################## Next, we prepare the Dominant Farm Type and Total Farm Count by CCS Region:
+######################## Here, we calculate the denisty of farms in the region:
 
-# Selecting Dominant Ag Types By Region -----------------------------------
-  # Here we pull out the top 2 farm count values for each of the CCS codes 
-    # https://statisticsglobe.com/select-row-with-maximum-or-minimum-value-in-each-group-in-r
 
-farm.ccs.join$VALUE<- as.integer(farm.ccs.join$VALUE)
+# Here we subset the farm data to SOI, and pull out the total farm counts: ---------------------------------
 
-  # Pull out the top two values from the join:
-top.two.ccs.farm.types<- farm.ccs.join %>% group_by(GEO) %>% top_n(2,VALUE)  # YAY! This worked!
-str(top.two.ccs.farm.types) # check to see that this worked
+  # Start by cropping the data down to SOI:
+farm.ccs.sf <- st_transform(farm.ccs.sf, st_crs(south.int.10k.buf))
+farm.ccs.soi <- st_intersection(farm.ccs.sf, south.int.10k.buf) 
 
-# Subset the Farm Join & Print --------------------------------------------
-  # Extract Total Farm Counts by CCS: (Do this with the dominant farms too)
-total.farms.bc<- farm.ccs.join %>% group_by(GEO) %>% top_n(2,VALUE) %>% slice_min(., order_by = "VALUE") # This successfully gives us total farm count by CCS region
-head(total.farms.bc)
-# Do this to get our dominant (most frequent) farm types by CCS region:
-dominant.farms.bc<- farm.ccs.join %>% group_by(GEO) %>% top_n(2,VALUE) %>% slice_tail() # This gives us the dominant type WITHOUT the total farms 
-head(dominant.farms.bc)
+  # Subset the data - separate total farms out of NAIC:
+farm.soi.subset <- subset(farm.ccs.soi, North.American.Industry.Classification.System..NAICS. != "Total number of farms")
+names(farm.soi.subset)[names(farm.soi.subset) == "North.American.Industry.Classification.System..NAICS."] <- "N_A_I_C"
 
-# Save these as .shp's for later:
-st_write(dominant.farms.bc,"/Users/shannonspragg/ONA_GRIZZ/Data/processed/Dominant Farm Types by CCS.shp")
+  # Condense Farm Types to Animal & Ground Crop Production:
+animal.product.farming <- dplyr::filter(farm.soi.subset, N_A_I_C == "Beef cattle ranching and farming, including feedlots [112110]" | N_A_I_C == "Cattle ranching and farming [1121]" 
+                                        | N_A_I_C == "Dairy cattle and milk production [112120]" | N_A_I_C == "Hog and pig farming [1122]" | N_A_I_C == "Poultry and egg production [1123]"
+                                        | N_A_I_C == "Chicken egg production [112310]" | N_A_I_C == "Broiler and other meat-type chicken production [112320]" | N_A_I_C == "Turkey production [112330]"
+                                        | N_A_I_C == "Poultry hatcheries [112340]" | N_A_I_C == "Combination poultry and egg production [112391]" | N_A_I_C == "All other poultry production [112399]"
+                                        | N_A_I_C == "Sheep and goat farming [1124]" | N_A_I_C == "Sheep farming [112410]" | N_A_I_C == "Goat farming [112420]" | N_A_I_C =="Other animal production [1129]"
+                                        | N_A_I_C == "Apiculture [112910]" | N_A_I_C == "Horse and other equine production [112920]" | N_A_I_C == "Fur-bearing animal and rabbit production [112930]"
+                                        | N_A_I_C == "Animal combination farming [112991]" | N_A_I_C == "All other miscellaneous animal production [112999]") 
 
-st_write(total.farms.bc, "/Users/shannonspragg/ONA_GRIZZ/Data/processed/Total Farm Count by CCS.shp") 
+
+ground.crop.production <- dplyr::filter(farm.soi.subset, N_A_I_C == "Fruit and tree nut farming [1113]" | N_A_I_C == "Greenhouse, nursery and floriculture production [1114]" | N_A_I_C == "Vegetable and melon farming [1112]"
+                                        | N_A_I_C == "Oilseed and grain farming [1111]" | N_A_I_C == "Soybean farming [111110]" | N_A_I_C == "Oilseed (except soybean) farming [111120]"
+                                        | N_A_I_C == "Dry pea and bean farming [111130]" | N_A_I_C == "Wheat farming [111140]" | N_A_I_C == "Corn farming [111150]" | N_A_I_C == "Other grain farming [111190]"
+                                        | N_A_I_C == "Potato farming [111211]" | N_A_I_C == "Other vegetable (except potato) and melon farming [111219]" | N_A_I_C == "Mushroom production [111411]" 
+                                        | N_A_I_C == "Other food crops grown under cover [111419]" | N_A_I_C == "Nursery and tree production [111421]" | N_A_I_C == "Floriculture production [111422]" 
+                                        | N_A_I_C == "Other crop farming [1119]" | N_A_I_C == "Tobacco farming [111910]" | N_A_I_C == "Hay farming [111940]" | N_A_I_C == "Fruit and vegetable combination farming [111993]"
+                                        | N_A_I_C == "Maple syrup and products production [111994]" | N_A_I_C == "All other miscellaneous crop farming [111999]" )
+
+# Calculate the Density of Farm Types: ------------------------------------
+
+  # We do so by dividing the count of farms by the overall area of the farm type categories:
+
+  # Calculate our areas for the two objects: 
+animal.product.farming$AREA_SQM <- st_area(animal.product.farming)
+ground.crop.production$AREA_SQM <- st_area(ground.crop.production)
+
+  # Make our area units kilometers:
+animal.product.farming$AREA_SQ_KM <- set_units(animal.product.farming$AREA_SQM, km^2)
+ground.crop.production$AREA_SQ_KM <- set_units(ground.crop.production$AREA_SQM, km^2)
+
+
+  # Now we make a new col with our farms per sq km:
+animal.product.farming$Farms_per_sq_km <- animal.product.farming$VALUE / animal.product.farming$AREA_SQ_KM
+head(animal.product.farming)
+
+ground.crop.production$Farms_per_sq_km <- ground.crop.production$VALUE / ground.crop.production$AREA_SQ_KM
+head(ground.crop.production)
+
+  # Save these as .shp's for later:
+st_write(animal.product.farming,"/Users/shannonspragg/ONA_GRIZZ/Data/processed/Animal Product Farming.shp")
+
+st_write(ground.crop.production, "/Users/shannonspragg/ONA_GRIZZ/Data/processed/Ground Crop Production.shp") 
+
+
+################################# Prep Grizzly Population Units:
+
+# Check Projections: ------------------------------------------------------
+st_crs(grizz.units) == st_crs(south.int.10k.buf) #TRUE
+
+  # Plot these together to see overlap:
+plot(st_geometry(grizz.units))
+
+
+# Filter these to just the extant populations: ----------------------------
+
+
+
 
 
 ################################# Prep Human Density Predictor:

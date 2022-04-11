@@ -166,6 +166,13 @@ which(is.na(pres.abs.reproj$dist_to_PA))
 which(is.na(pres.abs.reproj$dist_to_Metro))
 
 
+############################# Prepare Distance to Extent Bear Populations Variable: -------------------
+
+
+
+
+
+
 ############################## Adding the Agriculture Predictors to Our Data:
 
 # Rasterize Farm Data & WARP Points ---------------------------------------
@@ -187,13 +194,14 @@ ground.crop.production <- dplyr::filter(farm.type.soi.crop, N_A_I_C == "Fruit an
 
   # We do so by dividing the count of farms by the overall area of the farm type categories:
 
-  # Put our area units in kilometers 
-as.numeric(animal.product.farming$AREA_SQM)
-animal.product.farming$AREA_SQ_KM<-conv_unit(animal.product.farming$AREA_SQM,"m","km")
-head(animal.product.farming)
-as.numeric(ground.crop.production$AREA_SQM)
-ground.crop.production$AREA_SQ_KM<-conv_unit(ground.crop.production$AREA_SQM,"m","km")
-head(ground.crop.production)
+  # Calculate our areas for the two objects: 
+animal.product.farming$AREA_SQ_KM <- st_area(animal.product.farming)
+ground.crop.production$AREA_SQ_KM <- st_area(ground.crop.production)
+
+  # Make our area units kilometers:
+animal.product.farming$AREA_SQ_KM <- conv_unit(animal.product.farming$AREA_SQ_KM,"m","km")
+ground.crop.production$AREA_SQ_KM <- conv_unit(ground.crop.production$AREA_SQ_KM,"m","km")
+
 
   # Now we make a new col with our farms per sq km:
 animal.product.farming$Farms_per_sq_km <- animal.product.farming$VALUE / animal.product.farming$AREA_SQ_KM
@@ -247,6 +255,7 @@ terra::writeRaster(farm.count.rast, "/Users/shannonspragg/ONA_GRIZZ/Data/process
 
 terra::writeRaster(animal.product.soi, "/Users/shannonspragg/ONA_GRIZZ/Data/processed/animal_production_density_raster.tif")
 terra::writeRaster(ground.crop.soi, "/Users/shannonspragg/ONA_GRIZZ/Data/processed/ground_crop_density_raster.tif" )
+
 
 
 # Buffer WARP Points Before Attributing Farm Values -----------------------

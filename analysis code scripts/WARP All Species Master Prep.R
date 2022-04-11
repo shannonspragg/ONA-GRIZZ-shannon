@@ -33,14 +33,14 @@ bc.PAs <- st_read("/Users/shannonspragg/ONA_GRIZZ/CAN Spatial Data/BC protected 
 bc.PAs <- st_read("/Users/shannonspragg/ONA_GRIZZ/Data/original/CAN Protected Areas/Parks_Combined2.shp") # Clayton's data
 
   # BC Metropolitan Areas:
-bc.metro<-st_read("/Users/shannonspragg/ONA_GRIZZ/CAN Spatial Data/BC census metro areas/CEN_CENSUS_METRO_AREAS_SVW/CNCNSSMTRR_polygon.shp")
+bc.metro<-st_read("/Users/shannonspragg/ONA_GRIZZ/Data/original/BC Metro Areas/CNCNSSMTRR_polygon.shp")
 str(bc.metro) # check this
-  # DOminant Farm Type by CCS Region:
-dominant.farms.bc <-st_read("/Users/shannonspragg/ONA_GRIZZ/Data/processed/Dominant Farm Types by CCS.shp")
-str(dominant.farms.bc)
-  # Total Farm Count by CCS Region:
-total.farms.bc <-st_read("/Users/shannonspragg/ONA_GRIZZ/Data/processed/Total Farm Count by CCS.shp")
-str(total.farms.bc)
+
+  # Animal Product & Meat Farming:
+animal.product.farming <- st_read("/Users/shannonspragg/ONA_GRIZZ/Data/processed/Animal Product Farming.shp")
+  # Ground Crop & Produce Production:
+ground.crop.production <- st_read("/Users/shannonspragg/ONA_GRIZZ/Data/processed/Ground Crop Production.shp")
+
   # BC CCS Regions:
 bc.ccs<-st_read("//Users/shannonspragg/ONA_GRIZZ/Data/processed/BC CCS.shp")
 str(bc.ccs)
@@ -178,83 +178,22 @@ which(is.na(pres.abs.reproj$dist_to_Metro))
 # Rasterize Farm Data & WARP Points ---------------------------------------
   ## Here we make rasters for the farm type categories within our SOI region:
 
-  # Crop our Farm Polygons to SOI boundary:
-farm.type.soi.crop <- st_intersection(farms.reproj, soi.bound.reproj)
-plot(st_geometry(farm.type.soi.crop))
-
-tot.farms.soi.crop <- st_intersection(total.farms.reproj, soi.bound.reproj)
-plot(st_geometry(tot.farms.soi.crop))
-plot(st_geometry(soi.bound.reproj), add=TRUE) # This works
-
-  # Condense Farm Types to Animal & Ground Crop Production:
-animal.product.farming <- dplyr::filter(farm.type.soi.crop, N_A_I_C == "Beef cattle ranching and farming, including feedlots [112110]" | N_A_I_C == "Cattle ranching and farming [1121]" | N_A_I_C == "Other animal production [1129]") 
-ground.crop.production <- dplyr::filter(farm.type.soi.crop, N_A_I_C == "Fruit and tree nut farming [1113]" | N_A_I_C == "Greenhouse, nursery and floriculture production [1114]" | N_A_I_C == "Vegetable and melon farming [1112]")
-
-  ########## Calculate the density of our farm types:
-
-  # We do so by dividing the count of farms by the overall area of the farm type categories:
-
-  # Calculate our areas for the two objects: 
-animal.product.farming$AREA_SQ_KM <- st_area(animal.product.farming)
-ground.crop.production$AREA_SQ_KM <- st_area(ground.crop.production)
-
-  # Make our area units kilometers:
-animal.product.farming$AREA_SQ_KM <- conv_unit(animal.product.farming$AREA_SQ_KM,"m","km")
-ground.crop.production$AREA_SQ_KM <- conv_unit(ground.crop.production$AREA_SQ_KM,"m","km")
-
-
-  # Now we make a new col with our farms per sq km:
-animal.product.farming$Farms_per_sq_km <- animal.product.farming$VALUE / animal.product.farming$AREA_SQ_KM
-head(animal.product.farming)
-
-ground.crop.production$Farms_per_sq_km <- ground.crop.production$VALUE / ground.crop.production$AREA_SQ_KM
-head(ground.crop.production)
-
-
-  # Make farm type a spatvector:
-farm.type.soi.sv <- vect(farm.type.soi.crop)
-
-  # And our sub categories as spat vectors:
+  # Make these spat vectors:
 animal.prod.sv <- vect(animal.product.farming)
 ground.crop.sv <- vect(ground.crop.production)
 
-  # Now farm count:
-farm.count.soi.sv <- vect(tot.farms.soi.crop)
-plot(farm.count.soi.sv)
-
-  # Rasterize the farm type and count:
-farm.type.rast <- terra::rasterize(farm.type.soi.sv, soi.rast, field = "N_A_I_C")
-plot(farm.type.rast)
-
-farm.count.rast <- terra::rasterize(farm.count.soi.sv, soi.rast, field = "VALUE")
-plot(farm.count.rast)
-
-  # And our subset rasters:
+  # Rasterize our subset rasters:
 animal.prod.rast <- terra::rasterize(animal.prod.sv, soi.rast, field = "Farms_per_sq_km")
 ground.crop.rast <- terra::rasterize(ground.crop.sv, soi.rast, field = "Farms_per_sq_km")
 
   # Fix the column names:
-names(farm.type.rast)[names(farm.type.rast) == "N_A_I_C"] <- "Dominant Farm Type by CCS"
-
 names(animal.prod.rast)[names(animal.prod.rast) == "Farms_per_sq_km"] <- "Density of Animal Product & Meat Farming / sq km"
 names(ground.crop.rast)[names(ground.crop.rast) == "Farms_per_sq_km"] <- "Density of Ground Crop & Produce Farming / sq km"
 
-names(farm.count.rast)[names(farm.count.rast) == "VALUE"] <- "Total Farm Count by CCS"
-
-  # Merge these back to SOI Rasters (so we have values for the SOI region outside each farm type area):
-animal.product.soi <- merge(animal.prod.rast, soi.rast)
-animal.product.soi[animal.product.soi == 327] <- 0
-
-ground.crop.soi <- merge(ground.crop.rast, soi.rast)
-ground.crop.soi[ground.crop.soi == 327] <- 0
-
 
   # Save these Farm Rasters:
-terra::writeRaster(farm.type.rast, "/Users/shannonspragg/ONA_GRIZZ/Data/processed/dom_farm_type_raster.tif")
-terra::writeRaster(farm.count.rast, "/Users/shannonspragg/ONA_GRIZZ/Data/processed/total_farm_count_raster.tif" )
-
-terra::writeRaster(animal.product.soi, "/Users/shannonspragg/ONA_GRIZZ/Data/processed/animal_production_density_raster.tif")
-terra::writeRaster(ground.crop.soi, "/Users/shannonspragg/ONA_GRIZZ/Data/processed/ground_crop_density_raster.tif" )
+terra::writeRaster(animal.prod.rast, "/Users/shannonspragg/ONA_GRIZZ/Data/processed/animal_production_density_raster.tif")
+terra::writeRaster(ground.crop.rast, "/Users/shannonspragg/ONA_GRIZZ/Data/processed/ground_crop_density_raster.tif" )
 
 
 

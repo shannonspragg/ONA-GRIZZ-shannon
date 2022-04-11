@@ -143,7 +143,7 @@ bc.ccs<-can.ccs.sf %>%
   st_make_valid()
   
 # Save this for later:
-st_write(bc.ccs, "BC CCS.shp")
+st_write(bc.ccs, "/Users/shannonspragg/ONA_GRIZZ/Data/processed/BC CCS.shp")
 
 # Filter the Ag Files down to just BC districts:
   # See here: https://www.statology.org/filter-rows-that-contain-string-dplyr/  searched: 'Return rows with partial string, filter dplyr'

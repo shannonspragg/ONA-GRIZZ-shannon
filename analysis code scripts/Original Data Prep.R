@@ -186,14 +186,23 @@ head(farm.ccs.sf) # Here we have a farm type data frame with Multi-polygon geome
 
 
 # Here we subset the farm data to SOI, and pull out the total farm counts: ---------------------------------
+  
+# Buffering EcoProvince by 50km:
+  # We want a wider buffer here to allow for values along the edge of our region to be maintained, for purposes
+  # of overlaying these with buffered points for a later extraction:
+south.int.50k.buf <- st_buffer(south.interior.ep, 50000)
 
-  # Start by cropping the data down to SOI:
-farm.ccs.sf <- st_transform(farm.ccs.sf, st_crs(south.int.10k.buf))
+
+  # Start by cropping the data down to SOI buffer:
+farm.ccs.sf <- st_transform(farm.ccs.sf, st_crs(south.int.50k.buf))
 farm.ccs.soi <- st_intersection(farm.ccs.sf, south.int.10k.buf) 
+farm.ccs.soi.50km <- st_intersection(farm.ccs.sf, south.int.50k.buf) 
 
   # Subset the data - separate total farms out of NAIC:
 farm.soi.subset <- subset(farm.ccs.soi, North.American.Industry.Classification.System..NAICS. != "Total number of farms")
 names(farm.soi.subset)[names(farm.soi.subset) == "North.American.Industry.Classification.System..NAICS."] <- "N_A_I_C"
+farm.soi.subset.50km <- subset(farm.ccs.soi.50km, North.American.Industry.Classification.System..NAICS. != "Total number of farms")
+names(farm.soi.subset.50km)[names(farm.soi.subset.50km) == "North.American.Industry.Classification.System..NAICS."] <- "N_A_I_C"
 
   # Condense Farm Types to Animal & Ground Crop Production:
 animal.product.farming <- dplyr::filter(farm.soi.subset, N_A_I_C == "Beef cattle ranching and farming, including feedlots [112110]" | N_A_I_C == "Cattle ranching and farming [1121]" 
@@ -213,18 +222,42 @@ ground.crop.production <- dplyr::filter(farm.soi.subset, N_A_I_C == "Fruit and t
                                         | N_A_I_C == "Other crop farming [1119]" | N_A_I_C == "Tobacco farming [111910]" | N_A_I_C == "Hay farming [111940]" | N_A_I_C == "Fruit and vegetable combination farming [111993]"
                                         | N_A_I_C == "Maple syrup and products production [111994]" | N_A_I_C == "All other miscellaneous crop farming [111999]" )
 
+  # Mirror this for the buffered dataset:
+animal.product.farming.50km <- dplyr::filter(farm.soi.subset.50km, N_A_I_C == "Beef cattle ranching and farming, including feedlots [112110]" | N_A_I_C == "Cattle ranching and farming [1121]" 
+                                        | N_A_I_C == "Dairy cattle and milk production [112120]" | N_A_I_C == "Hog and pig farming [1122]" | N_A_I_C == "Poultry and egg production [1123]"
+                                        | N_A_I_C == "Chicken egg production [112310]" | N_A_I_C == "Broiler and other meat-type chicken production [112320]" | N_A_I_C == "Turkey production [112330]"
+                                        | N_A_I_C == "Poultry hatcheries [112340]" | N_A_I_C == "Combination poultry and egg production [112391]" | N_A_I_C == "All other poultry production [112399]"
+                                        | N_A_I_C == "Sheep and goat farming [1124]" | N_A_I_C == "Sheep farming [112410]" | N_A_I_C == "Goat farming [112420]" | N_A_I_C =="Other animal production [1129]"
+                                        | N_A_I_C == "Apiculture [112910]" | N_A_I_C == "Horse and other equine production [112920]" | N_A_I_C == "Fur-bearing animal and rabbit production [112930]"
+                                        | N_A_I_C == "Animal combination farming [112991]" | N_A_I_C == "All other miscellaneous animal production [112999]") 
+
+
+ground.crop.production.50km <- dplyr::filter(farm.soi.subset.50km, N_A_I_C == "Fruit and tree nut farming [1113]" | N_A_I_C == "Greenhouse, nursery and floriculture production [1114]" | N_A_I_C == "Vegetable and melon farming [1112]"
+                                        | N_A_I_C == "Oilseed and grain farming [1111]" | N_A_I_C == "Soybean farming [111110]" | N_A_I_C == "Oilseed (except soybean) farming [111120]"
+                                        | N_A_I_C == "Dry pea and bean farming [111130]" | N_A_I_C == "Wheat farming [111140]" | N_A_I_C == "Corn farming [111150]" | N_A_I_C == "Other grain farming [111190]"
+                                        | N_A_I_C == "Potato farming [111211]" | N_A_I_C == "Other vegetable (except potato) and melon farming [111219]" | N_A_I_C == "Mushroom production [111411]" 
+                                        | N_A_I_C == "Other food crops grown under cover [111419]" | N_A_I_C == "Nursery and tree production [111421]" | N_A_I_C == "Floriculture production [111422]" 
+                                        | N_A_I_C == "Other crop farming [1119]" | N_A_I_C == "Tobacco farming [111910]" | N_A_I_C == "Hay farming [111940]" | N_A_I_C == "Fruit and vegetable combination farming [111993]"
+                                        | N_A_I_C == "Maple syrup and products production [111994]" | N_A_I_C == "All other miscellaneous crop farming [111999]" )
+
+
 # Calculate the Density of Farm Types: ------------------------------------
 
-  # We do so by dividing the count of farms by the overall area of the farm type categories:
+  # We do so by dividing the count of farms by the overall area of the farm type categories (for our 10km buffered area, but save this to the 50km dataset 
+  # so that we have values on the edge of our 10km zone):
 
   # Calculate our areas for the two objects: 
+animal.product.farming.50km$AREA_SQM <- st_area(animal.product.farming.50km)
 animal.product.farming$AREA_SQM <- st_area(animal.product.farming)
-ground.crop.production$AREA_SQM <- st_area(ground.crop.production)
+
+ground.crop.production.50km$AREA_SQM <- st_area(ground.crop.production.50km)
 
   # Make our area units kilometers:
 animal.product.farming$AREA_SQ_KM <- set_units(animal.product.farming$AREA_SQM, km^2)
 ground.crop.production$AREA_SQ_KM <- set_units(ground.crop.production$AREA_SQM, km^2)
 
+animal.product.farming.50km$AREA_SQ_KM <- set_units(animal.product.farming.50km$AREA_SQM, km^2)
+ground.crop.production.50km$AREA_SQ_KM <- set_units(ground.crop.production.50km$AREA_SQM, km^2)
 
   # Now we make a new col with our farms per sq km:
 animal.product.farming$Farms_per_sq_km <- animal.product.farming$VALUE / animal.product.farming$AREA_SQ_KM
@@ -233,10 +266,20 @@ head(animal.product.farming)
 ground.crop.production$Farms_per_sq_km <- ground.crop.production$VALUE / ground.crop.production$AREA_SQ_KM
 head(ground.crop.production)
 
+animal.product.farming.50km$Farms_per_sq_km <- animal.product.farming.50km$VALUE / animal.product.farming.50km$AREA_SQ_KM
+head(animal.product.farming.50km)
+
+ground.crop.production.50km$Farms_per_sq_km <- ground.crop.production.50km$VALUE / ground.crop.production.50km$AREA_SQ_KM
+head(ground.crop.production.50km)
+
   # Save these as .shp's for later:
 st_write(animal.product.farming,"/Users/shannonspragg/ONA_GRIZZ/Data/processed/Animal Product Farming.shp")
 
 st_write(ground.crop.production, "/Users/shannonspragg/ONA_GRIZZ/Data/processed/Ground Crop Production.shp") 
+
+st_write(animal.product.farming.50km,"/Users/shannonspragg/ONA_GRIZZ/Data/processed/Animal Product Farming 50km buf.shp")
+
+st_write(ground.crop.production.50km, "/Users/shannonspragg/ONA_GRIZZ/Data/processed/Ground Crop Production 50km buf.shp") 
 
 
 ################################# Prep Grizzly Population Units:
@@ -250,7 +293,16 @@ plot(st_geometry(grizz.units))
 
 # Filter these to just the extant populations: ----------------------------
 
+extent.grizz <- filter(grizz.units, POP_NAME == "South Chilcotin Ranges" | POP_NAME == "Squamish-Lillooet" | POP_NAME == "Columbia-Shuswap"
+                       | POP_NAME == "Central Monashee" | POP_NAME == "Valhalla" | POP_NAME == "Kettle-Granby" | POP_NAME == "Central Selkirk"
+                       | POP_NAME == "Wells Gray" | POP_NAME == "South Selkirk")
 
+  # Plot with our boundary to see overlap/position
+plot(st_geometry(extent.grizz))
+plot(st_geometry(south.int.10k.buf), add=TRUE)
+
+  # Save this for later:
+st_write(extent.grizz, "/Users/shannonspragg/ONA_GRIZZ/Data/processed/Extent Grizzly Pop Units.shp") 
 
 
 

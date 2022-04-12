@@ -250,11 +250,13 @@ plot(st_geometry(pres.abs.buf)) # Check the buffers
 bears.sv.buf <- vect(bears.buf)
 pres.abs.sv.buf <- vect(pres.abs.buf)
 
+crs(bears.sv.buf) == crs(animal.prod.rast) #TRUE
+
 # Prep Variable 4: the Dominant Ag Type & Total Farm Count by CCS ----------------------------
   # Here I will extract the mean values from each raster to the buffered points
 
   # First, for our WARP data:
-bears.animal.prods.ext <- terra::extract(animal.prod.rast, bears.sv.buf, mean, na.rm = TRUE) 
+bears.animal.prods.ext <- terra::extract(animal.prod.rast, bears.sv.buf, mean, na.rm=TRUE) 
 # This gives us the mean value of each buffered area --> what we want!
 bears.ground.crop.ext <- terra::extract(ground.crop.rast, bears.sv.buf, mean, na.rm = TRUE) 
 
@@ -266,7 +268,6 @@ pres.abs.ground.crop.ext <- terra::extract(ground.crop.rast, pres.abs.sv.buf, me
 
 
 # Create New Column(s) for Extracted Values:
-bears.animal.prods.ext <- as.numeric(as.character(bears.animal.prods.ext))
 
 bears.reproj$Animal_Farming <- bears.animal.prods.ext[,2]
 bears.reproj$Ground_Crops <- bears.ground.crop.ext[,2]
@@ -274,7 +275,6 @@ bears.reproj$Ground_Crops <- bears.ground.crop.ext[,2]
 pres.abs.reproj$Animal_Farming <- pres.abs.animal.prods.ext[,2]
 pres.abs.reproj$Ground_Crops <- pres.abs.ground.crop.ext[,2]
 
-bears.reproj$Animal_Farming <- as.numeric(as.character(bears.reproj$Animal_Farming))
 
 # Check for NA's quick:
 which(is.na(bears.reproj$Animal_Farming))

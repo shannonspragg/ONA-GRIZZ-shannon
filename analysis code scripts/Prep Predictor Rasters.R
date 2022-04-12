@@ -66,7 +66,7 @@ plot(st_geometry(soi.bound.reproj), add=TRUE) # This works
 st_write(PAs.soi.crop, "/Users/shannonspragg/ONA_GRIZZ/CAN Spatial Data/SOI PAs & Metro Areas/soi.PAs.10km.buf.shp")
 st_write(metro.soi.crop, "/Users/shannonspragg/ONA_GRIZZ/CAN Spatial Data/SOI PAs & Metro Areas/soi.metro.10km.buf.shp")
 
-  # Buffer our region by 5km, so we have a space of 15km total (to accound for PA's just outside of our SOI 10km boundary):
+  # Buffer our region by 5km, so we have a space of 15km total (to account for PA's just outside of our SOI 10km boundary):
 soi.15km.buf <- soi.bound.reproj %>% 
   st_buffer(., 5000)
 plot(st_geometry(soi.15km.buf)) # Check the buffers
@@ -74,52 +74,44 @@ plot(st_geometry(soi.15km.buf)) # Check the buffers
 soi.pas.15km.buf <- st_intersection(bc.PAs.reproj, soi.15km.buf)
 
 
-# Filter our 15km Buffered PA's: ------------------------------------------
-  # We filter these so that we only include the larger protected areas
-
-  # Filter to those larger than 1,000 sq ha for general species:
-soi.15km.buf.1000hec <- filter(soi.pas.15km.buf, O_AREA > 1000) # Our 1k for general species
-  # Filter to those larger than 10,000 sq ha for bears:
-soi.15km.buf.10khec <- filter(soi.pas.15km.buf, O_AREA > 10000) # Our 10k for bears only
-
-# Save these PA's and Metro Areas for SOI:
-st_write(soi.15km.buf.1000hec, "/Users/shannonspragg/ONA_GRIZZ/CAN Spatial Data/SOI PAs & Metro Areas/1k_ha_soi.PAs.15km.buf.shp")
-st_write(soi.15km.buf.10khec, "/Users/shannonspragg/ONA_GRIZZ/CAN Spatial Data/SOI PAs & Metro Areas/10k_ha_soi.PAs.15km.buf.shp")
-
-
 # Rasterize our Points & Polygons: ----------------------------------------
 
   # Make our data spatvectors:
-PA.soi.1kha <- vect(soi.PA.filter.1000hec) # Our > 1000 ha PA's
-PA.soi.10kha <- vect(soi.PA.filter.10khec) # Our > 10k ha PA's
+PAs.soi <- vect(PA.soi.crop) 
 metro.soi.sv <- vect(metro.soi.crop)
 grizz.pop.sv <- vect(extent.grizz)
 
 # Create a Continuous Raster for Cell Distance to PA's: -------------------
 
   # Do this for our filtered PA's:
-dist.pa.raster.1kha <- terra::distance(soi.rast, PA.soi.1kha) # Dist for our 1k PA's
-
-dist.pa.raster.10kha <- terra::distance(soi.rast, PA.soi.10kha) # Dist for our 10k PA's
+dist.pa.raster <- terra::distance(soi.rast, PAs.soi) 
 
 dist.met.raster <- terra::distance(soi.rast, metro.soi.sv) 
 
-dist.grizz.pop.rast <- terra::distance(soi.rast, grizz.pop.sv) 
+dist.grizz.pop.raster <- terra::distance(soi.rast, grizz.pop.sv) 
 
   # Check this to see if it looks right:
-plot(dist.pa.raster.10kha) # Plot our 10k ha for bears
-plot(dist.pa.raster.1kha)  # Plot our 1k ha for general conflict
-plot(dist.met.raster)  # Plot our metro areas
+plot(dist.pa.raster) # Plot our PAs
+plot(dist.met.raster)  ## Plot our metro areas
+plot(dist.grizz.pop.raster)  # Plot our grizz pops
 
   # Make sure our rasters are in km:
-dist.pa.rast.1kha <- conv_unit(dist.pa.raster.1kha,"m","km") # There we go
-dist.pa.rast.10kha <- conv_unit(dist.pa.raster.10kha,"m","km")
+dist.pa.raster <- conv_unit(dist.pa.raster,"m","km") # There we go
 dist.met.raster <- conv_unit(dist.met.raster,"m","km")
+dist.grizz.pop.raster <- conv_unit(dist.grizz.pop.raster,"m","km")
 
-names(dist.pa.rast.1kha)[names(dist.pa.rast.1kha) == "SOI_10km"] <- "Distance to Nearest PA (km)"
-names(dist.pa.rast.10kha)[names(dist.pa.rast.10kha) == "SOI_10km"] <- "Distance to Nearest PA (km)"
+names(dist.pa.raster)[names(dist.pa.raster) == "SOI_10km"] <- "Distance to Nearest PA (km)"
 names(dist.met.raster)[names(dist.met.raster) == "SOI_10km"] <- "Distance to Nearest Metro (km)"
+names(dist.grizz.pop.raster)[names(dist.grizz.pop.raster) == "SOI_10km"] <- "Distance to Nearest Extent Grizzly Pop (km)"
 
+  # Invert distances: we want the highest raster value to be the closest (lowest distance) to our predictors:
+dist.pa.rast <- 1 - dist.pa.raster
+dist.met.rast <- 1 - dist.met.raster
+dist.grizz.rast <- 1 - dist.grizz.pop.raster
+  # Plot to check:
+plot(dist.pa.rast)
+plot(dist.met.rast)
+plot(dist.grizz.rast)
 
 
 ######################################## Now we Match All of our Rasters:
@@ -128,9 +120,8 @@ names(dist.met.raster)[names(dist.met.raster) == "SOI_10km"] <- "Distance to Nea
 crs(p.gen.conf.rast) == crs(grizzinc.rast) #TRUE
 crs(grizzinc.rast) == crs(bhs.rast) #TRUE
 crs(biophys.rast) == crs(bhs.rast) #TRUE
-crs(dist.pa.rast.10kha.soi) == crs(bhs.rast)
-crs(dist.pa.rast.1kha.soi) == crs(dist.met.rast.soi)
-crs(dist.met.rast.soi) == crs(bhs.rast)
+crs(dist.pa.rast) == crs(dist.met.rast)
+crs(dist.met.rast) == crs(dist.grizz.rast)
 
 
   # Check Extents:
@@ -146,17 +137,17 @@ ext(dist.pa.rast.10kha.soi)
 grizzinc.crop <- terra::crop(grizzinc.rast, soi.rast)  #MAKE SURE THIS IS UPDATED
 biophys.crop <- terra::crop(biophys.rast, soi.rast)
 bhs.crop <- terra::crop(bhs.rast, soi.rast)
-d2pa.b.crop <- terra::crop(dist.pa.rast.10kha.soi, soi.rast)
-d2pa.g.crop <- terra::crop(dist.pa.rast.1kha.soi, soi.rast)
-d2met.crop <- terra::crop(dist.met.rast.soi, soi.rast)
+d2pa.crop <- terra::crop(dist.pa.rast, soi.rast)
+d2met.crop <- terra::crop(dist.met.rast, soi.rast)
+d2grizzpop.crop <- terra::crop(dist.grizz.rast, soi.rast)
 
   # Resample to match extents and res:
 grizzinc.rsmple <- resample(grizzinc.crop, soi.rast, method='bilinear')
 biophys.rsmple <- resample(biophys.crop, soi.rast, method='bilinear')
 bhs.rsmple <- resample(bhs.crop, soi.rast, method='bilinear')
-d2pa.b.rsmpl <- resample(d2pa.b.crop, soi.rast, method='bilinear')
-d2pa.g.rsmpl <- resample(d2pa.g.crop, soi.rast, method='bilinear')
+d2pa.rsmpl <- resample(d2pa.b.crop, soi.rast, method='bilinear')
 d2met.rsmpl <- resample(d2met.crop, soi.rast, method='bilinear')
+d2grizz.pop.rsmpl <- resample(d2grizzpop.crop, soi.rast, method='bilinear')
 
 
   # Plot Check:
@@ -171,13 +162,13 @@ plot(soi.bound.vect, add=TRUE)
 plot(bhs.rsmple)
 plot(soi.bound.vect, add=TRUE)
 
-plot(d2pa.b.rsmpl)
-plot(soi.bound.vect, add=TRUE)
-
-plot(d2pa.g.rsmpl)
+plot(d2pa.rsmpl)
 plot(soi.bound.vect, add=TRUE)
 
 plot(d2met.rsmpl)
+plot(soi.bound.vect, add=TRUE)
+
+plot(d2grizz.pop.rsmpl)
 plot(soi.bound.vect, add=TRUE)
 
 # Cut these down to the SOI Boundary: -------------------------------------
@@ -186,23 +177,23 @@ grizzinc.soi <- terra::mask(grizzinc.rsmple, soi.bound.vect)
 biophys.soi <- terra::mask(biophys.rsmple, soi.bound.vect) 
 bhs.soi <- terra::mask(bhs.rsmple, soi.bound.vect) 
 d2pa.b.soi <- terra::mask(d2pa.b.rsmpl, soi.bound.vect) 
-d2pa.g.soi <- terra::mask(d2pa.g.rsmpl, soi.bound.vect) 
 d2met.soi <- terra::mask(d2met.rsmpl, soi.bound.vect) 
+d2grizzpop.soi <- terra::mask(d2grizz.pop.rsmpl, soi.bound.vect) 
 
 
 plot(biophys.soi)
 plot(bhs.soi)
-plot(d2pa.b.soi)
-plot(d2pa.g.soi)
+plot(d2pa.soi)
 plot(d2met.soi)
+plot(d2grizzpop.soi)
 
   # Fix the column names:
 names(grizzinc.soi)[names(grizzinc.soi) == "grizz_inc"] <- "Support for Grizzly Increase"
 names(biophys.soi)[names(biophys.soi) == "cum_curmap"] <- "Biophysical Connectivity Currentmap"
 names(bhs.soi)[names(bhs.soi) == "Height"] <- "Bear Habitat Suitability (BHS)"
-names(d2pa.b.soi)[names(d2pa.b.soi) == "SOI_10km"] <- "Distance to Nearest PA (km)"
-names(d2pa.g.soi)[names(d2pa.g.soi) == "SOI_10km"] <- "Distance to Nearest PA (km)"
+names(d2pa.b.soi)[names(d2pa.soi) == "SOI_10km"] <- "Distance to Nearest PA (km)"
 names(d2met.soi)[names(d2met.soi) == "SOI_10km"] <- "Distance to Nearest Metro (km)"
+names(d2grizzpop.soi)[names(d2grizzpop.soi) == "SOI_10km"] <- "Distance to Nearest Extent Grizz Pop (km)"
 
 
 
@@ -210,8 +201,8 @@ names(d2met.soi)[names(d2met.soi) == "SOI_10km"] <- "Distance to Nearest Metro (
 terra::writeRaster(grizzinc.soi, "/Users/shannonspragg/ONA_GRIZZ/Predictor Rasters/grizz_inc_SOI_10km.tif")
 terra::writeRaster(biophys.soi, "/Users/shannonspragg/ONA_GRIZZ/Predictor Rasters/biophys_SOI_10km.tif")
 terra::writeRaster(bhs.soi, "/Users/shannonspragg/ONA_GRIZZ/Predictor Rasters/bhs_SOI_10km.tif")
-terra::writeRaster(d2pa.b.soi, "/Users/shannonspragg/ONA_GRIZZ/Predictor Rasters/d2pa_bears_SOI_10km.tif")
+terra::writeRaster(d2pa.soi, "/Users/shannonspragg/ONA_GRIZZ/Predictor Rasters/dist2pa_SOI_10km.tif")
 terra::writeRaster(d2met.soi, "/Users/shannonspragg/ONA_GRIZZ/Predictor Rasters/dist2metro_raster.tif" )
-terra::writeRaster(d2pa.g.soi, "/Users/shannonspragg/ONA_GRIZZ/Predictor Rasters/1k_ha_dist2pa_raster.tif" )
+terra::writeRaster(d2grizzpop.soi, "/Users/shannonspragg/ONA_GRIZZ/Predictor Rasters/dist2grizz_pop_raster.tif" )
 
 

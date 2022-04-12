@@ -37,9 +37,9 @@ bc.metro<-st_read("/Users/shannonspragg/ONA_GRIZZ/Data/original/BC Metro Areas/C
 str(bc.metro) # check this
 
   # Animal Product & Meat Farming:
-animal.product.farming <- st_read("/Users/shannonspragg/ONA_GRIZZ/Data/processed/Animal Product Farming.shp")
+animal.prod.sf <- st_read("/Users/shannonspragg/ONA_GRIZZ/Data/processed/Animal Product Farming.shp")
   # Ground Crop & Produce Production:
-ground.crop.production <- st_read("/Users/shannonspragg/ONA_GRIZZ/Data/processed/Ground Crop Production.shp")
+ground.crop.sf <- st_read("/Users/shannonspragg/ONA_GRIZZ/Data/processed/Ground Crop Production.shp")
 
   # BC CCS Regions:
 bc.ccs<-st_read("//Users/shannonspragg/ONA_GRIZZ/Data/processed/BC CCS.shp")
@@ -208,7 +208,9 @@ head(pres.abs.reproj)
 
 # This added the dist to grizzly populations column to our data
 
-
+  # Check for NA:
+which(is.na(bears.reproj$dist_to_GrizzPop)) #none
+which(is.na(pres.abs.reproj$dist_to_GrizzPop)) #none
 
 ############################## Adding the Agriculture Predictors to Our Data:
 
@@ -216,8 +218,8 @@ head(pres.abs.reproj)
   ## Here we make rasters for the farm type categories within our SOI region:
 
   # Make these spat vectors:
-animal.prod.sv <- vect(animal.product.farming)
-ground.crop.sv <- vect(ground.crop.production)
+animal.prod.sv <- vect(animal.prod.sf)
+ground.crop.sv <- vect(ground.crop.sf)
 
 
   # Rasterize our subset rasters:
@@ -251,6 +253,8 @@ bears.sv.buf <- vect(bears.buf)
 pres.abs.sv.buf <- vect(pres.abs.buf)
 
 crs(bears.sv.buf) == crs(animal.prod.rast) #TRUE
+crs(pres.abs.sv.buf) == crs(animal.prod.rast) #TRUE
+
 
 # Prep Variable 4: the Dominant Ag Type & Total Farm Count by CCS ----------------------------
   # Here I will extract the mean values from each raster to the buffered points
@@ -260,14 +264,12 @@ bears.animal.prods.ext <- terra::extract(animal.prod.rast, bears.sv.buf, mean, n
 # This gives us the mean value of each buffered area --> what we want!
 bears.ground.crop.ext <- terra::extract(ground.crop.rast, bears.sv.buf, mean, na.rm = TRUE) 
 
-# Next, for our pres abs data:
+  # Next, for our pres abs data:
 pres.abs.animal.prods.ext <- terra::extract(animal.prod.rast, pres.abs.sv.buf, mean, na.rm = TRUE) 
 # This gives us the mean value of each buffered area --> what we want!
 pres.abs.ground.crop.ext <- terra::extract(ground.crop.rast, pres.abs.sv.buf, mean, na.rm = TRUE) 
 
-
-
-# Create New Column(s) for Extracted Values:
+  # Create New Column(s) for Extracted Values:
 
 bears.reproj$Animal_Farming <- bears.animal.prods.ext[,2]
 bears.reproj$Ground_Crops <- bears.ground.crop.ext[,2]
@@ -275,13 +277,27 @@ bears.reproj$Ground_Crops <- bears.ground.crop.ext[,2]
 pres.abs.reproj$Animal_Farming <- pres.abs.animal.prods.ext[,2]
 pres.abs.reproj$Ground_Crops <- pres.abs.ground.crop.ext[,2]
 
-
-# Check for NA's quick:
+  # Check for NA's quick:
 which(is.na(bears.reproj$Animal_Farming))
 which(is.na(bears.reproj$Ground_Crops))
 
-which(is.na(pres.abs.reproj$Animal_Farming))
-which(is.na(pres.abs.reproj$Ground_Crops))
+which(is.na(pres.abs.reproj$Animal_Farming)) # We have about 150 NA's
+which(is.na(pres.abs.reproj$Ground_Crops)) # Same NA's as above
+
+  # Plot some of our NA's to see if they're outside the boundary:
+plot(animal.prod.rast)
+plot(st_geometry(pres.abs.reproj[16605,]), col = "red", add=TRUE)
+plot(st_geometry(pres.abs.reproj[9601,]), col = "red", add=TRUE)
+plot(st_geometry(pres.abs.reproj[13096,]), col = "red", add=TRUE) # All of these are outside our southern border
+
+  # Drop these NA records:
+pres.abs.dropped <- pres.abs.reproj %>% drop_na(Animal_Farming) %>% drop_na(Ground_Crops)
+
+which(is.na(pres.abs.dropped$Animal_Farming)) # Now they're gone
+which(is.na(pres.abs.dropped$Ground_Crops)) # Same
+
+  # Update data frame:
+pres.abs.reproj <- pres.abs.dropped
 
 ############################ Next, Add in the CCS Region Names to the Data:
 
@@ -292,21 +308,21 @@ bc.ccs.reproj <- st_transform(bc.ccs, st_crs(soi.bound.reproj))
   # Check to see if the projections match:
 st_crs(bc.ccs.reproj) == st_crs(soi.bound.reproj) # [TRUE] 
 
-st_crs(bears.reproj) == st_crs(bc.ccs.crop) # [TRUE] 
-st_crs(pres.abs.reproj) == st_crs(bc.ccs.crop) # [TRUE] 
+st_crs(bears.reproj) == st_crs(bc.ccs.reproj) # [TRUE] 
+st_crs(pres.abs.reproj) == st_crs(bc.ccs.reproj) # [TRUE] 
 
   # Plot these together to make sure:
 plot(st_geometry(bc.ccs.reproj))
 plot(st_geometry(soi.bound.reproj), add=TRUE)
 
-plot(st_geometry(soi.bound.reproj))
-plot(st_geometry(bears.reproj), add=TRUE)
-
 # Crop CCS Down to SOI 10km Extent: --------------------------------------------
 soi.ccs.crop <- st_intersection(bc.ccs.reproj, soi.10k.buf)
 
+plot(st_geometry(soi.ccs.crop))
+plot(st_geometry(bears.reproj), add=TRUE)
+
   # Write this as a .shp for later:
-st_write(soi.ccs.crop, "/Users/shannonspragg/ONA_GRIZZ/CAN Spatial Data/SOI CCS regions/SOI_CCS_10km.shp")
+st_write(soi.ccs.crop, "/Users/shannonspragg/ONA_GRIZZ/Data/processed/SOI_CCS_10km.shp")
 
 # Assign the WARP Points to a CCS Region: ---------------------------------
   ## Here we want to overlay the points with the regions, adding a column in the warp data that is CCS region ID, 
@@ -338,7 +354,7 @@ warp.ccs.join$CDNAME <- NULL
 warp.ccs.join$CDTYPE <- NULL
 warp.ccs.join$CPRVNCNM <- NULL
 warp.ccs.join$CCSNAME.x <- NULL
-warp.ccs.join$CCSUID.x <- NULL
+warp.ccs.join$CCSUID_ <- NULL
 
 pres.abs.ccs.join$PRNAME <- NULL
 pres.abs.ccs.join$PRNTCDVSNC <- NULL
@@ -356,14 +372,7 @@ pres.abs.ccs.join$FEAT_LEN <- NULL
 pres.abs.ccs.join$CDNAME <- NULL
 pres.abs.ccs.join$CDTYPE <- NULL
 pres.abs.ccs.join$CPRVNCNM <- NULL
-pres.abs.ccs.join$CCSNAME.x <- NULL
-pres.abs.ccs.join$CCSUID.x <- NULL
-
-  # Rename these quick:
-names(warp.ccs.join)[names(warp.ccs.join) == "CCSUID.y"] <- "CCSUID"
-names(warp.ccs.join)[names(warp.ccs.join) == "CCSNAME.y"] <- "CCSNAME"
-names(pres.abs.ccs.join)[names(pres.abs.ccs.join) == "CCSUID.y"] <- "CCSUID"
-names(pres.abs.ccs.join)[names(pres.abs.ccs.join) == "CCSNAME.y"] <- "CCSNAME"
+pres.abs.ccs.join$CCSUID_ <- NULL
 
 head(warp.ccs.join)
 head(pres.abs.ccs.join)
@@ -371,13 +380,29 @@ head(pres.abs.ccs.join)
 # Check for NA's: -------------------------------------------------------
 
 which(is.na(warp.ccs.join$CCSNAME)) # no NAs
-which(is.na(warp.ccs.join$CCSUID)) # yay!!
+which(is.na(warp.ccs.join$CCSUID)) # same
 
-which(is.na(pres.abs.ccs.join$CCSNAME)) # no NAs
-which(is.na(pres.abs.ccs.join$CCSUID)) # yay!!
+which(is.na(pres.abs.ccs.join$CCSNAME)) # some 
+which(is.na(pres.abs.ccs.join$CCSUID)) # same as above
+
+  # Plot to see if these are outside the soi boundary too:
+plot(st_geometry(soi.ccs.crop))
+plot(st_geometry(pres.abs.ccs.join[11043,]), col = "red", add=TRUE)
+plot(st_geometry(pres.abs.reproj[13423,]), col = "red", add=TRUE)
+plot(st_geometry(pres.abs.reproj[16327,]), col = "red", add=TRUE) # All of these are just outside our southern border
+
+  # Drop these NA records:
+pres.abs.dropped <- pres.abs.ccs.join %>% drop_na(CCSNAME) %>% drop_na(CCSUID) 
+
+which(is.na(pres.abs.dropped$CCSNAME)) # Now they're gone
+which(is.na(pres.abs.dropped$CCSUID)) # Same
+
+# Update data frame:
+pres.abs.ccs.join <- pres.abs.dropped
+
 
 # WARP All Species Master Data Frame --------------------------------------
   # Save the resulting data frames here:
-st_write(warp.ccs.join, "/Users/shannonspragg/ONA_GRIZZ/WARP Bears /warp.master.shp")
-st_write(pres.abs.ccs.join, "/Users/shannonspragg/ONA_GRIZZ/WARP Bears /pres.abs.master.shp")
+st_write(warp.ccs.join, "/Users/shannonspragg/ONA_GRIZZ/Data/processed/warp.master.shp")
+st_write(pres.abs.ccs.join, "/Users/shannonspragg/ONA_GRIZZ/Data/processed/pres.abs.master.shp")
 

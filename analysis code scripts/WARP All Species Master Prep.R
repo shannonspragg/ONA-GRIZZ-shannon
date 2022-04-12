@@ -45,6 +45,9 @@ ground.crop.production <- st_read("/Users/shannonspragg/ONA_GRIZZ/Data/processed
 bc.ccs<-st_read("//Users/shannonspragg/ONA_GRIZZ/Data/processed/BC CCS.shp")
 str(bc.ccs)
 
+  # Extent Grizzly Populations:
+extent.grizz <- st_read("/Users/shannonspragg/ONA_GRIZZ/Data/processed/Extent Grizzly Pop Units.shp")
+
   # SOI Raster for rasterizing later:
 soi.rast <- terra::rast("/Users/shannonspragg/ONA_GRIZZ/Data/processed/SOI_10km.tif") # SOI Region 10km buffer raster
 
@@ -59,6 +62,8 @@ pres.abs.reproj <- st_make_valid(warp.pres.abs) %>%  # our pres-abs data
 bc.PAs.reproj <- st_make_valid(bc.PAs) %>% 
   st_transform(crs=crs(soi.rast))
 metro.reproj <- st_make_valid(bc.metro) %>% 
+  st_transform(crs=crs(soi.rast))
+grizz.pop.reproj <- st_make_valid(extent.grizz) %>% 
   st_transform(crs=crs(soi.rast))
 
 farms.reproj <- st_make_valid(dominant.farms.bc) %>% 
@@ -168,8 +173,40 @@ which(is.na(pres.abs.reproj$dist_to_Metro))
 
 ############################# Prepare Distance to Extent Bear Populations Variable: -------------------
 
+# Prep Variable 3: Dist to Extent Grizzly Populations ------------------------------------
+#Calculation of the distance between the grizz pop units and our points
 
+# Do this for our WARP only data:
+dist.pts2grizz.warp <- st_distance(bears.reproj, grizz.pop.reproj)
+head(dist.pts2grizz.warp)
 
+# And the pres-abs data:
+dist.pts2grizz.presabs <- st_distance(pres.abs.reproj, grizz.pop.reproj)
+head(dist.pts2grizz.presabs)
+
+# Must find the minimum distance to PA's (Distance from conflict point to nearest PA)
+min.dist.grizz.warp <- apply(dist.pts2grizz.warp, 1, min)
+min.dist.grizz.presabs <- apply(dist.pts2grizz.presabs, 1, min)
+
+# Add Distance Variable into Data table
+bears.reproj$dist_to_GrizzPop<-min.dist.grizz.warp
+head(bears.reproj)
+
+pres.abs.reproj$dist_to_GrizzPop<-min.dist.grizz.presabs
+head(pres.abs.reproj)
+
+# Remove the units from the values (note: in meters)
+as.numeric(bears.reproj$dist_to_GrizzPop) 
+as.numeric(pres.abs.reproj$dist_to_GrizzPop)
+
+# Convert units from meters to km:
+bears.reproj$dist_to_GrizzPop<-conv_unit(bears.reproj$dist_to_GrizzPop,"m","km")
+head(bears.reproj)
+
+pres.abs.reproj$dist_to_GrizzPop<-conv_unit(pres.abs.reproj$dist_to_GrizzPop,"m","km")
+head(pres.abs.reproj)
+
+# This added the dist to grizzly populations column to our data
 
 
 
@@ -182,9 +219,11 @@ which(is.na(pres.abs.reproj$dist_to_Metro))
 animal.prod.sv <- vect(animal.product.farming)
 ground.crop.sv <- vect(ground.crop.production)
 
+
   # Rasterize our subset rasters:
 animal.prod.rast <- terra::rasterize(animal.prod.sv, soi.rast, field = "Farms_per_sq_km")
 ground.crop.rast <- terra::rasterize(ground.crop.sv, soi.rast, field = "Farms_per_sq_km")
+
 
   # Fix the column names:
 names(animal.prod.rast)[names(animal.prod.rast) == "Farms_per_sq_km"] <- "Density of Animal Product & Meat Farming / sq km"
@@ -211,32 +250,38 @@ plot(st_geometry(pres.abs.buf)) # Check the buffers
 bears.sv.buf <- vect(bears.buf)
 pres.abs.sv.buf <- vect(pres.abs.buf)
 
-# Prep Variable 3: the Dominant Ag Type & Total Farm Count by CCS ----------------------------
+# Prep Variable 4: the Dominant Ag Type & Total Farm Count by CCS ----------------------------
   # Here I will extract the mean values from each raster to the buffered points
 
   # First, for our WARP data:
-bears.farm.type.ext <- terra::extract(farm.type.rast, bears.sv.buf, modal, na.rm = TRUE) 
+bears.animal.prods.ext <- terra::extract(animal.prod.rast, bears.sv.buf, mean, na.rm = TRUE) 
 # This gives us the mean value of each buffered area --> what we want!
-bears.total.farm.ext <- terra::extract(farm.count.rast, bears.sv.buf, mean, na.rm = TRUE) 
+bears.ground.crop.ext <- terra::extract(ground.crop.rast, bears.sv.buf, mean, na.rm = TRUE) 
 
 # Next, for our pres abs data:
-pres.abs.farm.type.ext <- terra::extract(farm.type.rast, pres.abs.sv.buf, modal, na.rm = TRUE) 
+pres.abs.animal.prods.ext <- terra::extract(animal.prod.rast, pres.abs.sv.buf, mean, na.rm = TRUE) 
 # This gives us the mean value of each buffered area --> what we want!
-pres.abs.total.farm.ext <- terra::extract(farm.count.rast, pres.abs.sv.buf, mean, na.rm = TRUE) 
+pres.abs.ground.crop.ext <- terra::extract(ground.crop.rast, pres.abs.sv.buf, mean, na.rm = TRUE) 
+
+
 
 # Create New Column(s) for Extracted Values:
-bears.reproj$Dm_Fr_T <- bears.farm.type.ext[,2]
-bears.reproj$Ttl_F_C <- bears.total.farm.ext[,2]
+bears.animal.prods.ext <- as.numeric(as.character(bears.animal.prods.ext))
 
-pres.abs.reproj$Dm_Fr_T <- pres.abs.farm.type.ext[,2]
-pres.abs.reproj$Ttl_F_C <- pres.abs.total.farm.ext[,2]
+bears.reproj$Animal_Farming <- bears.animal.prods.ext[,2]
+bears.reproj$Ground_Crops <- bears.ground.crop.ext[,2]
+
+pres.abs.reproj$Animal_Farming <- pres.abs.animal.prods.ext[,2]
+pres.abs.reproj$Ground_Crops <- pres.abs.ground.crop.ext[,2]
+
+bears.reproj$Animal_Farming <- as.numeric(as.character(bears.reproj$Animal_Farming))
 
 # Check for NA's quick:
-which(is.na(bears.reproj$Dm_Fr_T))
-which(is.na(bears.reproj$Ttl_F_C))
+which(is.na(bears.reproj$Animal_Farming))
+which(is.na(bears.reproj$Ground_Crops))
 
-which(is.na(pres.abs.reproj$Dm_Fr_T))
-which(is.na(pres.abs.reproj$Ttl_F_C))
+which(is.na(pres.abs.reproj$Animal_Farming))
+which(is.na(pres.abs.reproj$Ground_Crops))
 
 ############################ Next, Add in the CCS Region Names to the Data:
 

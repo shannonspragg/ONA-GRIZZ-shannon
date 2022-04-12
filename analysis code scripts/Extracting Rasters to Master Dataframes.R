@@ -17,9 +17,9 @@ library(rgdal)
 
 # Bring in Data: ----------------------------------
   # Our WARP points master df:
-warp.all.sp <- st_read("/Users/shannonspragg/ONA_GRIZZ/WARP Bears /warp.master.shp")
+warp.all.sp <- st_read("/Users/shannonspragg/ONA_GRIZZ/Data/processed/warp.master.shp")
   # Our pres-abs ponts master df:
-pres.abs.master <- ist_read("/Users/shannonspragg/ONA_GRIZZ/WARP Bears /pres.abs.master.shp")
+pres.abs.master <- ist_read("/Users/shannonspragg/ONA_GRIZZ/Data/processed/pres.abs.master.shp")
 
   # Predictor Rasters:
 biophys.cum.curmap <- rast("/Users/shannonspragg/ONA_grizz_Matt/data/processed/output/biophys_CS/cum_currmap.tif") # use this one

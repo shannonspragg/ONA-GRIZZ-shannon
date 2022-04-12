@@ -12,7 +12,6 @@ library(stars)
 
 
 # Load Data: --------------------------------------------------------------
-p.gen.conf.rast <- terra::rast("/Users/shannonspragg/ONA_GRIZZ/Predictor Rasters/prob_general_conf.tif")
 
   # Grizzinc:  UPDATE THIS WITH NEW DATA
 grizzinc.rast <- terra::rast("/Users/shannonspragg/rasters/grizz_inc.tif") 
@@ -27,12 +26,16 @@ biophys.rast <- rast("/Users/shannonspragg/ONA_grizz_Matt/data/processed/output/
 soi.10k.boundary <- st_read("/Users/shannonspragg/ONA_GRIZZ/CAN Spatial Data/SOI CCS regions/SOI_CCS_10km.shp")
 soi.rast <- rast("/Users/shannonspragg/ONA_GRIZZ/CAN Spatial Data/SOI Ecoprovince Boundary/SOI_10km.tif")
   
-# PA and Metro Data: (need to be cropped)
-bc.PAs <- st_read("/Users/shannonspragg/ONA_GRIZZ/CAN Spatial Data/BC protected areas/BC PAs.shp")
+  # PA and Metro Data: (need to be cropped)
+bc.PAs <- st_read("/Users/shannonspragg/ONA_GRIZZ/Data/original/CAN Protected Areas/Parks_Combined2.shp") # Clayton's data
+#bc.PAs <- st_read("/Users/shannonspragg/ONA_GRIZZ/CAN Spatial Data/BC protected areas/BC PAs.shp")
 bc.metro<-st_read("/Users/shannonspragg/ONA_GRIZZ/CAN Spatial Data/BC census metro areas/CEN_CENSUS_METRO_AREAS_SVW/CNCNSSMTRR_polygon.shp")
+  
+# Extent Grizzly Populations:
+extent.grizz <- st_read("/Users/shannonspragg/ONA_GRIZZ/Data/processed/Extent Grizzly Pop Units.shp")
 
   
-################################# First, we need to produce our Distance to PA and Metro Rasters:
+################################# First, we need to produce our Distance to PA, Metro, and Grizzly Pop Rasters:
 
 # Check Projections: ------------------------------------------------------
 
@@ -42,10 +45,13 @@ metro.reproj <- st_make_valid(bc.metro) %>%
   st_transform(crs=crs(soi.rast))
 soi.bound.reproj <- st_make_valid(soi.10k.boundary) %>% 
   st_transform(crs=crs(soi.rast))
+grizz.pop.reproj <- st_make_valid(extent.grizz) %>% 
+  st_transform(crs=crs(soi.rast))
 
   # Check to see if they match:
 st_crs(warp.pa.reproj) == st_crs(bc.PAs.reproj) # [TRUE] 
 st_crs(metro.reproj) == st_crs(soi.bound.reproj) # [TRUE]
+st_crs(grizz.pop.reproj) == st_crs(soi.bound.reproj) # [TRUE]
 
 # Crop PA's & Metro to SOI Region: ----------------------------------------
   # Crop these points to the SOI:
@@ -87,6 +93,8 @@ st_write(soi.15km.buf.10khec, "/Users/shannonspragg/ONA_GRIZZ/CAN Spatial Data/S
 PA.soi.1kha <- vect(soi.PA.filter.1000hec) # Our > 1000 ha PA's
 PA.soi.10kha <- vect(soi.PA.filter.10khec) # Our > 10k ha PA's
 metro.soi.sv <- vect(metro.soi.crop)
+grizz.pop.sv <- vect(extent.grizz)
+
 # Create a Continuous Raster for Cell Distance to PA's: -------------------
 
   # Do this for our filtered PA's:
@@ -95,6 +103,8 @@ dist.pa.raster.1kha <- terra::distance(soi.rast, PA.soi.1kha) # Dist for our 1k 
 dist.pa.raster.10kha <- terra::distance(soi.rast, PA.soi.10kha) # Dist for our 10k PA's
 
 dist.met.raster <- terra::distance(soi.rast, metro.soi.sv) 
+
+dist.grizz.pop.rast <- terra::distance(soi.rast, grizz.pop.sv) 
 
   # Check this to see if it looks right:
 plot(dist.pa.raster.10kha) # Plot our 10k ha for bears

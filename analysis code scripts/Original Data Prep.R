@@ -304,22 +304,9 @@ hum.dens.crop <- terra::crop(world.dens.reproj, soi.rast)
   # Resample to match template raster:
 hm.dens.rsmple <- resample(hum.dens.crop, soi.rast, method='bilinear')
 
-# Overlay the SOI Boundary: -----------------------------------------------
-soi.bound.vect <- vect(soi.reproj)
-
-plot(hm.dens.rsmple)
-plot(soi.bound.vect, add=TRUE) # We see they're projected properly and have a nice overlay going
-
-hm.dens.soi <- terra::mask(hm.dens.rsmple, soi.bound.vect) # BEA-UTIFUL!
-  # Check how this looks:
-str(hm.dens.soi) 
-plot(hm.dens.soi)
-
-# Fix the column names:
-names(hm.dens.soi)[names(hm.dens.soi) == "gpw_v4_population_density_adju~ountry_totals_rev11_2020_1_deg"] <- "Human Population Density by Nearest km"
 
 # Save Raster as .tif for later: ----------------------------------------------------
-terra::writeRaster(hm.dens.soi, "/Users/shannonspragg/ONA_GRIZZ/Data/processed/human_dens_SOI_10km.tif")
+terra::writeRaster(hm.dens.rsmple, "/Users/shannonspragg/ONA_GRIZZ/Data/processed/human_dens_SOI_10km.tif")
 
 
 ################################# Lastly, we will filter the CAN Protected Areas down to BC:

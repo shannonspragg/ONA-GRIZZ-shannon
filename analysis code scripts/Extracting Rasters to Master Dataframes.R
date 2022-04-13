@@ -126,9 +126,6 @@ biophys.rsmple <- resample(biophys.crop, soi.rsmple, method='bilinear')
 bhs.rsmple <- resample(bhs.crop, soi.rsmple, method='bilinear')
 hm.dens.rsmple <- resample(hm.dens.reproj, soi.rsmple, method='bilinear')
 
-grizzinc.soi <- terra::mask(grizzinc.rsmple, soi.bound.vect) 
-biophys.soi <- terra::mask(biophys.rsmple, soi.bound.vect) 
-bhs.soi <- terra::mask(bhs.rsmple, soi.bound.vect) 
 
 # Overlay WARP Points with CS Raster  --------------------------------------
 # Here we extract the mean values from each raster to the buffered points
@@ -154,17 +151,18 @@ pres.abs.reproj$BHS <- pres.abs.bhs.b.extract[,2]
 pres.abs.reproj$Human_Dens <- pres.abs.dens.b.ext[,2] 
 
 # Check for NA's:
-which(is.na(warp.reproj$BphysEx)) #none
-which(is.na(warp.reproj$BHSExtr)) #none
-which(is.na(warp.reproj$GrzzInE)) # none
+which(is.na(warp.reproj$Biophys)) #none
+which(is.na(warp.reproj$BHS)) #none
+which(is.na(warp.reproj$GrizzInc)) # none
 which(is.na(warp.reproj$Human_Dens)) 
 
-which(is.na(pres.abs.reproj$BphysEx)) #none
-which(is.na(pres.abs.reproj$BHSExtr)) #none
-which(is.na(pres.abs.reproj$GrzzInE)) # none
+which(is.na(pres.abs.reproj$Biophys)) #none
+which(is.na(pres.abs.reproj$BHS)) #none
+which(is.na(pres.abs.reproj$GrizzInc)) # none
 which(is.na(pres.abs.reproj$Human_Dens)) 
 
-
+plot(hm.dens.rsmple)
+plot(st_geometry(pres.abs.reproj[5921,]), add= TRUE)
 # Save this as new file ---------------------------------------------------
 
 st_write(warp.reproj, "/Users/shannonspragg/ONA_GRIZZ/WARP Bears /warp.final.shp")

@@ -117,21 +117,27 @@ plot(dist.grizz.rast)
 ######################################## Now we Match All of our Rasters:
 
 # Check Projections: ------------------------------------------------------
-crs(p.gen.conf.rast) == crs(grizzinc.rast) #TRUE
-crs(grizzinc.rast) == crs(bhs.rast) #TRUE
-crs(biophys.rast) == crs(bhs.rast) #TRUE
+  # GrizzInc Map:
+grizz.inc.reproj <- terra::project(grizz.inc.rast, crs(soi.rast))  ## CHECK THESE WITH IMPORT NAMES
+crs(grizz.inc.reproj) == crs(soi.rast) 
+  # Bear Density (BHS) Estimate:
+grizz.dens.reproj <- terra::project(grizz.dens, crs(soi.rast))
+crs(grizz.dens) == crs(soi.rast) # Nice, this worked --> now in BC Albers EPSG 3005
+  # Biophys Map:
+biophys.reproj <- terra::project(biophys.cum.curmap, crs(soi.rast))
+crs(biophys.cum.curmap) == crs(soi.rast) # Nice, this worked --> now in BC Albers EPSG 3005
+  # Human Density:
+hm.dens.reproj <- terra::project(hm.dens.soi, crs(soi.rast))
+crs(hm.dens.soi) == crs(soi.rast) # Nice, this worked --> now in BC Albers EPSG 3005
+
+
+crs(soi.rast) == crs(grizz.inc.reproj) #TRUE
+crs(grizz.inc.reproj) == crs(grizz.dens.reproj) #TRUE
+crs(biophys.rast) == crs(hm.dens.reproj) #TRUE
+crs(hm.dens.reproj) == crs(dist.pa.rast)
 crs(dist.pa.rast) == crs(dist.met.rast)
 crs(dist.met.rast) == crs(dist.grizz.rast)
 
-
-  # Check Extents:
-ext(soi.rast) # Need to match others to this one
-ext(grizzinc.rast)
-ext(biophys.rast)
-ext(bhs.rast)
-ext(dist.met.rast.soi)
-ext(dist.pa.rast.1kha.soi)
-ext(dist.pa.rast.10kha.soi)
 
   # Crop these Rasters:
 grizzinc.crop <- terra::crop(grizzinc.rast, soi.rast)  #MAKE SURE THIS IS UPDATED
@@ -142,12 +148,14 @@ d2met.crop <- terra::crop(dist.met.rast, soi.rast)
 d2grizzpop.crop <- terra::crop(dist.grizz.rast, soi.rast)
 
   # Resample to match extents and res:
+soi.rsmple <- resample( soi.rast,grizzinc.crop, method='bilinear')
 grizzinc.rsmple <- resample(grizzinc.crop, soi.rast, method='bilinear')
 biophys.rsmple <- resample(biophys.crop, soi.rast, method='bilinear')
 bhs.rsmple <- resample(bhs.crop, soi.rast, method='bilinear')
 d2pa.rsmpl <- resample(d2pa.b.crop, soi.rast, method='bilinear')
 d2met.rsmpl <- resample(d2met.crop, soi.rast, method='bilinear')
 d2grizz.pop.rsmpl <- resample(d2grizzpop.crop, soi.rast, method='bilinear')
+hm.dens.rsmple <- resample(hm.dens.reproj, soi.rsmple, method='bilinear')
 
 
   # Plot Check:
@@ -171,6 +179,10 @@ plot(soi.bound.vect, add=TRUE)
 plot(d2grizz.pop.rsmpl)
 plot(soi.bound.vect, add=TRUE)
 
+plot(hm.dens.rsmple)
+plot(soi.bound.vect, add=TRUE) 
+
+
 # Cut these down to the SOI Boundary: -------------------------------------
 
 grizzinc.soi <- terra::mask(grizzinc.rsmple, soi.bound.vect) 
@@ -179,6 +191,7 @@ bhs.soi <- terra::mask(bhs.rsmple, soi.bound.vect)
 d2pa.b.soi <- terra::mask(d2pa.b.rsmpl, soi.bound.vect) 
 d2met.soi <- terra::mask(d2met.rsmpl, soi.bound.vect) 
 d2grizzpop.soi <- terra::mask(d2grizz.pop.rsmpl, soi.bound.vect) 
+hm.dens.soi <- terra::mask(hm.dens.rsmple, soi.bound.vect) # BEA-UTIFUL!
 
 
 plot(biophys.soi)
@@ -194,6 +207,7 @@ names(bhs.soi)[names(bhs.soi) == "Height"] <- "Bear Habitat Suitability (BHS)"
 names(d2pa.b.soi)[names(d2pa.soi) == "SOI_10km"] <- "Distance to Nearest PA (km)"
 names(d2met.soi)[names(d2met.soi) == "SOI_10km"] <- "Distance to Nearest Metro (km)"
 names(d2grizzpop.soi)[names(d2grizzpop.soi) == "SOI_10km"] <- "Distance to Nearest Extent Grizz Pop (km)"
+names(hm.dens.soi)[names(hm.dens.soi) == "gpw_v4_population_density_adju~ountry_totals_rev11_2020_1_deg"] <- "Human Population Density by Nearest km"
 
 
 

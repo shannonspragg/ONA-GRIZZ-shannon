@@ -102,12 +102,12 @@ st_write(south.int.10k.buf, "/Users/shannonspragg/ONA_GRIZZ/Data/processed/SOI_1
   # Write this as a Raster for later:
 soi.vect <- vect(south.int.10k.buf)
 soi.rast.templ <- rast(soi.vect, nrows= 218, ncols=298, nlyrs=1, xmin=1149612, xmax=1585533, ymin=453864.2, ymax=772759.3)
-soi.rast <- rasterize(soi.vect, soi.rast.templ, field = "OBJECTID")
+soi.rast <- terra::rasterize(soi.vect, soi.rast.templ, field = "OBJECTID")
 soi.rast[soi.rast == 327] <- 0
 
 
 # Export as tiff:
-writeRaster(soi.rast, "/Users/shannonspragg/ONA_GRIZZ/Data/processed/SOI_10km.tif")
+terra::writeRaster(soi.rast, "/Users/shannonspragg/ONA_GRIZZ/Data/processed/SOI_10km.tif")
 
   # Reports Within a 10k Buffer: 
   # Let's check how many total and just bear reports we include with a 10k buffer:

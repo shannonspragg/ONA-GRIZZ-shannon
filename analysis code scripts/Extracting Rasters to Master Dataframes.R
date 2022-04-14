@@ -41,7 +41,7 @@ soi.10k.boundary <- st_read("/Users/shannonspragg/ONA_GRIZZ/Data/processed/SOI_1
 soi.rast <- terra::rast("/Users/shannonspragg/ONA_GRIZZ/Data/processed/SOI_10km.tif") # SOI Region 10km buffer raster
 
  # Human Density for SOI:
-hm.dens.soi <- terra::rast("/Users/shannonspragg/ONA_GRIZZ/Data/processed/human_dens_SOI_10km.tif") # SOI Region 10km
+hm.dens <- terra::rast("/Users/shannonspragg/ONA_GRIZZ/Data/processed/human_dens.tif") # SOI Region 10km
 
 
 # Check / Set CRS for Raster and Points -----------------------------------
@@ -59,7 +59,7 @@ biophys.reproj <- terra::project(biophys.cum.curmap, crs(soi.rast))
 crs(biophys.cum.curmap) == crs(soi.rast) # Nice, this worked --> now in BC Albers EPSG 3005
 # Nice, this worked --> now in BC Albers EPSG 3005
   # Human Density:
-hm.dens.reproj <- terra::project(hm.dens.soi, crs(soi.rast))
+hm.dens.reproj <- terra::project(hm.dens, crs(soi.rast))
 crs(hm.dens.soi) == crs(soi.rast) # Nice, this worked --> now in BC Albers EPSG 3005
 
   # Project SOI boundary:
@@ -79,11 +79,11 @@ st_crs(warp.reproj)
 crs(soi.rast) # The same as above, just formatted differently - success!
 
   # Check Raster Resolutions:
-res(grizz.dens)
+res(grizz.dens) # 1000 x 1000
 res(biophys.cum.curmap) # 1000 x 1000
-res(grizz.inc.raster) # 270 x 270
-res(soi.rast)
-res(hm.dens.soi)
+res(grizz.inc.rast) # 270 x 270
+res(soi.rast) # 271 x 271
+res(hm.dens.soi) # 271 x 271
 
 # Buffer the WARP Points (Before Overlay) --------------------------------------------------
 # Here we buffer the WARP and ppres-abs points by 5km before extracting the attributes from the current maps
@@ -116,31 +116,39 @@ plot(pres.abs.sv.buf, add = TRUE)
 
 
 # Crop these Rasters:
-grizzinc.crop <- terra::crop(grizz.inc.reproj, soi.rast)  #MAKE SURE THIS IS UPDATED
+grizzinc.crop <- terra::crop(grizz.inc.reproj, soi.rast)  
 biophys.crop <- terra::crop(biophys.reproj, soi.rast)
 bhs.crop <- terra::crop(grizz.dens.reproj, soi.rast)
 
-# Resample to match extents and res ( we want to match to the grizzinc res):
-soi.rsmple <- resample( soi.rast,grizzinc.crop, method='bilinear')
-biophys.rsmple <- resample(biophys.crop, soi.rsmple, method='bilinear')
-bhs.rsmple <- resample(bhs.crop, soi.rsmple, method='bilinear')
-hm.dens.rsmple <- resample(hm.dens.reproj, soi.rsmple, method='bilinear')
+plot(grizzinc.crop)
+plot(biophys.crop)
+plot(bhs.crop)
 
+# Resample to match extents and res ( we want to match to the grizzinc res):
+biophys.rsmple <- resample(biophys.crop, soi.rast, method='bilinear')
+bhs.rsmple <- resample(bhs.crop, soi.rast, method='bilinear')
+hm.dens.rsmple <- resample(hm.dens.reproj, soi.rast, method='bilinear')
+grizzinc.rsmple <- resample(grizzinc.crop, soi.rast, method='bilinear')
+
+plot(biophys.rsmple)
+plot(bhs.rsmple)
+plot(hm.dens.rsmple)
+plot(grizzinc.rsmple)
 
 # Overlay WARP Points with CS Raster  --------------------------------------
 # Here we extract the mean values from each raster to the buffered points
 warp.biophys.b.ext <- terra::extract(biophys.rsmple, warp.sv.buf, mean, na.rm = TRUE)  # This gives us the mean value of each buffered area --> what we want!
-warp.grizz.inc.b.ext <- terra::extract(grizzinc.crop, warp.sv.buf, mean, na.rm = TRUE) 
+warp.grizz.inc.b.ext <- terra::extract(grizzinc.rsmple, warp.sv.buf, mean, na.rm = TRUE) 
 warp.bhs.b.extract <- terra::extract(bhs.rsmple, warp.sv.buf, mean, na.rm = TRUE) 
 warp.dens.b.ext <- terra::extract(hm.dens.rsmple, warp.sv.buf, mean, na.rm = TRUE) 
 
 pres.abs.biophys.b.ext <- terra::extract(biophys.rsmple, pres.abs.sv.buf, mean, na.rm = TRUE)  # This gives us the mean value of each buffered area --> what we want!
-pres.abs.grizz.inc.b.ext <- terra::extract(grizzinc.crop, pres.abs.sv.buf, mean, na.rm = TRUE) 
+pres.abs.grizz.inc.b.ext <- terra::extract(grizzinc.rsmple, pres.abs.sv.buf, mean, na.rm = TRUE) 
 pres.abs.bhs.b.extract <- terra::extract(bhs.rsmple, pres.abs.sv.buf, mean, na.rm = TRUE) 
 pres.abs.dens.b.ext <- terra::extract(hm.dens.rsmple, pres.abs.sv.buf, mean, na.rm = TRUE) 
 
 # Create New Column(s) for Extracted Values:
-warp.reproj$Biophys <- warp.biophys.b.ext[,2]   # MAke sure col names match!
+warp.reproj$Biophys <- warp.biophys.b.ext[,2]  
 warp.reproj$GrizzInc <- warp.grizz.inc.b.ext[,2]
 warp.reproj$BHS <- warp.bhs.b.extract[,2]
 warp.reproj$Human_Dens <- warp.dens.b.ext[,2] # Number of persons per square kilometer
@@ -162,9 +170,12 @@ which(is.na(pres.abs.reproj$GrizzInc)) # none
 which(is.na(pres.abs.reproj$Human_Dens)) 
 
 plot(hm.dens.rsmple)
-plot(st_geometry(pres.abs.reproj[5921,]), add= TRUE)
+plot(st_geometry(pres.abs.reproj[5921,]), add= TRUE) # these are outside data window
+
+pres.abs.reproj <- pres.abs.reproj %>% drop_na(Human_Dens)  
+
 # Save this as new file ---------------------------------------------------
 
-st_write(warp.reproj, "/Users/shannonspragg/ONA_GRIZZ/WARP Bears /warp.final.shp")
-st_write(pres.abs.reproj, "/Users/shannonspragg/ONA_GRIZZ/WARP Bears /pres.abs.final.shp")
+st_write(warp.reproj, "/Users/shannonspragg/ONA_GRIZZ/Data/processed/warp.final.shp")
+st_write(pres.abs.reproj, "/Users/shannonspragg/ONA_GRIZZ/Data/processed/pres.abs.final.shp")
 

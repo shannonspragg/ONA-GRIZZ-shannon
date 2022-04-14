@@ -262,9 +262,9 @@ Then, we extract the values of this raster to our original warp conflict report 
 ## Create our Varying Intercept Raster
 ```{r varying intercept raster}
 # Bring in Data: ----------------------------------------------------------
-soi.ccs.crop <- st_read( "/Users/shannonspragg/ONA_GRIZZ/CAN Spatial Data/SOI CCS regions/SOI_CCS_10km.shp")
+soi.ccs.crop <- st_read( "/Users/shannonspragg/ONA_GRIZZ/Data/processed/SOI_CCS_10km.shp")
   # Bring in one of our rasters for rasterizing polygon data later:
-soi.rast <- terra::rast("/Users/shannonspragg/ONA_GRIZZ/CAN Spatial Data/SOI Ecoprovince Boundary/SOI_10km.tif") # SOI Region 10km
+soi.rast <- terra::rast("/Users/shannonspragg/ONA_GRIZZ/Data/processed/SOI_10km.tif") # SOI Region 10km
 
 # Reproject the Data:
 soi.ccs.reproj <- st_make_valid(soi.ccs.crop) %>% 
@@ -302,30 +302,42 @@ warp.varint.join$FEAT_LEN <- NULL
 warp.varint.join$CDNAME <- NULL
 warp.varint.join$CDTYPE <- NULL
 warp.varint.join$CPRVNCNM <- NULL
-warp.varint.join$CCSNAME.x <- NULL
-warp.varint.join$CCSUID.x <- NULL
-
-  # Rename these quick:
-names(warp.varint.join)[names(warp.varint.join) == "CCSUID.y"] <- "CCSUID"
-names(warp.varint.join)[names(warp.varint.join) == "CCSNAME.y"] <- "CCSNAME"
-names(warp.varint.join)[names(warp.varint.join) == "condval"] <- "CCS Varying Int Mean"
+warp.varint.join$CCSNAME.y <- NULL
+warp.varint.join$CCSUID.y <- NULL
+warp.varint.join$CCSUID_ <- NULL
+  
+# Rename these quick:
+names(warp.varint.join)[names(warp.varint.join) == "CCSNAME.x"] <- "CCSNAME"
+names(warp.varint.join)[names(warp.varint.join) == "CCSUID.x"] <- "CCSUID"
+names(warp.varint.join)[names(warp.varint.join) == "condval"] <- "CCS_Varying_Int"
 
 # Make our CCS Raster: ----------------------------------------------------
-
   # Make these spatvectors:
 soi.ccs.sv <- vect(soi.ccs.reproj)
 warp.ps.sv <- vect(warp.varint.join)
 
 # Make our CCS Post Mean Raster: ------------------------------------------
+soi.ccs.rast <- terra::rasterize(soi.ccs.sv, soi.rast, field = "CCSNAME")
+
+# Make Raster for our Posterior Means for CCS Varying Intercept: ---------------------
+varint.means.rast <- terra::rasterize(warp.ps.sv, soi.rast, field = "CCS_Varying_Int")
+names(varint.means.rast)[names(varint.means.rast) == "OBJECTID"] <- "CCS Varying Intercept Mean Estimate"
+
+  # Extract Values of Posterior Means to CCS regions: 
+warp.varint.mean.ext <- terra::extract(varint.means.rast, soi.ccs.sv, mean, na.rm = TRUE) 
+
+  # Create New Column(s) for Extracted Values:
+soi.ccs.sv$CCSMean <- warp.varint.mean.ext[,2] 
+
+# Make our CCS Post Mean Raster: ------------------------------------------
 ccs.varint.means.rast <- terra::rasterize(soi.ccs.sv, soi.rast, field = "CCSMean")
-names(ccs.varint.means.rast)[names(ccs.varint.means.rast) == "PostMean"] <- "CCS Varying Intercept Means"
+names(soi.ccs.rast)[names(soi.ccs.rast) == "PostMean"] <- "CCS Varying Intercept Means"
 
   # Check this:
-plot(warp.ps.sv)
-plot(ccs.varint.means.rast, add=TRUE) #HECK YEAHHHH
+plot(ccs.varint.means.rast) 
 
 # Save our CCS Post Means Raster: -----------------------------------------
-terra::writeRaster(ccs.varint.means.rast, "/Users/shannonspragg/ONA_GRIZZ/Predictor Rasters/CCS_varint_raster.tif" )
+terra::writeRaster(ccs.varint.means.rast, "/Users/shannonspragg/ONA_GRIZZ/Data/processed/CCS_varint_raster.tif" )
 ```
 
 
@@ -333,105 +345,82 @@ terra::writeRaster(ccs.varint.means.rast, "/Users/shannonspragg/ONA_GRIZZ/Predic
 ## Bring in Rasters:
 ```{r bring in data 2, include=FALSE}
 # Here we bring in all of our predictor rasters for the SOI region:
-# link to data here:   https://drive.google.com/drive/u/0/folders/1T60Al9vHOF-E7ftKzvzN2CMUyF1agC-l
+  # link to data here:   https://drive.google.com/drive/u/0/folders/1T60Al9vHOF-E7ftKzvzN2CMUyF1agC-l
 
-# Dominant Farm Type by CCS Region:
-dom.farms.rast <- terra::rast("/Users/shannonspragg/ONA_GRIZZ/Predictor Rasters/dom_farm_type_raster.tif")
+  # Distance to Neartest Protected Area (km):
+dist2pa.rast <- terra::rast("/Users/shannonspragg/ONA_GRIZZ/Data/processed/dist2pa_SOI_10km.tif" )
 
-beef.cattle.rast <- rast("/Users/shannonspragg/ONA_GRIZZ/Predictor Rasters/beef_cattle_raster.tif")
-cattle.ranching.rast <- rast("/Users/shannonspragg/ONA_GRIZZ/Predictor Rasters/cattle_ranching_raster.tif")
-other.animal.rast <- rast("/Users/shannonspragg/ONA_GRIZZ/Predictor Rasters/other_animal_prod_raster.tif")
-fruit.tree.nut.rast <- rast("/Users/shannonspragg/ONA_GRIZZ/Predictor Rasters/fruit_treenut_raster.tif")
-other.crop.rast <- rast("/Users/shannonspragg/ONA_GRIZZ/Predictor Rasters/other_crop_prod_raster.tif")
-greenhs.rast <- rast("/Users/shannonspragg/ONA_GRIZZ/Predictor Rasters/greenhouse_crop_raster.tif")
-veg.mel.rast <- rast("/Users/shannonspragg/ONA_GRIZZ/Predictor Rasters/veg_melon_raster.tif")
+  # Distance to Nearest Metro Area (km):
+dist2met.rast <- terra::rast("/Users/shannonspragg/ONA_GRIZZ/Data/processed/dist2metro_raster.tif" )
 
-# Total Farm Count by CCS Region:
-tot.farms.rast <- terra::rast("/Users/shannonspragg/ONA_GRIZZ/Predictor Rasters/total_farm_count_raster.tif" )
+  # Animal & Meat Farming Density:
+animal.farming.rast <- terra::rast("/Users/shannonspragg/ONA_GRIZZ/Data/processed/animal_production_density_raster.tif")
 
-# Total Farm Count Squared:
-tot.farms.sq.rast <- tot.farms.rast * tot.farms.rast # I am not sure how to do this one...
+  # Ground Crop & Produce Production Density:
+ground.crop.rast <- terra::rast("/Users/shannonspragg/ONA_GRIZZ/Data/processed/ground_crop_density_raster.tif")
 
-# Distance to Neartest Protected Area (km):
-dist2pa.rast.general.1k <- terra::rast("/Users/shannonspragg/ONA_GRIZZ/Predictor Rasters/1k_ha_dist2pa_raster.tif" )
+  # Human Pop Density (by sq km):
+hm.dens.rast <- terra::rast("/Users/shannonspragg/ONA_GRIZZ/Data/processed/human_dens_SOI_10km.tif") # SOI Region 10km
 
-# Distance to Nearest Metro Area (km):
-dist2met.rast <- terra::rast("/Users/shannonspragg/ONA_GRIZZ/Predictor Rasters/dist2metro_raster.tif" )
-
-# Human Pop Density (by sq km):
-hm.dens.rast <- terra::rast("/Users/shannonspragg/ONA_GRIZZ/CAN Spatial Data/Human Pop Density/human_dens_SOI_10km.tif") # SOI Region 10km
-names(hm.dens.rast)[names(hm.dens.rast) == "gpw_v4_population_density_adju~ountry_totals_rev11_2020_1_deg"] <- "Human Density per sq km"
-
-# CCS Region ID:
-ccs.varint.rast <- terra::rast("/Users/shannonspragg/ONA_GRIZZ/Predictor Rasters/CCS_varint_raster.tif" )
+  # CCS Region ID:
+ccs.varint.rast <- terra::rast("/Users/shannonspragg/ONA_GRIZZ/Data/processed/CCS_varint_raster.tif" )
 ```
 
 ## Scale Rasters:
 ```{r scale our variables}
 # Scale the Rasters:
-# Here we create a function to scale by subtracting the mean and dividing by 2 standard deviations:
-scale2sd.raster <-function(variable){(variable - global(variable, "mean", na.rm=TRUE)[,1])/(2*global(variable, "sd", na.rm=TRUE)[,1])}
-dist2metro.rast.sc <- scale2sd.raster(dist2met.rast) 
-dist2pa.rast.sc <- scale2sd.raster(dist2pa.rast.general.1k)
-tot.farms.rast.sc <- scale2sd.raster(tot.farms.rast)
-tot.farms.sq.rast.sc <- scale2sd.raster(tot.farms.sq.rast)
-hm.dens.rast.sc <- scale2sd.raster(hm.dens.rast)
-
-
-# We can also do this Step by Step:
+# We can do this Step by Step:
 
 # Distance to PA:
-d2pa.mean <- mean(warp.pres.abs$ds__PA_)
-d2pa.sub.mean <- dist2pa.rast.general.1k - d2pa.mean
-d2pa.sd <- sd(warp.pres.abs$ds__PA_)
+d2pa.mean <- mean(warp.pres.abs$dst__PA)
+d2pa.sub.mean <- dist2pa.rast - d2pa.mean
+d2pa.sd <- sd(warp.pres.abs$dst__PA)
 dist2pa.rast.sc <- d2pa.sub.mean / ( 2 * d2pa.sd)
 
 # Distance to Metro
-d2met.mean <- mean(warp.pres.abs$dstn___)
+d2met.mean <- mean(warp.pres.abs$dst_t_M)
 d2met.sub.mean <- dist2met.rast - d2met.mean
-d2met.sd <- sd(warp.pres.abs$dstn___)
+d2met.sd <- sd(warp.pres.abs$dst_t_M)
 dist2metro.rast.sc <- d2met.sub.mean / ( 2 * d2met.sd)
 
-# Total Farm Count:
-ttl.farm.mean <- mean(warp.pres.abs$Ttl_F_C)
-ttl.f.sub.mean <- tot.farms.rast - ttl.farm.mean
-ttl.f.sd <- sd(warp.pres.abs$Ttl_F_C)
-tot.farms.rast.sc <- ttl.f.sub.mean / ( 2 * ttl.f.sd)
+# Animal Farm Density:
+animal.farm.mean <- mean(warp.pres.abs$Anml_Fr)
+anim.f.sub.mean <- animal.farming.rast - animal.farm.mean
+anim.f.sd <- sd(warp.pres.abs$Anml_Fr)
+animal.farm.rast.sc <- anim.f.sub.mean / ( 2 * anim.f.sd)
 
-# Total Farms Sq:
-ttl.farm.sq.mean <- mean(total.farms.sq)
-ttl.f.sq.sub.mean <- tot.farms.sq.rast - ttl.farm.sq.mean
-ttl.f.sq.sd <- sd(total.farms.sq)
-tot.farms.sq.rast.sc <- ttl.f.sq.sub.mean / ( 2 * ttl.f.sq.sd)
+# Ground Crop Density:
+ground.crop.mean <- mean(warp.pres.abs$Grnd_Cr)
+ground.c.sub.mean <- ground.crop.rast - ground.crop.mean
+ground.c.sd <- sd(warp.pres.abs$Grnd_Cr)
+ground.crop.rast.sc <- ground.c.sub.mean / ( 2 * ground.c.sd)
 
 # Human Density:
-pop.dens.mean <- mean(warp.pres.abs$Hmn_Dns)
+pop.dens.mean <- mean(warp.pres.abs$Human_Dens)
 pop.sub.mean <- hm.dens.rast - pop.dens.mean
-pop.dens.sd <- sd(warp.pres.abs$Hmn_Dns)
+pop.dens.sd <- sd(warp.pres.abs$Human_Dens)
 hm.dens.rast.sc <- pop.sub.mean / ( 2 * pop.dens.sd)
-
 ```
 
 ## Creating Probability of General Conflict Raster:
 ```{r raster math, include=TRUE}
 # Make sure extents match:
-ext(dist2pa.rast.general.1k) == ext(dist2met.rast) # TRUE
-ext(dist2met.rast) == ext(tot.farms.rast) #TRUE
-ext(tot.farms.rast) == ext(hm.dens.rast) #TRUE
+ext(dist2pa.rast.sc) == ext(dist2metro.rast.sc) # TRUE
+ext(dist2metro.rast.sc) == ext(animal.farm.rast.sc) #TRUE
+ext(ground.crop.rast.sc) == ext(hm.dens.rast.sc) #TRUE
 
 # View our Full Model Coefficients:
 summary(post.pa.full)
-
+fixef(post.pa.full)
 
 # Stack these spatrasters:
-conf.rast.stack <- c(dist2pa.rast.sc, dist2metro.rast.sc, tot.farms.rast.sc, tot.farms.sq.rast.sc, hm.dens.rast.sc, ccs.varint.rast, cattle.ranching.rast, fruit.tree.nut.rast, other.animal.rast, other.crop.rast, veg.mel.rast)
+conf.rast.stack <- c(dist2pa.rast.sc, dist2metro.rast.sc, animal.farm.rast.sc, ground.crop.rast.sc, hm.dens.rast.sc, ccs.varint.rast)
 plot(conf.rast.stack) # plot these all to check
 
-# It looks like veg.melon raster has all 0 values, so isn't working
 
 # Create P(all conflict) raster with our regression coefficients and rasters:
     # Prob_conf_rast = Int.val + CCS + B_1est * PopDens…
-conflict_rast <- -3.2055204 + ccs.varint.rast + (-1.3828608 * dist2pa.rast.sc) + (-1.2770144 * dist2metro.rast.sc) + (-0.2812924 * tot.farms.rast.sc) + (0.4672799 * tot.farms.sq.rast.sc) + (0.7252248 * hm.dens.rast.sc) + (-0.3491539 * cattle.ranching.rast) + (1.0034481  * fruit.tree.nut.rast) + (1.4657681 * other.animal.rast) + (1.5591872 * other.crop.rast) + (0.2028940 * veg.mel.rast)
+conflict_rast <- -1.48500922 + ccs.varint.rast + (-0.65376870 * dist2pa.rast.sc) + (-1.44075814 * dist2metro.rast.sc) + (2.11855439 * animal.farm.rast.sc) + (0.03700273 * ground.crop.rast.sc) + (0.67683370 * hm.dens.rast.sc) 
 
 # Convert the Raster to the Probability Scale:
 p_conf_rast <- app(conflict_rast, fun=plogis)
@@ -442,7 +431,7 @@ We use raster math calculations to apply the regression coefficients to each cor
 
 ```{r write raster}
 # Save our P(General Conflict) Raster:
-terra::writeRaster(p_conf_rast, "/Users/shannonspragg/ONA_GRIZZ/Predictor Rasters/prob_general_conf.tif")
+terra::writeRaster(p_conf_rast, "/Users/shannonspragg/ONA_GRIZZ/Data/processed/prob_general_conf.tif")
 
 ```
 

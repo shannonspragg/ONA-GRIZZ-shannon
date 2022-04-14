@@ -32,50 +32,41 @@ library(bayestestR)
 # Import Data: ------------------------------------------------------------
 
 # Our just-conflict point data:
-warp.df <- st_read("/Users/shannonspragg/ONA_GRIZZ/WARP Bears /WARP Cropped - SIP/warp_crop_10_ccs.shp")
+warp.df <- st_read("/Users/shannonspragg/ONA_GRIZZ/Data/processed/warp.final.shp")
 str(warp.df)
 
 # Bring in our P(General Conflict) Raster for Extraction:
-prob.gen.conf.rast <- terra::rast("/Users/shannonspragg/ONA_GRIZZ/Predictor Rasters/prob_general_conf.tif")
+prob.gen.conf.rast <- terra::rast("/Users/shannonspragg/ONA_GRIZZ/Data/processed/prob_general_conf.tif")
 names(prob.gen.conf.rast)[names(prob.gen.conf.rast) == "lyr.1"] <- "Probability of General Conflict"
 
 
 # Import our Predictor Rasters: -------------------------------------------
-# Here we bring in all of our predictor rasters for the SOI region:
+  # Here we bring in all of our predictor rasters for the SOI region:
 
-# Dominant Farm Type by CCS Region:
-dom.farms.rast <- terra::rast("/Users/shannonspragg/ONA_GRIZZ/Predictor Rasters/dom_farm_type_raster.tif")
-beef.cattle.rast <- rast("/Users/shannonspragg/ONA_GRIZZ/Predictor Rasters/beef_cattle_raster.tif")
-cattle.ranching.rast <- rast("/Users/shannonspragg/ONA_GRIZZ/Predictor Rasters/cattle_ranching_raster.tif")
-other.animal.rast <- rast("/Users/shannonspragg/ONA_GRIZZ/Predictor Rasters/other_animal_prod_raster.tif")
-fruit.tree.nut.rast <- rast("/Users/shannonspragg/ONA_GRIZZ/Predictor Rasters/fruit_treenut_raster.tif")
-other.crop.rast <- rast("/Users/shannonspragg/ONA_GRIZZ/Predictor Rasters/other_crop_prod_raster.tif")
-greenhs.rast <- rast("/Users/shannonspragg/ONA_GRIZZ/Predictor Rasters/greenhouse_crop_raster.tif")
-veg.mel.rast <- rast("/Users/shannonspragg/ONA_GRIZZ/Predictor Rasters/veg_melon_raster.tif")
+  # Distance to Nearest Protected Area (km):
+dist2pa.rast <- terra::rast("/Users/shannonspragg/ONA_GRIZZ/Data/processed/dist2pa_SOI_10km.tif" )
 
-# Total Farm Count by CCS Region:
-tot.farms.rast <- terra::rast("/Users/shannonspragg/ONA_GRIZZ/Predictor Rasters/total_farm_count_raster.tif" )
+  # Dist to Grizzly Populations:
+dist2grizzpop.rast <- terra::rast("/Users/shannonspragg/ONA_GRIZZ/Data/processed/dist2grizz_pop_raster.tif")
 
-# Total Farm Count Squared:
-tot.farms.sq.rast <- tot.farms.rast * tot.farms.rast # I am not sure how to do this one...
+  # Animal & Meat Farming Density:
+animal.farming.rast <- terra::rast("/Users/shannonspragg/ONA_GRIZZ/Data/processed/animal_production_density_raster.tif")
 
-# Dist to PA's , buffered for bears:
-dist2pa.bear.rast <- rast("/Users/shannonspragg/ONA_GRIZZ/Predictor Rasters/10k_hadist2pa_raster.tif")
+  # Ground Crop & Produce Production Density:
+ground.crop.rast <- terra::rast("/Users/shannonspragg/ONA_GRIZZ/Data/processed/ground_crop_density_raster.tif")
 
-# Grizzinc:
-grizzinc.rast <- terra::rast("/Users/shannonspragg/ONA_GRIZZ/Predictor Rasters/grizz_inc_SOI_10km.tif")
-names(grizzinc.rast)[names(grizzinc.rast) == "griz_inc"] <- "Support for Grizzly Increase"
+  # Grizzinc:
+grizzinc.rast <- terra::rast("/Users/shannonspragg/ONA_GRIZZ/Data/processed/grizz_inc_SOI_10km.tif")
 
-# Bear Density - Bear Habitat Suitability (BHS):
-bhs.rast <- rast("/Users/shannonspragg/ONA_GRIZZ/Predictor Rasters/bhs_SOI_10km.tif")
+  # Bear Density - Bear Habitat Suitability (BHS):
+bhs.rast <- rast("/Users/shannonspragg/ONA_GRIZZ/Data/processed/bhs_SOI_10km.tif")
 
-# Biophysical Current Map (Cumulative current flow shows the total current for each landscape pixel):
-biophys.rast <- rast("/Users/shannonspragg/ONA_GRIZZ/Predictor Rasters/biophys_SOI_10km.tif") # use this one
-names(biophys.rast)[names(biophys.rast) == "cum_currmap"] <- "Biophysical Bear Current Map"
+  # Biophysical Current Map (Cumulative current flow shows the total current for each landscape pixel):
+biophys.rast <- rast("/Users/shannonspragg/ONA_GRIZZ/Data/processed/biophys_SOI_10km.tif") # use this one
 
 # CCS Region ID:
-ccs.varint.rast <- terra::rast("/Users/shannonspragg/ONA_GRIZZ/Predictor Rasters/CCS_varint_raster.tif" )
-names(ccs.varint.rast)[names(ccs.varint.rast) == "PostMean"] <- "CCS Varying Intercept Mean"
+ccs.varint.rast <- terra::rast("/Users/shannonspragg/ONA_GRIZZ/Data/processed/CCS_varint_raster.tif" )
+names(ccs.varint.rast)[names(ccs.varint.rast) == "CCSMean"] <- "CCS Varying Intercept Mean"
 
 
 # Extract P(General Conflict) to WARP Points: -----------------------------
@@ -105,39 +96,32 @@ which(is.na(warp.df$ProbGeneralConf)) #none
 # Scale the Variables: ----------------------------------------------------------
 scale2sd <-function(variable){(variable - mean(variable, na.rm=TRUE))/(2*sd(variable, na.rm=TRUE))}
 
-b2pa.dist.co.sc <- scale2sd(warp.df$ds__PA_)
-total.farms.co.sc <- scale2sd(warp.df$Ttl_F_C)
-b2met.dist.co.sc <- scale2sd(warp.df$dstn___)
-grizzinc.co.sc <- scale2sd(warp.df$GrzzInE)
-bhs.co.sc <- scale2sd(warp.df$BHSExtr)
-biophys.co.sc <- scale2sd(warp.df$BphysEx)
-total.farms.warp.co <- warp.df$Ttl_F_C
-total.farms.sq.co <- total.farms.warp.co * total.farms.warp.co # unscaled version
+dist.2.pa.co <- scale2sd(warp.df$dst__PA)
+animal.farm.dens.co <- warp.df$Anml_Fr
+ground.crop.dens.co <- warp.df$Grnd_Cr
+dist.2.grizzpop.co <- scale2sd(warp.df$dst__GP)
+grizzinc.co <- scale2sd(warp.df$GrizzInc)
+bhs.co <- scale2sd(warp.df$BHS)
+biophys.co <- scale2sd(warp.df$Biophys)
 
 bears_presence_co <- warp.df$bears # Binomial bears
-dom.farms.co <- warp.df$Dm_Fr_T # Dominant farm type covariate -- non numeric
-dom.farms.co <- as.factor(warp.df$Dm_Fr_T) # Making this work as a factor
 prob.gen.conf <- warp.df$ProbGeneralConf  # This was already scaled
 
 warp.df$CCSNAME <- as.factor(warp.df$CCSNAME)
-warp.df$CCSUID <- as.factor(warp.df$CCSUID)
 
 CCSNAME.co <- warp.df$CCSNAME
 
-which(is.na(warp.df$CCSNAME.ps)) # none
-which(is.na(warp.df$CCSUID.ps)) # none
+which(is.na(warp.df$CCSNAME.co)) # none
 
-# Add an QUADRATIC term for Farm Count: 
-# We want to add a quadratic term to farm count so that we can better interpret it against P(conflict)
-total.farms.sq.co.sc <- total.farms.co.sc*total.farms.co.sc
 
 
 # Fit Data for Rstanarm: --------------------------------------------------
 
 # And do this for our conflict only df:
-mini.warp.df.co <- data.frame(bears_presence_co, b2pa.dist.co.sc, total.farms.co.sc, total.farms.sq.co.sc, dom.farms.co, 
-                              grizzinc.co.sc, bhs.co.sc, biophys.co.sc, CCSNAME.co, prob.gen.conf )
+mini.warp.df.co <- data.frame(bears_presence_co, dist.2.pa.co, dist.2.grizzpop.co, animal.farm.dens.co, ground.crop.dens.co, 
+                              grizzinc.co, bhs.co, biophys.co, CCSNAME.co, prob.gen.conf )
 
+str(mini.warp.df.co)
 
 # Fit the Regression: -----------------------------------------------------
 
@@ -155,7 +139,7 @@ post.co.int <- stan_glmer(bears_presence_co ~ 1 + (1 | CCSNAME.co),
                            seed = SEED, refresh=0) # we add seed for reproducibility
 
 # Full model:
-post.co.full <- stan_glmer(bears_presence_co ~ b2pa.dist.co.sc + dom.farms.co + total.farms.co.sc + total.farms.sq.co.sc + grizzinc.co.sc + biophys.co.sc + bhs.co.sc + (1 | CCSNAME.co) + prob.gen.conf, 
+post.co.full <- stan_glmer(bears_presence_co ~ dist.2.pa.co + dist.2.grizzpop.co + animal.farm.dens.co + ground.crop.dens.co + grizzinc.co + biophys.co + bhs.co + (1 | CCSNAME.co) + prob.gen.conf, 
                            data = mini.warp.df.co,
                            family = binomial(link = "logit"), # define our binomial glm
                            prior = t_prior, prior_intercept = int_prior, QR=TRUE,

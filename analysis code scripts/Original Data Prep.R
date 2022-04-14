@@ -40,6 +40,8 @@ soi.10k.boundary <- st_read("/Users/shannonspragg/ONA_GRIZZ/CAN Spatial Data/SOI
 bc.PAs <- st_read("/Users/shannonspragg/ONA_GRIZZ/Data/original/CAN Protected Areas/Parks_Combined2.shp")
   # Grizzly Population Units:
 grizz.units <- st_read("/Users/shannonspragg/ONA_GRIZZ/Data/original/Grizz Pop Units/GBPU_BC_polygon.shp")
+  # Grizz Inc:
+grizz.inc.rast <- rast("/Users/shannonspragg/ONA_GRIZZ/Data/original/Grizz Increase/grizz.increase.map.fixed.tif") #  the proportion of people within a census that 
 
 ################# We begin by filtering to our SOI ecoprovince, buffering, and cropping our conflict data to the buffered region:
 
@@ -99,10 +101,14 @@ plot(st_geometry(south.interior.ep), add= TRUE) # Here we see it with a 10k buff
   # Save this buffered SOI Boundary:
 st_write(south.int.10k.buf, "/Users/shannonspragg/ONA_GRIZZ/Data/processed/SOI_10km_buf.shp")
 
-  # Write this as a Raster for later:
+  # Make our SOI template raster:
 soi.vect <- vect(south.int.10k.buf)
+grizz.inc.templ <- terra::project(grizz.inc.rast, crs(soi.vect))
+grizzinc.crop.t <- terra::crop(grizz.inc.templ, soi.vect)  
+
 soi.rast.templ <- rast(soi.vect, nrows= 218, ncols=298, nlyrs=1, xmin=1149612, xmax=1585533, ymin=453864.2, ymax=772759.3)
 soi.rast <- terra::rasterize(soi.vect, soi.rast.templ, field = "OBJECTID")
+soi.rast <- resample( soi.rast, grizzinc.crop.t, method='bilinear')
 soi.rast[soi.rast == 327] <- 0
 
 
@@ -306,7 +312,7 @@ hm.dens.rsmple <- resample(hum.dens.crop, soi.rast, method='bilinear')
 
 
 # Save Raster as .tif for later: ----------------------------------------------------
-terra::writeRaster(hm.dens.rsmple, "/Users/shannonspragg/ONA_GRIZZ/Data/processed/human_dens_SOI_10km.tif")
+terra::writeRaster(hm.dens.rsmple, "/Users/shannonspragg/ONA_GRIZZ/Data/processed/human_dens.tif")
 
 
 ################################# Lastly, we will filter the CAN Protected Areas down to BC:

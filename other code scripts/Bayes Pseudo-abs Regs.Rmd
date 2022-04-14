@@ -56,14 +56,14 @@ library(randomForest)
 ```{r data, echo=FALSE}
 # Import Data: ------------------------------------------------------------
 # Here we have our presence-absence data:
-warp.pres.abs <- st_read("/Users/shannonspragg/ONA_GRIZZ/WARP Bears /WARP Cropped - SIP/WARP Final Pres-abs/pres_abs_1k_pa.shp")
+warp.pres.abs <- st_read("/Users/shannonspragg/ONA_GRIZZ/Data/processed/pres.abs.final.shp")
 head(warp.pres.abs)
 
 # Access this via googledrive: In our ONA-GRIZZ folder
 # at the link: https://drive.google.com/drive/u/0/folders/17n64UwIiwhGVCwTQX8uc31ybWJ0YIdtv
 
-# Our bear warp data: ***STILL NEEDS VARINT VARIABLE ADDED***
-warp.soi <- st_read("/Users/shannonspragg/ONA_GRIZZ/WARP Bears /WARP SOI - All Reports/warp_final_10k_pa.shp")
+# Our bear warp data: 
+warp.soi <- st_read("/Users/shannonspragg/ONA_GRIZZ/Data/processed/warp.final.shp")
 ```
 
 
@@ -72,30 +72,21 @@ warp.soi <- st_read("/Users/shannonspragg/ONA_GRIZZ/WARP Bears /WARP SOI - All R
 # Here we create a function to scale by subtracting the mean and dividing by 2 standard deviations:
 scale2sd <-function(variable){(variable - mean(variable, na.rm=TRUE))/(2*sd(variable, na.rm=TRUE))}
 
-b2pa.dist.ps <- scale2sd(warp.pres.abs$ds__PA_)
-total.farms.ps <- scale2sd(warp.pres.abs$Ttl_F_C)
-b2met.dist.ps <- scale2sd(warp.pres.abs$dstn___)
-grizzinc.ps <- scale2sd(warp.pres.abs$GrzzInE)
-bhs.ps <- scale2sd(warp.pres.abs$BHSExtr)
-biophys.ps <- scale2sd(warp.pres.abs$BphysEx)
-pop.dens <- scale2sd(warp.pres.abs$Hmn_Dns)
-total.farms <- warp.pres.abs$Ttl_F_C
-total.farms.sq <- total.farms * total.farms
+dist.2.pa.ps <- scale2sd(warp.pres.abs$dst__PA)
+dist.2.met.ps <- scale2sd(warp.pres.abs$dst_t_M)
+pop.dens <- scale2sd(warp.pres.abs$Human_Dens)
+animal.farm.dens.ps <- warp.pres.abs$Anml_Fr
+ground.crop.dens.ps <- warp.pres.abs$Grnd_Cr
+dist.2.grizzpop.ps <- scale2sd(warp.pres.abs$dst__GP)
+grizzinc.ps <- scale2sd(warp.pres.abs$GrizzInc)
+bhs.ps <- scale2sd(warp.pres.abs$BHS)
+biophys.ps <- scale2sd(warp.pres.abs$Biophys)
 
-
-conflict_presence_ps <- warp.pres.abs$bears # Binomial bears --> for this data, 1'a are all wildlife
-dom.farms.ps <- warp.pres.abs$Dm_Fr_T # Dominant farm type covariate -- non numeric
-dom.farms.ps <- as.factor(warp.pres.abs$Dm_Fr_T) # Making this work as a factor
+conflict_presence_ps <- warp.pres.abs$bears # Binomial bears --> for this data, 1's are all wildlife
 
 warp.pres.abs$CCSNAME <- as.factor(warp.pres.abs$CCSNAME)
-warp.pres.abs$CCSUID <- as.factor(warp.pres.abs$CCSUID)
 
 CCSNAME.ps <- warp.pres.abs$CCSNAME
-
-# Add an QUADRATIC term for Farm Count: -----------------------------------
-# We want to add a quadratic term to farm count so that we can better interpret it against P(conflict)
-total.farms.sq.ps <- total.farms.ps*total.farms.ps
-
 ```
 We can use the scale function to center our predictors by subtracting the means (center= TRUE) and scaling by dividing by their standard deviation (scale=TRUE). We do this as well as adding a quadratic term for our scaled total farms predictor.
 
@@ -103,8 +94,8 @@ We can use the scale function to center our predictors by subtracting the means 
 
 ```{r mini df, echo=FALSE}
 # Fit Model with Rstanarm: ------------------------------------------------
-# Make a mini data frame with just our predictors (no spatial info):
-mini.warp.df.ps <-  data.frame(conflict_presence_ps, b2pa.dist.ps, b2met.dist.ps, total.farms.sq.ps, total.farms.ps, dom.farms.ps, CCSNAME.ps, pop.dens)
+# Make a mini data frame with just our general conflict predictors (no spatial info):
+mini.warp.df.ps <-  data.frame(conflict_presence_ps, dist.2.pa.ps, dist.2.met.ps, animal.farm.dens.ps, ground.crop.dens.ps, CCSNAME.ps, pop.dens)
 
 str(mini.warp.df.ps)
 ```
@@ -128,34 +119,15 @@ post.int.only <- stan_glmer(conflict_presence_ps ~ 1 + (1 | CCSNAME.ps),
                   iter = 5000,
                   seed = SEED, refresh=0) # we add seed for reproducability
 
-# Look at our simple model:
-post.pa.simple <- stan_glmer(conflict_presence_ps ~ pop.dens + (1 | CCSNAME.ps), 
-                  data = mini.warp.df.ps,
-                  family = binomial(link = "logit"), # define our binomial glm
-                  prior = t_prior, prior_intercept = int_prior, 
-                  iter = 5000,
-                  seed = SEED, refresh=0) # we add seed for reproducability
-
-# Build out our Comparison Model (to compare to Global):
-  # For this one, we leave out the FarmCount quad term
-post.pa.compare <- stan_glmer(conflict_presence_ps ~ b2pa.dist.ps + b2met.dist.ps + dom.farms.ps + total.farms.ps + pop.dens + (1 | CCSNAME.ps), 
-                            data = mini.warp.df.ps,
-                            family = binomial(link = "logit"), # define our binomial glm
-                            prior = t_prior, prior_intercept = int_prior,
-                            iter = 5000,
-                            seed = SEED, refresh=0) # we add seed for reproducability
-# If this has a bulk ESS error... need to run chains for longer
 
 # Global Model: including all of our predictors 
-post.pa.full <- stan_glmer(conflict_presence_ps ~ b2pa.dist.ps + b2met.dist.ps + dom.farms.ps + total.farms.ps + total.farms.sq.ps + pop.dens + (1 | CCSNAME.ps), 
+post.pa.full <- stan_glmer(conflict_presence_ps ~ dist.2.pa.ps + dist.2.met.ps + animal.farm.dens.ps + ground.crop.dens.ps + pop.dens + (1 | CCSNAME.ps), 
                             data = mini.warp.df.ps,
                             family = binomial(link = "logit"), # define our binomial glm
                             prior = t_prior, prior_intercept = int_prior, QR=TRUE,
                             seed = SEED, refresh=0) # we add seed for reproducability
 
 summary(post.int.onlny)
-summary(post.pa.simple)
-summary(post.pa.compare)
 summary(post.pa.full)
 
 # Save an object to a file
@@ -171,8 +143,7 @@ plot_model(post.pa.full, sort.est = TRUE)
 # Notes: axis labels should be in order from bottom to top. 
 # To see the values of the effect size and p-value, set show.values and show.p= TRUE
 post.pa.full.effects.plot <- sjPlot::plot_model(post.pa.full, 
-                                         axis.labels=c("Population Density", "Total Farm Count ^2" ,"Total Farm Count" ,"Vegetable & Melon Farming" , "Other Crop Farming (tobacco, peanut, sugar-cane, hay, herbs & spices) ", "Other Animal Production (bees & honey, equine, fur-bearers)" , "Fruit & Tree Nut Farming" , "Cattle Ranching & Farming" , "Distance to Metro Area (km)",
-                                                        "Distance to Protected Area (km)"),
+                                         axis.labels=c("Population Density", "Ground Crop & Produce Density (per km^2)", "Animal & Meat Farming Density (per km^2)" , "Distance to Metro Area (km)", "Distance to Protected Area (km)"),
                                          show.values=TRUE, show.p=FALSE,
                                          title="Effects of Social & Environmental Variables on General Conflict")
 
@@ -208,10 +179,7 @@ Comparing the simple pseudo-absence model with the full model in a ROC plot show
 # Loo package implements fast Pareto smoothed leave-one-out-cross-val (PSIS-LOO) to compute expected log predictive density:
 (loo.simplest <- loo(post.pa.simplest, save_psis = TRUE))
 # Above we see that PSIS-LOO result is reliable as all Pareto k estimates are small (k< 0.5) Vehtari, Gelman and Gabry (2017a).
-(loo.simple <- loo(post.pa.simple, save_psis = TRUE))
 
-# Compare the LOO values for full model vs the one with quad term:
-(loo.pa.comp <- loo(post.pa.compare, save_psis = TRUE))
 (loo.pa.full <- loo(post.pa.full, save_psis = TRUE))
 
 

@@ -222,13 +222,13 @@ ground.crop.sv <- vect(ground.crop.sf)
 
 
   # Rasterize our subset rasters:
-animal.prod.rast <- terra::rasterize(animal.prod.sv, soi.rast, field = "Farms_per_sq_km")
-ground.crop.rast <- terra::rasterize(ground.crop.sv, soi.rast, field = "Farms_per_sq_km")
+animal.prod.rast <- terra::rasterize(animal.prod.sv, soi.rast, field = "Frms___")
+ground.crop.rast <- terra::rasterize(ground.crop.sv, soi.rast, field = "Frms___")
 
 
   # Fix the column names:
-names(animal.prod.rast)[names(animal.prod.rast) == "Farms_per_sq_km"] <- "Density of Animal Product & Meat Farming / sq km"
-names(ground.crop.rast)[names(ground.crop.rast) == "Farms_per_sq_km"] <- "Density of Ground Crop & Produce Farming / sq km"
+names(animal.prod.rast)[names(animal.prod.rast) == "Frms___"] <- "Density of Animal Product & Meat Farming / sq km"
+names(ground.crop.rast)[names(ground.crop.rast) == "Frms___"] <- "Density of Ground Crop & Produce Farming / sq km"
 
 
   # Save these Farm Rasters:
@@ -297,6 +297,7 @@ which(is.na(pres.abs.dropped$Ground_Crops)) # Same
 
   # Update data frame:
 pres.abs.reproj <- pres.abs.dropped
+
 
 ############################ Next, Add in the CCS Region Names to the Data:
 

@@ -13,6 +13,7 @@ library(rgdal)
 library(fasterize)
 library(terra)
 library(stars)
+library(units)
 
 # Bring in the Data -------------------------------
 

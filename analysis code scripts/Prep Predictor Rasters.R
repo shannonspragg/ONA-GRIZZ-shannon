@@ -9,30 +9,32 @@ library(raster)
 library(terra)
 library(dismo)
 library(stars)
-
+library(measurements)
 
 # Load Data: --------------------------------------------------------------
 
   # Grizzinc:  UPDATE THIS WITH NEW DATA
-grizzinc.rast <- terra::rast("/Users/shannonspragg/rasters/grizz_inc.tif") 
+grizzinc.rast <- terra::rast("/Users/shannonspragg/ONA_GRIZZ/Data/original/Grizz Increase/grizz.increase.map.fixed.tif") 
 
   # Bear Density - Bear Habitat Suitability (BHS):
-bhs.rast <- rast("/Users/shannonspragg/ONA_GRIZZ/Grizz Density rasters/grizz_dens.tif")
+bhs.rast <- rast("/Users/shannonspragg/ONA_GRIZZ/Data/original/Grizz Density/grizz_dens.tif")
 
   # Biophysical Current Map (Cumulative current flow shows the total current for each landscape pixel):
-biophys.rast <- rast("/Users/shannonspragg/ONA_grizz_Matt/data/processed/output/biophys_CS/cum_currmap.tif") 
+biophys.rast <- rast("/Users/shannonspragg/ONA_GRIZZ/Data/original/Biophysical CS/cum_currmap.tif") 
 
   # SOI Region for plotting:
-soi.10k.boundary <- st_read("/Users/shannonspragg/ONA_GRIZZ/CAN Spatial Data/SOI CCS regions/SOI_CCS_10km.shp")
-soi.rast <- rast("/Users/shannonspragg/ONA_GRIZZ/CAN Spatial Data/SOI Ecoprovince Boundary/SOI_10km.tif")
+soi.10k.boundary <- st_read("/Users/shannonspragg/ONA_GRIZZ/Data/processed/SOI_10km_buf.shp")
+soi.rast <- rast("/Users/shannonspragg/ONA_GRIZZ/Data/processed/SOI_10km.tif")
   
   # PA and Metro Data: (need to be cropped)
 bc.PAs <- st_read("/Users/shannonspragg/ONA_GRIZZ/Data/original/CAN Protected Areas/Parks_Combined2.shp") # Clayton's data
-#bc.PAs <- st_read("/Users/shannonspragg/ONA_GRIZZ/CAN Spatial Data/BC protected areas/BC PAs.shp")
-bc.metro<-st_read("/Users/shannonspragg/ONA_GRIZZ/CAN Spatial Data/BC census metro areas/CEN_CENSUS_METRO_AREAS_SVW/CNCNSSMTRR_polygon.shp")
+bc.metro<-st_read("/Users/shannonspragg/ONA_GRIZZ/Data/original/BC Metro Areas/CNCNSSMTRR_polygon.shp")
   
-# Extent Grizzly Populations:
+  # Extent Grizzly Populations:
 extent.grizz <- st_read("/Users/shannonspragg/ONA_GRIZZ/Data/processed/Extent Grizzly Pop Units.shp")
+ 
+  # Human Density for SOI:
+hm.dens <- terra::rast("/Users/shannonspragg/ONA_GRIZZ/Data/processed/human_dens.tif") # SOI Region 10km
 
   
 ################################# First, we need to produce our Distance to PA, Metro, and Grizzly Pop Rasters:
@@ -49,7 +51,7 @@ grizz.pop.reproj <- st_make_valid(extent.grizz) %>%
   st_transform(crs=crs(soi.rast))
 
   # Check to see if they match:
-st_crs(warp.pa.reproj) == st_crs(bc.PAs.reproj) # [TRUE] 
+st_crs(soi.bound.reproj) == st_crs(bc.PAs.reproj) # [TRUE] 
 st_crs(metro.reproj) == st_crs(soi.bound.reproj) # [TRUE]
 st_crs(grizz.pop.reproj) == st_crs(soi.bound.reproj) # [TRUE]
 
@@ -63,8 +65,8 @@ plot(st_geometry(metro.soi.crop))
 plot(st_geometry(soi.bound.reproj), add=TRUE) # This works
 
   # Save these:
-st_write(PAs.soi.crop, "/Users/shannonspragg/ONA_GRIZZ/CAN Spatial Data/SOI PAs & Metro Areas/soi.PAs.10km.buf.shp")
-st_write(metro.soi.crop, "/Users/shannonspragg/ONA_GRIZZ/CAN Spatial Data/SOI PAs & Metro Areas/soi.metro.10km.buf.shp")
+st_write(PAs.soi.crop, "/Users/shannonspragg/ONA_GRIZZ/Data/processed/soi.PAs.10km.buf.shp")
+st_write(metro.soi.crop, "/Users/shannonspragg/ONA_GRIZZ/Data/processed/soi.metro.10km.buf.shp")
 
   # Buffer our region by 5km, so we have a space of 15km total (to account for PA's just outside of our SOI 10km boundary):
 soi.15km.buf <- soi.bound.reproj %>% 
@@ -72,12 +74,13 @@ soi.15km.buf <- soi.bound.reproj %>%
 plot(st_geometry(soi.15km.buf)) # Check the buffers
 
 soi.pas.15km.buf <- st_intersection(bc.PAs.reproj, soi.15km.buf)
+plot(st_geometry(soi.pas.15km.buf)) # Check the buffers
 
 
 # Rasterize our Points & Polygons: ----------------------------------------
 
   # Make our data spatvectors:
-PAs.soi <- vect(PA.soi.crop) 
+PAs.soi <- vect(PAs.soi.crop) 
 metro.soi.sv <- vect(metro.soi.crop)
 grizz.pop.sv <- vect(extent.grizz)
 
@@ -100,59 +103,56 @@ dist.pa.raster <- conv_unit(dist.pa.raster,"m","km") # There we go
 dist.met.raster <- conv_unit(dist.met.raster,"m","km")
 dist.grizz.pop.raster <- conv_unit(dist.grizz.pop.raster,"m","km")
 
-names(dist.pa.raster)[names(dist.pa.raster) == "SOI_10km"] <- "Distance to Nearest PA (km)"
-names(dist.met.raster)[names(dist.met.raster) == "SOI_10km"] <- "Distance to Nearest Metro (km)"
-names(dist.grizz.pop.raster)[names(dist.grizz.pop.raster) == "SOI_10km"] <- "Distance to Nearest Extent Grizzly Pop (km)"
+names(dist.pa.raster)[names(dist.pa.raster) == "OBJECTID"] <- "Distance to Nearest PA (km)"
+names(dist.met.raster)[names(dist.met.raster) == "OBJECTID"] <- "Distance to Nearest Metro (km)"
+names(dist.grizz.pop.raster)[names(dist.grizz.pop.raster) == "OBJECTID"] <- "Distance to Nearest Extent Grizzly Pop (km)"
 
   # Invert distances: we want the highest raster value to be the closest (lowest distance) to our predictors:
-dist.pa.rast <- 1 - dist.pa.raster
-dist.met.rast <- 1 - dist.met.raster
-dist.grizz.rast <- 1 - dist.grizz.pop.raster
+dist.pa.rast.invert <- 1 - dist.pa.raster
+dist.met.rast.invert <- 1 - dist.met.raster
+dist.grizz.rast.invert <- 1 - dist.grizz.pop.raster
+
+
   # Plot to check:
-plot(dist.pa.rast)
-plot(dist.met.rast)
-plot(dist.grizz.rast)
+plot(dist.pa.rast.invert) # This just makes the 0km distance the "highest" value (i.e. closest in proximity)
+plot(dist.met.rast.invert)
+plot(dist.grizz.rast.invert)
 
 
 ######################################## Now we Match All of our Rasters:
 
 # Check Projections: ------------------------------------------------------
   # GrizzInc Map:
-grizz.inc.reproj <- terra::project(grizz.inc.rast, crs(soi.rast))  ## CHECK THESE WITH IMPORT NAMES
-crs(grizz.inc.reproj) == crs(soi.rast) 
+grizz.inc.reproj <- terra::project(grizz.inc.rast, crs(soi.rast))  
   # Bear Density (BHS) Estimate:
-grizz.dens.reproj <- terra::project(grizz.dens, crs(soi.rast))
-crs(grizz.dens) == crs(soi.rast) # Nice, this worked --> now in BC Albers EPSG 3005
+bhs.reproj <- terra::project(bhs.rast, crs(soi.rast))
   # Biophys Map:
-biophys.reproj <- terra::project(biophys.cum.curmap, crs(soi.rast))
-crs(biophys.cum.curmap) == crs(soi.rast) # Nice, this worked --> now in BC Albers EPSG 3005
+biophys.reproj <- terra::project(biophys.rast, crs(soi.rast))
   # Human Density:
-hm.dens.reproj <- terra::project(hm.dens.soi, crs(soi.rast))
-crs(hm.dens.soi) == crs(soi.rast) # Nice, this worked --> now in BC Albers EPSG 3005
+hm.dens.reproj <- terra::project(hm.dens, crs(soi.rast))
 
 
 crs(soi.rast) == crs(grizz.inc.reproj) #TRUE
 crs(grizz.inc.reproj) == crs(grizz.dens.reproj) #TRUE
 crs(biophys.rast) == crs(hm.dens.reproj) #TRUE
-crs(hm.dens.reproj) == crs(dist.pa.rast)
-crs(dist.pa.rast) == crs(dist.met.rast)
-crs(dist.met.rast) == crs(dist.grizz.rast)
+crs(hm.dens.reproj) == crs(dist.pa.rast.invert)
+crs(dist.pa.rast.invert) == crs(dist.met.rast.invert)
+crs(dist.met.rast.invert) == crs(dist.grizz.rast.invert)
 
 
   # Crop these Rasters:
-grizzinc.crop <- terra::crop(grizzinc.rast, soi.rast)  #MAKE SURE THIS IS UPDATED
-biophys.crop <- terra::crop(biophys.rast, soi.rast)
-bhs.crop <- terra::crop(bhs.rast, soi.rast)
-d2pa.crop <- terra::crop(dist.pa.rast, soi.rast)
-d2met.crop <- terra::crop(dist.met.rast, soi.rast)
-d2grizzpop.crop <- terra::crop(dist.grizz.rast, soi.rast)
+grizzinc.crop <- terra::crop(grizz.inc.reproj, soi.rast)  
+biophys.crop <- terra::crop(biophys.reproj, soi.rast)
+bhs.crop <- terra::crop(bhs.reproj, soi.rast)
+d2pa.crop <- terra::crop(dist.pa.rast.invert, soi.rast)
+d2met.crop <- terra::crop(dist.met.rast.invert, soi.rast)
+d2grizzpop.crop <- terra::crop(dist.grizz.rast.invert, soi.rast)
 
   # Resample to match extents and res:
-soi.rsmple <- resample( soi.rast,grizzinc.crop, method='bilinear')
 grizzinc.rsmple <- resample(grizzinc.crop, soi.rast, method='bilinear')
 biophys.rsmple <- resample(biophys.crop, soi.rast, method='bilinear')
 bhs.rsmple <- resample(bhs.crop, soi.rast, method='bilinear')
-d2pa.rsmpl <- resample(d2pa.b.crop, soi.rast, method='bilinear')
+d2pa.rsmpl <- resample(d2pa.crop, soi.rast, method='bilinear')
 d2met.rsmpl <- resample(d2met.crop, soi.rast, method='bilinear')
 d2grizz.pop.rsmpl <- resample(d2grizzpop.crop, soi.rast, method='bilinear')
 hm.dens.rsmple <- resample(hm.dens.reproj, soi.rsmple, method='bilinear')
@@ -188,7 +188,7 @@ plot(soi.bound.vect, add=TRUE)
 grizzinc.soi <- terra::mask(grizzinc.rsmple, soi.bound.vect) 
 biophys.soi <- terra::mask(biophys.rsmple, soi.bound.vect) 
 bhs.soi <- terra::mask(bhs.rsmple, soi.bound.vect) 
-d2pa.b.soi <- terra::mask(d2pa.b.rsmpl, soi.bound.vect) 
+d2pa.soi <- terra::mask(d2pa.rsmpl, soi.bound.vect) 
 d2met.soi <- terra::mask(d2met.rsmpl, soi.bound.vect) 
 d2grizzpop.soi <- terra::mask(d2grizz.pop.rsmpl, soi.bound.vect) 
 hm.dens.soi <- terra::mask(hm.dens.rsmple, soi.bound.vect) # BEA-UTIFUL!
@@ -199,24 +199,22 @@ plot(bhs.soi)
 plot(d2pa.soi)
 plot(d2met.soi)
 plot(d2grizzpop.soi)
+plot(hm.dens.soi)
 
   # Fix the column names:
-names(grizzinc.soi)[names(grizzinc.soi) == "grizz_inc"] <- "Support for Grizzly Increase"
-names(biophys.soi)[names(biophys.soi) == "cum_curmap"] <- "Biophysical Connectivity Currentmap"
+names(grizzinc.soi)[names(grizzinc.soi) == "grizz.increase.map.fixed"] <- "Support for Grizzly Increase"
+names(biophys.soi)[names(biophys.soi) == "cum_currmap"] <- "Biophysical Connectivity Current Map"
 names(bhs.soi)[names(bhs.soi) == "Height"] <- "Bear Habitat Suitability (BHS)"
-names(d2pa.b.soi)[names(d2pa.soi) == "SOI_10km"] <- "Distance to Nearest PA (km)"
-names(d2met.soi)[names(d2met.soi) == "SOI_10km"] <- "Distance to Nearest Metro (km)"
-names(d2grizzpop.soi)[names(d2grizzpop.soi) == "SOI_10km"] <- "Distance to Nearest Extent Grizz Pop (km)"
-names(hm.dens.soi)[names(hm.dens.soi) == "gpw_v4_population_density_adju~ountry_totals_rev11_2020_1_deg"] <- "Human Population Density by Nearest km"
+names(hm.dens.soi)[names(hm.dens.soi) == "gpw_v4_population_density_adju~ountry_totals_rev11_2020_1_deg"] <- "Human Population Density by Nearest Km"
 
 
 
 # Save our Cropped Rasters: -----------------------------------------------
-terra::writeRaster(grizzinc.soi, "/Users/shannonspragg/ONA_GRIZZ/Predictor Rasters/grizz_inc_SOI_10km.tif")
-terra::writeRaster(biophys.soi, "/Users/shannonspragg/ONA_GRIZZ/Predictor Rasters/biophys_SOI_10km.tif")
-terra::writeRaster(bhs.soi, "/Users/shannonspragg/ONA_GRIZZ/Predictor Rasters/bhs_SOI_10km.tif")
-terra::writeRaster(d2pa.soi, "/Users/shannonspragg/ONA_GRIZZ/Predictor Rasters/dist2pa_SOI_10km.tif")
-terra::writeRaster(d2met.soi, "/Users/shannonspragg/ONA_GRIZZ/Predictor Rasters/dist2metro_raster.tif" )
-terra::writeRaster(d2grizzpop.soi, "/Users/shannonspragg/ONA_GRIZZ/Predictor Rasters/dist2grizz_pop_raster.tif" )
+terra::writeRaster(grizzinc.soi, "/Users/shannonspragg/ONA_GRIZZ/Data/processed/grizz_inc_SOI_10km.tif")
+terra::writeRaster(biophys.soi, "/Users/shannonspragg/ONA_GRIZZ/Data/processed/biophys_SOI_10km.tif")
+terra::writeRaster(bhs.soi, "/Users/shannonspragg/ONA_GRIZZ/Data/processed/bhs_SOI_10km.tif")
+terra::writeRaster(d2pa.soi, "/Users/shannonspragg/ONA_GRIZZ/Data/processed/dist2pa_SOI_10km.tif")
+terra::writeRaster(d2met.soi, "/Users/shannonspragg/ONA_GRIZZ/Data/processed/dist2metro_raster.tif" )
+terra::writeRaster(d2grizzpop.soi, "/Users/shannonspragg/ONA_GRIZZ/Data/processed/dist2grizz_pop_raster.tif" )
 
 

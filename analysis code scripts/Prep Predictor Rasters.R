@@ -144,9 +144,9 @@ crs(dist.met.rast.invert) == crs(dist.grizz.rast.invert)
 grizzinc.crop <- terra::crop(grizz.inc.reproj, soi.rast)  
 biophys.crop <- terra::crop(biophys.reproj, soi.rast)
 bhs.crop <- terra::crop(bhs.reproj, soi.rast)
-d2pa.crop <- terra::crop(dist.pa.rast.invert, soi.rast)
-d2met.crop <- terra::crop(dist.met.rast.invert, soi.rast)
-d2grizzpop.crop <- terra::crop(dist.grizz.rast.invert, soi.rast)
+d2pa.crop <- terra::crop(dist.pa.raster, soi.rast)
+d2met.crop <- terra::crop(dist.met.raster, soi.rast)
+d2grizzpop.crop <- terra::crop(dist.grizz.pop.raster, soi.rast)
 
   # Resample to match extents and res:
 grizzinc.rsmple <- resample(grizzinc.crop, soi.rast, method='bilinear')
@@ -216,5 +216,6 @@ terra::writeRaster(bhs.soi, "/Users/shannonspragg/ONA_GRIZZ/Data/processed/bhs_S
 terra::writeRaster(d2pa.soi, "/Users/shannonspragg/ONA_GRIZZ/Data/processed/dist2pa_SOI_10km.tif")
 terra::writeRaster(d2met.soi, "/Users/shannonspragg/ONA_GRIZZ/Data/processed/dist2metro_raster.tif" )
 terra::writeRaster(d2grizzpop.soi, "/Users/shannonspragg/ONA_GRIZZ/Data/processed/dist2grizz_pop_raster.tif" )
+terra::writeRaster(hm.dens.soi, "/Users/shannonspragg/ONA_GRIZZ/Data/processed/human_dens_SOI_10km.tif" )
 
 

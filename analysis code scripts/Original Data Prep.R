@@ -314,30 +314,3 @@ hm.dens.rsmple <- resample(hum.dens.crop, soi.rast, method='bilinear')
 # Save Raster as .tif for later: ----------------------------------------------------
 terra::writeRaster(hm.dens.rsmple, "/Users/shannonspragg/ONA_GRIZZ/Data/processed/human_dens.tif")
 
-
-################################# Lastly, we will filter the CAN Protected Areas down to BC:
-
-  # Load in our Protected Areas Database:
-fgdb <- "/Users/shannonspragg/ONA_GRIZZ/Data/original/CAN Protected Areas/CPCAD-BDCAPC_Dec2020.gdb"
-
-  # List all feature classes in a file geodatabase
-subset(ogrDrivers(), grepl("GDB", name))
-fc_list <- ogrListLayers(fgdb)
-print(fc_list)
-
-  # Read the feature class for PA shapes
-fc <- readOGR(dsn=fgdb,layer="CPCAD_Dec2020")
-fc.sf <- as(fc, "sf") 
-
-  # Filter these down to BC:
-bc.PAs <- fc.sf %>% 
-  filter(., LOC_E == "British Columbia" | LOC_E == "Alberta") %>% 
-  st_make_valid()
-
-  # Save for later:
-st_write(bc.PAs,"/Users/shannonspragg/ONA_GRIZZ/Data/processed/bc_PAs.shp")
-
-  # Bring in Protected Areas: Provincial & National Parks
-
-
-

@@ -29,7 +29,6 @@ warp.pres.abs <- st_read("/Users/shannonspragg/ONA_GRIZZ/Data/processed/warp_pre
   # Our SOI 10km Buffered Boundary:
 soi.10k.boundary <- st_read("/Users/shannonspragg/ONA_GRIZZ/Data/processed/SOI_10km_buf.shp")
   # Filtered BC Protected Areas:
-bc.PAs <- st_read("/Users/shannonspragg/ONA_GRIZZ/CAN Spatial Data/BC protected areas/BC PAs.shp")
 bc.PAs <- st_read("/Users/shannonspragg/ONA_GRIZZ/Data/original/CAN Protected Areas/Parks_Combined2.shp") # Clayton's data
 
   # BC Metropolitan Areas:

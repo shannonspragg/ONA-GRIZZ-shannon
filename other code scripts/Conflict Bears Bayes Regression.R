@@ -147,7 +147,16 @@ post.co.full <- stan_glmer(bears_presence_co ~ dist.2.pa.co + dist.2.grizzpop.co
                            seed = SEED, refresh=0) # we add seed for reproducibility
 summary(post.co.full)
 
-post.co.offset <- stan_glmer(bears_presence_co ~ b2pa.dist.co.sc + dom.farms.co + total.farms.co.sc + total.farms.sq.co.sc + grizzinc.co.sc + biophys.co.sc + bhs.co.sc + (1 | CCSNAME.co) + offset(prob.gen.conf), 
+# Semi-Model: Just including one ag variable 
+post.co.semi <- stan_glmer(bears_presence_co ~ dist.2.pa.co + dist.2.grizzpop.co + animal.farm.dens.co + grizzinc.co + biophys.co + bhs.co + (1 | CCSNAME.co) + offset(prob.gen.conf), 
+                             data = mini.warp.df.co,
+                             family = binomial(link = "logit"), # define our binomial glm
+                             prior = t_prior, prior_intercept = int_prior, QR=TRUE,
+                             iter = 5000, # Run for enough iterations to avoid errors
+                             seed = SEED, refresh=0) # we add seed for reproducibility
+
+
+post.co.offset <- stan_glmer(bears_presence_co ~ dist.2.pa.co + dist.2.grizzpop.co + animal.farm.dens.co + ground.crop.dens.co + grizzinc.co + biophys.co + bhs.co + (1 | CCSNAME.co) + offset(prob.gen.conf), 
                              data = mini.warp.df.co,
                              family = binomial(link = "logit"), # define our binomial glm
                              prior = t_prior, prior_intercept = int_prior, QR=TRUE,
@@ -170,11 +179,29 @@ co.full.plot+ geom_vline(xintercept = 0)
 co.offset.plot <- plot(post.co.offset, "areas", prob = 0.95, prob_outer = 1)
 co.offset.plot+ geom_vline(xintercept = 0)
 
+# Run Correlation Plot: ---------------------------------------------------
+library(corrplot)
+
+# Make a correlation matrix for our data dn predictors:
+cor.matrix.df.co <- data.frame(dist.2.pa.co, dist.2.grizzpop.co, animal.farm.dens.co, ground.crop.dens.co, bhs.co, biophys.co, grizzinc.co)
+
+cor.matrix.co <- cor(cor.matrix.df.co)
+round(cor.matrix.co, 2)
+# Simple correlation plots:
+corrplot(cor.matrix.co, method = 'number', ) # colorful number
+corrplot(cor.matrix.co, addCoef.col = 'black')
+
+# Make a plot with proportional circles on a diagonal, coefficent numbers, and legend at the bottom:
+predictor.cor.plot.co <- corrplot(cor.matrix.co, type = 'lower', order = 'hclust', tl.col = 'black',addCoef.col = 'grey',
+                               cl.ratio = 0.2, tl.srt = 45, col = COL2('PuOr', 10))
+
+
+
 
 # Plot our Area Under the Curve: ------------------------------------------
 # Plot ROC for the Simple Posterior:
 par(pty="s") # sets our graph to square
-roc(bears_presence_co, post.co.full$fitted.values, plot=TRUE, legacy.axes=TRUE, percent=TRUE ,
+roc(bears_presence_co, post.co.offset$fitted.values, plot=TRUE, legacy.axes=TRUE, percent=TRUE ,
     xlab= "False Positive Percentage", ylab= "True Positive Percentage",
     col="#377eb8", lwd=4, print.auc=TRUE) # this gives us the ROC curve , in 3544 controls (bears 0) < 2062 cases (bears 1), Area under curve = 0.
 
@@ -235,22 +262,22 @@ scale2sd.raster <-function(variable){(variable - global(variable, "mean", na.rm=
 # We can also do this Step by Step:
 
 # Distance to PA:
-d2pa.mean.co <- mean(warp.df$ds__PA_)
-d2pa.sub.mean.co <- dist2pa.bear.rast - d2pa.mean.co
-d2pa.sd.co <- sd(warp.df$ds__PA_)
-dist2pa.bear.rast.sc <- d2pa.sub.mean.co / ( 2 * d2pa.sd.co)
+d2pa.mean.co <- mean(warp.df$dst__PA)
+d2pa.sub.mean.co <- dist2pa.rast - d2pa.mean.co
+d2pa.sd.co <- sd(warp.df$dst__PA)
+dist2pa.rast.co.sc <- d2pa.sub.mean.co / ( 2 * d2pa.sd.co)
 
-# Total Farm Count:
-ttl.farm.mean.co <- mean(warp.df$Ttl_F_C)
-ttl.f.sub.mean.co <- tot.farms.rast - ttl.farm.mean.co
-ttl.f.sd.co <- sd(warp.df$Ttl_F_C)
-tot.farms.rast.co.sc <- ttl.f.sub.mean.co / ( 2 * ttl.f.sd.co)
+# Animal Farm Density:
+animal.farm.mean.co <- mean(warp.pres.abs$Anml_Fr)
+anim.f.sub.mean <- animal.farming.rast - animal.farm.mean
+anim.f.sd <- sd(warp.pres.abs$Anml_Fr)
+animal.farm.rast.sc <- anim.f.sub.mean / ( 2 * anim.f.sd)
 
-# Total Farms Sq:
-ttl.farm.sq.mean.co <- mean(total.farms.sq.co)
-ttl.f.sq.sub.mean.co <- tot.farms.sq.rast - ttl.farm.sq.mean.co
-ttl.f.sq.sd.co <- sd(total.farms.sq.co)
-tot.farms.sq.rast.co.sc <- ttl.f.sq.sub.mean.co / ( 2 * ttl.f.sq.sd.co)
+# Ground Crop Density:
+ground.crop.mean <- mean(warp.pres.abs$Grnd_Cr)
+ground.c.sub.mean <- ground.crop.rast - ground.crop.mean
+ground.c.sd <- sd(warp.pres.abs$Grnd_Cr)
+ground.crop.rast.sc <- ground.c.sub.mean / ( 2 * ground.c.sd)
 
 # Grizz Increase:
 grizzinc.mean <- mean(warp.df$GrzzInE)

@@ -119,6 +119,13 @@ post.int.only <- stan_glmer(conflict_presence_ps ~ 1 + (1 | CCSNAME.ps),
                   iter = 5000,
                   seed = SEED, refresh=0) # we add seed for reproducability
 
+# Semi-Model: Just including one ag variable 
+post.pa.full <- stan_glmer(conflict_presence_ps ~ dist.2.pa.ps + dist.2.met.ps + animal.farm.dens.ps + pop.dens + (1 | CCSNAME.ps), 
+                            data = mini.warp.df.ps,
+                            family = binomial(link = "logit"), # define our binomial glm
+                            prior = t_prior, prior_intercept = int_prior, QR=TRUE,
+                            seed = SEED, refresh=0) # we add seed for reproducability
+
 
 # Global Model: including all of our predictors 
 post.pa.full <- stan_glmer(conflict_presence_ps ~ dist.2.pa.ps + dist.2.met.ps + animal.farm.dens.ps + ground.crop.dens.ps + pop.dens + (1 | CCSNAME.ps), 
@@ -149,6 +156,26 @@ post.pa.full.effects.plot <- sjPlot::plot_model(post.pa.full,
 
 ```
 Here we set our initial priors to students t with 7 degrees of freedom, and a scale of 2.5 which is a reasonable default fir prior when coefficients should be close to zero but have some chance of being large. We build our three models using stan_glm to return our posterior distribution for the specified model parameters. Our first model, logit(p_conflict) = B_1*PopDens , has a 0.8 coefficient/mean for population density. Model 2, logit(p_conflict) = a[CCS] + B_1 * PopDens includes a varying intercept for CCS region and a coefficient/mean of -2.3 for population density. The full model, logit(p_conflict) = a[CCS] + B_1*PopDens + B_2 * Dist2PA + B_3 * Dist2Metro + B_4 * TotalFarms + B_5 * DomFarms shows a -3.3 coefficient for Dist2PA, a -1.4 for Dist2Metro , a -0.3 for Cattle Ranching & Farming (Domfarms), 1.1 Fruit and tree nut farming (Domfarms), 1.6 for Other animal production (Domfarms), 1.6 for Other crop farming (Domfarms), 0.2 for Vegetable & Meelon farming, -0.3 for total farms , 0.5 for total farsms squared, and 0.7 for population density.
+
+```{r correlation plot}
+# Run Correlation Plot: ---------------------------------------------------
+library(corrplot)
+
+# Make a correlation matrix for our data dn predictors:
+cor.matrix.df.co <- data.frame(dist.2.pa.co, dist.2.grizzpop.co, animal.farm.dens.co, ground.crop.dens.co, bhs.co, biophys.co, grizzinc.co)
+
+cor.matrix.co <- cor(cor.matrix.df.co)
+round(cor.matrix.co, 2)
+# Simple correlation plots:
+corrplot(cor.matrix.co, method = 'number', ) # colorful number
+corrplot(cor.matrix.co, addCoef.col = 'black')
+
+# Make a plot with proportional circles on a diagonal, coefficent numbers, and legend at the bottom:
+predictor.cor.plot.co <- corrplot(cor.matrix.co, type = 'lower', order = 'hclust', tl.col = 'black',addCoef.col = 'grey',
+                               cl.ratio = 0.2, tl.srt = 45, col = COL2('PuOr', 10))
+
+```
+
 
 
 ## Find the Area Under the Curve for our Posterior Distributions:

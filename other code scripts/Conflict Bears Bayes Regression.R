@@ -244,9 +244,8 @@ sjPlot::plot_model(post.co.offset)
 # Notes: axis labels should be in order from bottom to top. 
 # To see the values of the effect size and p-value, set show.values and show.p= TRUE
 post.co.offset.effects.plot <- sjPlot::plot_model(post.co.offset, 
-                                         axis.labels=c("Bear Habitat Suitability", "CS Biophysical (HII + topo ruggedness)", "Grizz Increase", "Total Farm Count ^2" ,"Total Farm Count" ,"Vegetable & Melon Farming" ,
-                                                       "Other Crop Farming (tobacco, peanut, sugar-cane, hay, herbs & spices) ", "Other Animal Production (bees & honey, equine, fur-bearers)" , "Fruit & Tree Nut Farming" , "Cattle Ranching & Farming" ,
-                                                        "Distance to Protected Area (km)"),
+                                         axis.labels=c("Bear Habitat Suitability", "Biophysical Connectivity Map of Bear Corridors", "Grizz Increase", "Ground Crop & Produce Farming Density",
+                                                      "Animal & Meat Farming Density", " Distance to Extant Grizzly Populations", "Distance to Protected Area (km)"),
                                          show.values=TRUE, show.p=FALSE,
                                          title="Effects of Social & Environmental Variables on Bear Conflict")
 

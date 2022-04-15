@@ -257,6 +257,87 @@ post.co.offset.effects.plot <- sjPlot::plot_model(post.co.offset,
 sjPlot::tab_model(post.co.offset)
 
 
+################## Make CCS Varying Intercept Raster:
+# Bring in Data: ----------------------------------------------------------
+soi.ccs.crop <- st_read( "/Users/shannonspragg/ONA_GRIZZ/Data/processed/SOI_CCS_10km.shp")
+# Bring in one of our rasters for rasterizing polygon data later:
+soi.rast <- terra::rast("/Users/shannonspragg/ONA_GRIZZ/Data/processed/SOI_10km.tif") # SOI Region 10km
+
+# Reproject the Data:
+soi.ccs.reproj <- st_make_valid(soi.ccs.crop) %>% 
+  st_transform(crs=crs(soi.rast))
+
+# Check to see if they match:
+st_crs(warp.df) == st_crs(soi.ccs.reproj) # [TRUE] 
+
+# Extracting CCS Varying Intercept from Posterior: ------------------------
+
+# Need to make the ranef(post.pa.full) into a dataframe and join by CCS name to our warp.pres.abs:
+varying.int.means.co <- as.data.frame(ranef(post.co.offset))
+vary.int.subset.co <- varying.int.means.co[ , c("grp", "condval")]
+
+# Join the tab data with spatial:  
+ccs.varint.join.co <- merge(soi.ccs.crop, vary.int.subset.co, by.x = "CCSNAME", by.y = "grp")
+
+# Now that it's spatial, do a spatial join to assign a varying intercept mean to each point:
+warp.varint.join.co <- st_join(warp.df, left = TRUE, ccs.varint.join.co) # join points
+
+# Clean this up
+warp.varint.join.co$PRNAME <- NULL
+warp.varint.join.co$PRNTCDVSNC <- NULL
+warp.varint.join.co$PRUID <- NULL
+warp.varint.join.co$CDUID <- NULL
+warp.varint.join.co$CPRVNCCD <- NULL
+warp.varint.join.co$FTRCD <- NULL
+warp.varint.join.co$CPRVNCCD <- NULL
+warp.varint.join.co$PRNTCDVSNC <- NULL
+warp.varint.join.co$FFCTVDT <- NULL
+warp.varint.join.co$XPRDT <- NULL
+warp.varint.join.co$OBJECTID <- NULL
+warp.varint.join.co$AREA_SQM <- NULL
+warp.varint.join.co$FEAT_LEN <- NULL 
+warp.varint.join.co$CDNAME <- NULL
+warp.varint.join.co$CDTYPE <- NULL
+warp.varint.join.co$CPRVNCNM <- NULL
+warp.varint.join.co$CCSNAME.y <- NULL
+warp.varint.join.co$CCSUID.y <- NULL
+warp.varint.join.co$CCSUID_ <- NULL
+
+# Rename these quick:
+names(warp.varint.join.co)[names(warp.varint.join.co) == "CCSNAME.x"] <- "CCSNAME"
+names(warp.varint.join.co)[names(warp.varint.join.co) == "CCSUID.x"] <- "CCSUID"
+names(warp.varint.join.co)[names(warp.varint.join.co) == "condval"] <- "CCS_Varying_Int"
+
+# Make our CCS Raster: ----------------------------------------------------
+# Make these spatvectors:
+soi.ccs.sv <- vect(soi.ccs.reproj)
+warp.co.sv <- vect(warp.varint.join.co)
+
+# Make our CCS Post Mean Raster: ------------------------------------------
+soi.ccs.rast <- terra::rasterize(soi.ccs.sv, soi.rast, field = "CCSNAME")
+
+# Make Raster for our Posterior Means for CCS Varying Intercept: ---------------------
+varint.means.rast.co <- terra::rasterize(warp.co.sv, soi.rast, field = "CCS_Varying_Int")
+names(varint.means.rast.co)[names(varint.means.rast.co) == "OBJECTID"] <- "CCS Varying Intercept Mean Estimate"
+
+# Extract Values of Posterior Means to CCS regions: 
+warp.varint.mean.ext.co <- terra::extract(varint.means.rast.co, soi.ccs.sv, mean, na.rm = TRUE) 
+
+# Create New Column(s) for Extracted Values:
+soi.ccs.sv$CCSMean <- warp.varint.mean.ext.co[,2] 
+
+# Make our CCS Post Mean Raster: ------------------------------------------
+ccs.varint.means.rast.co <- terra::rasterize(soi.ccs.sv, soi.rast, field = "CCSMean")
+names(ccs.varint.means.rast.co)[names(ccs.varint.means.rast.co) == "CCStMean"] <- "CCS Varying Intercept Means"
+
+# Check this:
+plot(ccs.varint.means.rast) 
+
+# Save our CCS Post Means Raster: -----------------------------------------
+terra::writeRaster(ccs.varint.means.rast.co, "/Users/shannonspragg/ONA_GRIZZ/Data/processed/CCS_varint_raster_co.tif" )
+ccs.varint.means.rast.co <- rast("/Users/shannonspragg/ONA_GRIZZ/Data/processed/CCS_varint_raster_co.tif")
+
+
 # Scale our Predictor Rasters: --------------------------------------------
 # Here we create a function to scale by subtracting the mean and dividing by 2 standard deviations:
 scale2sd.raster <-function(variable){(variable - global(variable, "mean", na.rm=TRUE)[,1])/(2*global(variable, "sd", na.rm=TRUE)[,1])}
@@ -269,35 +350,41 @@ d2pa.sub.mean.co <- dist2pa.rast - d2pa.mean.co
 d2pa.sd.co <- sd(warp.df$dst__PA)
 dist2pa.rast.co.sc <- d2pa.sub.mean.co / ( 2 * d2pa.sd.co)
 
+# Distance to Grizzly Pops:
+d2grizz.mean.co <- mean(warp.df$dst__GP)
+d2grizz.sub.mean.co <- dist2grizzpop.rast - d2grizz.mean.co
+d2grizz.sd.co <- sd(warp.df$dst__GP)
+dist2grizzpop.rast.co.sc <- d2grizz.sub.mean.co / ( 2 * d2grizz.sd.co)
+
 # Animal Farm Density:
-animal.farm.mean.co <- mean(warp.pres.abs$Anml_Fr)
-anim.f.sub.mean <- animal.farming.rast - animal.farm.mean
-anim.f.sd <- sd(warp.pres.abs$Anml_Fr)
-animal.farm.rast.sc <- anim.f.sub.mean / ( 2 * anim.f.sd)
+animal.farm.mean.co <- mean(warp.df$Anml_Fr)
+anim.f.sub.mean.co <- animal.farming.rast - animal.farm.mean.co
+anim.f.sd.co <- sd(warp.df$Anml_Fr)
+animal.farm.rast.co.sc <- anim.f.sub.mean.co / ( 2 * anim.f.sd.co)
 
 # Ground Crop Density:
-ground.crop.mean <- mean(warp.pres.abs$Grnd_Cr)
-ground.c.sub.mean <- ground.crop.rast - ground.crop.mean
-ground.c.sd <- sd(warp.pres.abs$Grnd_Cr)
-ground.crop.rast.sc <- ground.c.sub.mean / ( 2 * ground.c.sd)
+ground.crop.mean.co <- mean(warp.df$Grnd_Cr)
+ground.c.sub.mean.co <- ground.crop.rast - ground.crop.mean.co
+ground.c.sd.co <- sd(warp.df$Grnd_Cr)
+ground.crop.rast.co.sc <- ground.c.sub.mean.co / ( 2 * ground.c.sd.co)
 
 # Grizz Increase:
-grizzinc.mean <- mean(warp.df$GrzzInE)
-grizz.sub.mean <- grizzinc.rast - grizzinc.mean
-grizzinc.sd <- sd(warp.df$GrzzInE)
-grizzinc.rast.sc <- grizz.sub.mean / ( 2 * grizzinc.sd)
+grizzinc.mean.co <- mean(warp.df$GrizzInc)
+grizz.sub.mean.co <- grizzinc.rast - grizzinc.mean.co
+grizzinc.sd.co <- sd(warp.df$GrizzInc)
+grizzinc.rast.co.sc <- grizz.sub.mean.co / ( 2 * grizzinc.sd.co)
 
 # Biophys:
-biophys.mean <- mean(warp.df$BphysEx)
-bio.sub.mean <- biophys.rast - biophys.mean
-biophys.sd <- sd(warp.df$BphysEx)
-biophys.rast.sc <- bio.sub.mean / ( 2 * biophys.sd)
+biophys.mean.co <- mean(warp.df$Biophys)
+bio.sub.mean.co <- biophys.rast - biophys.mean.co
+biophys.sd.co <- sd(warp.df$Biophys)
+biophys.rast.co.sc <- bio.sub.mean.co / ( 2 * biophys.sd.co)
 
 # BHS:
-bhs.mean <- mean(warp.df$BHSExtr)
-bhs.sub.mean <- bhs.rast - bhs.mean
-bhs.sd <- sd(warp.df$BHSExtr)
-bhs.rast.sc <- bhs.sub.mean / ( 2 * bhs.sd)
+bhs.mean.co <- mean(warp.df$BHS)
+bhs.sub.mean.co <- bhs.rast - bhs.mean.co
+bhs.sd.co <- sd(warp.df$BHS)
+bhs.rast.co.sc <- bhs.sub.mean.co / ( 2 * bhs.sd.co)
 
 # We don't need to scale the categorical rasters, CCS raster or the p(general conflict) raster
 
@@ -305,27 +392,27 @@ bhs.rast.sc <- bhs.sub.mean / ( 2 * bhs.sd)
 # Produce our P(Bear Conflict) Raster: ------------------------------------
 
 # Make sure extents match:
-ext(grizzinc.rast.sc) == ext(bhs.rast.sc) # TRUE
-ext(biophys.rast.sc) == ext(tot.farms.rast.co.sc) #TRUE
-ext(tot.farms.sq.rast.co.sc) == ext(cattle.ranching.rast) #TRUE
+ext(grizzinc.rast.co.sc) == ext(bhs.rast.co.sc) # TRUE
+ext(biophys.rast.co.sc) == ext(animal.farm.rast.co.sc) #TRUE
+ext(animal.farm.rast.co.sc) == ext(ground.crop.rast.co.sc) #TRUE
 
 # View our Full Model Coefficients:
 summary(post.co.offset)
 fixef(post.co.offset)
 
 # Stack these spatrasters:
-bear.conf.rast.stack <- c(grizzinc.rast.sc, bhs.rast.sc, biophys.rast.sc, dist2pa.bear.rast.sc, tot.farms.rast.co.sc, tot.farms.sq.rast.co.sc, cattle.ranching.rast, ccs.varint.rast, fruit.tree.nut.rast, other.animal.rast, other.crop.rast, veg.mel.rast, prob.gen.conf.rast)
+bear.conf.rast.stack <- c(grizzinc.rast.co.sc, bhs.rast.co.sc, biophys.rast.co.sc, dist2pa.rast.co.sc, dist2grizzpop.rast.co.sc, animal.farm.rast.co.sc, ground.crop.rast.co.sc, ccs.varint.means.rast.co)
 plot(bear.conf.rast.stack) # plot these all to check
 # It looks like veg.melon raster has all 0 values, so isn't working
 
 # Create P(all conflict) raster with our regression coefficients and rasters:
 # Prob_conf_rast = Int.val + CCS + B_1est * PopDens…
-bear_conflict_rast <- -1.767194645 + ccs.varint.rast + (-0.272180709 * dist2pa.bear.rast.sc) + (0.190484001 * grizzinc.rast.sc) + (0.377704254 * biophys.rast.sc) + ( 0.001733723 * bhs.rast.sc) + (-0.205342727 * tot.farms.rast.co.sc) + (0.829898279  * tot.farms.sq.rast.co.sc) + 
-  ( 3.171972498 * prob.gen.conf.rast) + (0.936089290 * cattle.ranching.rast) + (1.226594906 * fruit.tree.nut.rast) + (1.186180400 * other.animal.rast) + (1.057287864 * other.crop.rast) + (0.391081848 * veg.melon.rast)
+#bear_conflict_rast <- -1.767194645 + ccs.varint.rast + (-0.272180709 * dist2pa.bear.rast.sc) + (0.190484001 * grizzinc.rast.sc) + (0.377704254 * biophys.rast.sc) + ( 0.001733723 * bhs.rast.sc) + (-0.205342727 * tot.farms.rast.co.sc) + (0.829898279  * tot.farms.sq.rast.co.sc) + 
+#  ( 3.171972498 * prob.gen.conf.rast) + (0.936089290 * cattle.ranching.rast) + (1.226594906 * fruit.tree.nut.rast) + (1.186180400 * other.animal.rast) + (1.057287864 * other.crop.rast) + (0.391081848 * veg.melon.rast)
 
 # Our full model with general conflict offset:
-bear_conf_offset_rast <- -1.885970912 + ccs.varint.rast + (-0.325936392 * dist2pa.bear.rast.sc) + (0.238192923  * grizzinc.rast.sc) + (0.434320141 * biophys.rast.sc) + ( -0.008000519 * bhs.rast.sc) + (0.015953383 * tot.farms.rast.co.sc) + (0.876481329 * tot.farms.sq.rast.co.sc) + 
-  ( 3.171972498 * prob.gen.conf.rast) + (1.187479574  * cattle.ranching.rast) + (1.488549377 * fruit.tree.nut.rast) + (1.216286474 * other.animal.rast) + (1.582768773 * other.crop.rast) + (1.576219007 * veg.mel.rast)
+bear_conf_offset_rast <- -1.2012335 + ccs.varint.means.rast.co + (0.1940000 * dist2pa.rast.co.sc) + (0.8533170  * grizzinc.rast.co.sc) + (0.4597530 * biophys.rast.co.sc) + ( -0.2396923 * bhs.rast.co.sc) + (-0.4936497 * dist2grizzpop.rast.co.sc) + (-1.1418043 * animal.farm.rast.co.sc) + 
+  ( 2.7521941 * ground.crop.rast.co.sc) 
 
 # Convert the Raster to the Probability Scale:
 p_BEAR_conf_rast <- app(bear_conflict_rast, fun=plogis)

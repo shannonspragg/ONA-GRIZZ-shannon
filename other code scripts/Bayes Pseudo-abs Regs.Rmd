@@ -366,6 +366,7 @@ plot(ccs.varint.means.rast)
 
 # Save our CCS Post Means Raster: -----------------------------------------
 terra::writeRaster(ccs.varint.means.rast, "/Users/shannonspragg/ONA_GRIZZ/Data/processed/CCS_varint_raster.tif" )
+ccs.varint.means.rast <- rast("/Users/shannonspragg/ONA_GRIZZ/Data/processed/CCS_varint_raster.tif")
 ```
 
 

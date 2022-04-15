@@ -138,14 +138,7 @@ post.co.int <- stan_glmer(bears_presence_co ~ 1 + (1 | CCSNAME.co),
                            iter = 5000,
                            seed = SEED, refresh=0) # we add seed for reproducibility
 
-# Full model:
-post.co.full <- stan_glmer(bears_presence_co ~ dist.2.pa.co + dist.2.grizzpop.co + animal.farm.dens.co + ground.crop.dens.co + grizzinc.co + biophys.co + bhs.co + (1 | CCSNAME.co) + prob.gen.conf, 
-                           data = mini.warp.df.co,
-                           family = binomial(link = "logit"), # define our binomial glm
-                           prior = t_prior, prior_intercept = int_prior, QR=TRUE,
-                           iter = 5000,
-                           seed = SEED, refresh=0) # we add seed for reproducibility
-summary(post.co.full)
+
 
 # Semi-Model: Just including one ag variable 
 post.co.semi <- stan_glmer(bears_presence_co ~ dist.2.pa.co + dist.2.grizzpop.co + animal.farm.dens.co + grizzinc.co + biophys.co + bhs.co + (1 | CCSNAME.co) + offset(prob.gen.conf), 
@@ -165,6 +158,8 @@ post.co.offset <- stan_glmer(bears_presence_co ~ dist.2.pa.co + dist.2.grizzpop.
 
 # Save an object to a file
 saveRDS(post.co.offset, file = "/Users/shannonspragg/ONA_GRIZZ/Data/processed/post_co_offset.rds")
+saveRDS(post.co.int, file = "/Users/shannonspragg/ONA_GRIZZ/Data/processed/post_co_int.rds")
+
 # Restore the object
 post.co.offset <- readRDS(file = "/Users/shannonspragg/ONA_GRIZZ/Data/processed/post_co_offset.rds")
 
@@ -205,12 +200,17 @@ roc(bears_presence_co, post.co.offset$fitted.values, plot=TRUE, legacy.axes=TRUE
     xlab= "False Positive Percentage", ylab= "True Positive Percentage",
     col="#377eb8", lwd=4, print.auc=TRUE) # this gives us the ROC curve , in 3544 controls (bears 0) < 2062 cases (bears 1), Area under curve = 0.
 
+# Add ROC curve for our semi model:
+plot.roc(bears_presence_co, post.co.semi$fitted.values, percent=TRUE, col='#4daf4a', lwd=4, print.auc=TRUE, add=TRUE, print.auc.y=60)
+
 # Leave-one-out Cross_validation: -----------------------------------------
 # Run a Leave-One-Out (LOO):
 # Loo package implements fast Pareto smoothed leave-one-out-cross-val (PSIS-LOO) to compute expected log predictive density:
 
-(loo.co.full <- loo(post.co.full, save_psis = TRUE))
+(loo.co.semi <- loo(post.co.semi, save_psis = TRUE))
 (loo.co.offset <- loo(post.co.offset, save_psis = TRUE))
+
+loo.comparison <- loo_compare(loo.co.semi, loo.co.offset) # this high negative value for post0 shows us the covariates contain clearly useful information for predictions
 
 
 plot(loo.co.full, label_points = TRUE)

@@ -231,9 +231,12 @@ loo.comparison <- loo_compare(loo.0.co, loo.co.full, loo.co.offset) # this high 
 cv10folds <- kfold_split_stratified(K=10, x=mini.warp.df.ps$dom.farms.ps)
 
 kfold.10.co <- kfold(post.co.offset, K=10, cores = getOption("mc.cores", 1))
+kfold.10.co.int <- kfold(post.co.int, K=10, cores = getOption("mc.cores", 1))
+
 
 # Save this as data:
-saveRDS(kfold.10.co, file = "post_co_kfold10.rds")
+saveRDS(kfold.10.co, file = "/Users/shannonspragg/ONA_GRIZZ/Data/processed/post_co_kfold10.rds")
+saveRDS(kfold.10.co.int, file = "/Users/shannonspragg/ONA_GRIZZ/Data/processed/post_co_int_kfold10.rds")
 
 # Plotting Mixed Effects: -------------------------------------------------
 

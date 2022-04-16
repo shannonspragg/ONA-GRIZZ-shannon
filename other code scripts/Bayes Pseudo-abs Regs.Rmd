@@ -240,6 +240,8 @@ cv10folds.ccs <- kfold_split_stratified(K=10, x=mini.warp.df.ps$CCSNAME.ps)
 
 # Save this as data:
 saveRDS(kfold.10.ps, file = "/Users/shannonspragg/ONA_GRIZZ/Data/processed/post_pa_kfold10.rds")
+saveRDS(kfold.10.ps.int, file = "/Users/shannonspragg/ONA_GRIZZ/Data/processed/post_pa_kfold10_int.rds")
+
 kfold.10.ps <- readRDS(file = "/Users/shannonspragg/ONA_GRIZZ/Data/processed/post_pa_kfold10.rds")
 
 ```

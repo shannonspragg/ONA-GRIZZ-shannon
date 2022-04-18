@@ -86,7 +86,7 @@ grizz.pop.sv <- vect(extent.grizz)
 
 # Create a Continuous Raster for Cell Distance to PA's: -------------------
 
-  # Do this for our filtered PA's:
+  # Do this for our variables:
 dist.pa.raster <- terra::distance(soi.rast, PAs.soi) 
 
 dist.met.raster <- terra::distance(soi.rast, metro.soi.sv) 
@@ -148,6 +148,11 @@ d2pa.crop <- terra::crop(dist.pa.raster, soi.rast)
 d2met.crop <- terra::crop(dist.met.raster, soi.rast)
 d2grizzpop.crop <- terra::crop(dist.grizz.pop.raster, soi.rast)
 
+d2pa.inv.crop <- terra::crop(dist.pa.rast.invert, soi.rast)
+d2met.inv.crop <- terra::crop(dist.met.rast.invert, soi.rast)
+d2grizzpop.inv.crop <- terra::crop(dist.grizz.pop.rast.invert, soi.rast)
+
+
   # Resample to match extents and res:
 grizzinc.rsmple <- resample(grizzinc.crop, soi.rast, method='bilinear')
 biophys.rsmple <- resample(biophys.crop, soi.rast, method='bilinear')
@@ -157,6 +162,9 @@ d2met.rsmpl <- resample(d2met.crop, soi.rast, method='bilinear')
 d2grizz.pop.rsmpl <- resample(d2grizzpop.crop, soi.rast, method='bilinear')
 hm.dens.rsmple <- resample(hm.dens.reproj, soi.rsmple, method='bilinear')
 
+d2pa.inv.rsmpl <- resample(d2pa.inv.crop, soi.rast, method='bilinear')
+d2met.inv.rsmpl <- resample(d2met..inv.crop, soi.rast, method='bilinear')
+d2grizz.pop.inv.rsmpl <- resample(d2grizzpop.inv.crop, soi.rast, method='bilinear')
 
   # Plot Check:
 soi.bound.vect <- vect(soi.bound.reproj)
@@ -193,6 +201,9 @@ d2met.soi <- terra::mask(d2met.rsmpl, soi.bound.vect)
 d2grizzpop.soi <- terra::mask(d2grizz.pop.rsmpl, soi.bound.vect) 
 hm.dens.soi <- terra::mask(hm.dens.rsmple, soi.bound.vect) # BEA-UTIFUL!
 
+d2pa.inv.soi <- terra::mask(d2pa.inv.rsmpl, soi.bound.vect) 
+d2met.inv.soi <- terra::mask(d2met.inv.rsmpl, soi.bound.vect) 
+d2grizzpop.inv.soi <- terra::mask(d2grizz.pop.inv.rsmpl, soi.bound.vect) 
 
 plot(biophys.soi)
 plot(bhs.soi)
@@ -218,4 +229,7 @@ terra::writeRaster(d2met.soi, "/Users/shannonspragg/ONA_GRIZZ/Data/processed/dis
 terra::writeRaster(d2grizzpop.soi, "/Users/shannonspragg/ONA_GRIZZ/Data/processed/dist2grizz_pop_raster.tif" )
 terra::writeRaster(hm.dens.soi, "/Users/shannonspragg/ONA_GRIZZ/Data/processed/human_dens_SOI_10km.tif" )
 
+terra::writeRaster(d2pa.inv.soi, "/Users/shannonspragg/ONA_GRIZZ/Data/processed/dist2pa_Sinvert_raster.tif")
+terra::writeRaster(d2met.inv.soi, "/Users/shannonspragg/ONA_GRIZZ/Data/processed/dist2metro_invert_raster.tif" )
+terra::writeRaster(d2grizzpop.inv.soi, "/Users/shannonspragg/ONA_GRIZZ/Data/processed/dist2grizz_pop_invert_raster.tif" )
 

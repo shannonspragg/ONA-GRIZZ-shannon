@@ -150,7 +150,7 @@ d2grizzpop.crop <- terra::crop(dist.grizz.pop.raster, soi.rast)
 
 d2pa.inv.crop <- terra::crop(dist.pa.rast.invert, soi.rast)
 d2met.inv.crop <- terra::crop(dist.met.rast.invert, soi.rast)
-d2grizzpop.inv.crop <- terra::crop(dist.grizz.pop.rast.invert, soi.rast)
+d2grizzpop.inv.crop <- terra::crop(dist.grizz.rast.invert, soi.rast)
 
 
   # Resample to match extents and res:
@@ -163,7 +163,7 @@ d2grizz.pop.rsmpl <- resample(d2grizzpop.crop, soi.rast, method='bilinear')
 hm.dens.rsmple <- resample(hm.dens.reproj, soi.rsmple, method='bilinear')
 
 d2pa.inv.rsmpl <- resample(d2pa.inv.crop, soi.rast, method='bilinear')
-d2met.inv.rsmpl <- resample(d2met..inv.crop, soi.rast, method='bilinear')
+d2met.inv.rsmpl <- resample(d2met.inv.crop, soi.rast, method='bilinear')
 d2grizz.pop.inv.rsmpl <- resample(d2grizzpop.inv.crop, soi.rast, method='bilinear')
 
   # Plot Check:

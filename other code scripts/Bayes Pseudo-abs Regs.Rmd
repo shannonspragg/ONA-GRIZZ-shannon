@@ -10,13 +10,12 @@ knitr::opts_chunk$set(echo = TRUE)
 
 ## Formatting our Pseudo-absence Bayesian Probability of Conflict Regressions:
 
-This document will include the different Bayesian regression models (simplest to most complex) for our WARP pseudo-abs dataframe (1's = all conflict report points , 0's = randomly generated absence points).
+This document will include the different Bayesian regression models (null and full) for our WARP pseudo-abs dataframe (1's = all conflict report points , 0's = randomly generated absence points).
 
-We produce three different models to estimate the probability of any wildlife conflict points occurring, in order from simplest to most complex. As we are demonstrating the probability of conflict for any species, we only include predictors that possibly pertain to all species (not bear specific) which are human population density, distance to nearest PA and metro area, total farm count and dominant farm type by CCS region, and a varying intercept for CCS region.
+We produce one primary full model to estimate the probability of any wildlife conflict points occurring. As we are demonstrating the probability of conflict for any species, we only include predictors that possibly pertain to all species (not bear specific) which are human population density, distance to nearest PA and metro area, density of ground crop farming and density of animal farming by CCS region, and a varying intercept for CCS region.
 
 Model 1 (null) : logit(p_conflict) = 1 + a[CCS]
-Model 2 (simple) : logit(p_conflict) = a[CCS] + B_1*PopDens 
-Model 3 (full) : logit(p_conflict) = a[CCS] + B_1*PopDens + B_2 * Dist2PA + B_3 * Dist2Metro + B_4 * TotalFarms + B_5 * DomFarms
+Model 2 (full) : logit(p_conflict) = a[CCS] + B_1*PopDens + B_2 * Dist2PA + B_3 * Dist2Metro + B_4 * AnimalFarmDensity + B_5 * GroundCropFarmDensity
 
 We will use the resulting p(conflict) values to adjust our predictor rasters (multiplying the coefficients by each raster) and combine these rasters into a single raster representing our p(conflict) for general species. These values will then be extracted to points in our p(conflict) model for bears as a predictor.
 
@@ -88,7 +87,7 @@ warp.pres.abs$CCSNAME <- as.factor(warp.pres.abs$CCSNAME)
 
 CCSNAME.ps <- warp.pres.abs$CCSNAME
 ```
-We can use the scale function to center our predictors by subtracting the means (center= TRUE) and scaling by dividing by their standard deviation (scale=TRUE). We do this as well as adding a quadratic term for our scaled total farms predictor.
+We can write a scale function to center our predictors by subtracting the means (center= TRUE) and scaling by dividing by two times their standard deviation (scale=TRUE).
 
 ## Producing the Bayes Models:
 
@@ -120,7 +119,7 @@ post.int.only <- stan_glmer(conflict_presence_ps ~ 1 + (1 | CCSNAME.ps),
                   seed = SEED, refresh=0) # we add seed for reproducability
 
 # Semi-Model: Just including one ag variable 
-post.pa.full <- stan_glmer(conflict_presence_ps ~ dist.2.pa.ps + dist.2.met.ps + animal.farm.dens.ps + pop.dens + (1 | CCSNAME.ps), 
+post.pa.semi <- stan_glmer(conflict_presence_ps ~ dist.2.pa.ps + dist.2.met.ps + animal.farm.dens.ps + pop.dens + (1 | CCSNAME.ps), 
                             data = mini.warp.df.ps,
                             family = binomial(link = "logit"), # define our binomial glm
                             prior = t_prior, prior_intercept = int_prior, QR=TRUE,
@@ -155,8 +154,9 @@ post.pa.full.effects.plot <- sjPlot::plot_model(post.pa.full,
                                          title="Effects of Social & Environmental Variables on General Conflict")
 
 ```
-Here we set our initial priors to students t with 7 degrees of freedom, and a scale of 2.5 which is a reasonable default fir prior when coefficients should be close to zero but have some chance of being large. We build our three models using stan_glm to return our posterior distribution for the specified model parameters. Our first model, logit(p_conflict) = B_1*PopDens , has a 0.8 coefficient/mean for population density. Model 2, logit(p_conflict) = a[CCS] + B_1 * PopDens includes a varying intercept for CCS region and a coefficient/mean of -2.3 for population density. The full model, logit(p_conflict) = a[CCS] + B_1*PopDens + B_2 * Dist2PA + B_3 * Dist2Metro + B_4 * TotalFarms + B_5 * DomFarms shows a -3.3 coefficient for Dist2PA, a -1.4 for Dist2Metro , a -0.3 for Cattle Ranching & Farming (Domfarms), 1.1 Fruit and tree nut farming (Domfarms), 1.6 for Other animal production (Domfarms), 1.6 for Other crop farming (Domfarms), 0.2 for Vegetable & Meelon farming, -0.3 for total farms , 0.5 for total farsms squared, and 0.7 for population density.
+Here we set our initial priors to students t with 7 degrees of freedom, and a scale of 2.5 which is a reasonable default fir prior when coefficients should be close to zero but have some chance of being large. We build our two models using stan_glm to return our posterior distribution for the specified model parameters. Our first model is an intercept only (null) model which only includes our intercept and varying intercepts. It has the simple formula of logit(p_conflict) = conflict_presence ~ 1 + a[CCS]. Model 2, logit(p_conflict) = a[CCS] + B_1 * Dist2PA + B_2 * Dist2Metro + B_3 * AnimalFarming + B_4 * GroundCropFarming + B_5 * PopulationDensity.  
 
+## Run a Variable Correlation Plot:
 ```{r correlation plot}
 # Run Correlation Plot: ---------------------------------------------------
 library(corrplot)
@@ -179,7 +179,6 @@ predictor.cor.plot.co <- corrplot(cor.matrix.co, type = 'lower', order = 'hclust
 
 
 ## Find the Area Under the Curve for our Posterior Distributions:
-
 ```{r roc plot, echo=FALSE}
 # Plot ROC for the Simple Posterior:
 par(pty="s") # sets our graph to square
@@ -190,16 +189,13 @@ roc(conflict_presence_ps, post.pa.full$fitted.values, plot=TRUE, legacy.axes=TRU
 # Add ROC curve for our full pseudo-abs model:
 plot.roc(conflict_presence_ps, post.int.only$fitted.values, percent=TRUE, col='#4daf4a', lwd=4, print.auc=TRUE, add=TRUE, print.auc.y=60)
 
-plot.roc(conlfict_presence_ps, post.pa.simplest$fitted.values, percent=TRUE, col='red', lwd=4, print.auc=TRUE, add=TRUE, print.auc.y=40)
-
-legend("bottomright", legend=c("Full Pseudo-abs Regression", "Simple Pseudo-Abs Regression", "Simplest Pseudo-abs Regression"),
-       col=c("#377eb8", "#4daf4a", "red"), lwd = 4)
+legend("bottomright", legend=c("Full Pseudo-abs Regression", "Null Pseudo-abs Regression"),
+       col=c("#377eb8", "#4daf4a"), lwd = 4)
 ```
-Comparing the simple pseudo-absence model with the full model in a ROC plot shows that the full model has a 82% discrimination. This indicates that the model predictions are correct 82% of the time, slightly better than the simple model at 79% and the simplest model at 67%.
+Comparing the simple pseudo-absence model with the full model in a ROC plot shows that the full model has a 88% discrimination. This indicates that the model predictions are correct 88% of the time, slightly better than the null model at 87%.
 
 
 ## Leave One Out Cross Validation:
-
 ```{r LOO, echo=FALSE}
 # Leave-one-out Cross_validation: -----------------------------------------
 # Run a Leave-One-Out (LOO):
@@ -223,13 +219,12 @@ post0.ps <- update(post.int.only, formula = bears_presence_ps ~ 1 + (1 | CCSNAME
 
 loo.comparison <- loo_compare(loo.0, loo.pa.comp, loo.pa.full) # this high negative value for post0 shows us the covariates contain clearly useful information for predictions
 ```
-We conduct a leave-one-out cross validation for our three models and then compare them to the zero posterior. Above, we see that the full model and simple model's PSIS-LOO result is reliable as all Pareto k estimates are small (k< 0.5) and the Monte Carlo SE is 0.1 (Vehtari, Gelman and Gabry 2017a). The simplest model is also reliable as it has a Monte Carlo SE of 0.0 and all Pareto k estimates are small (k< 0.5). Comparing these LOO values to our baseline, we see that the theoretical expected log point wise predictive density (elpd_loo) is lowest for our full model (still lower than the compare model) and highest for our baseline posterior, indicating that the increased covariates in our models contain clearly useful information for predictions.
+We conduct a leave-one-out cross validation for our three models and then compare them to the zero posterior. Above, we see that the full model and simple model's PSIS-LOO result is reliable as all Pareto k estimates are small (k< 0.5) and the Monte Carlo SE is 0.1 (Vehtari, Gelman and Gabry 2017a). The null model is also reliable as it has a Monte Carlo SE of 0.0 and all Pareto k estimates are small (k< 0.5). Comparing these LOO values to our baseline, we see that the theoretical expected log point wise predictive density (elpd_loo) is lowest for our full model (still lower than the compare model) and highest for our baseline posterior (null model), indicating that the increased covariates in our models contain clearly useful information for predictions.
 
 ## K-Fold Cross Validation:
 ```{r K fold cross validate}
 # K Fold Cross Validation: -----------------------------------------
 # Setting up a K - fold cross validation for our general model: 
-
 
 # (if possible also specify the 'cores' argument to use multiple cores) 
 kfold.10.ps <-kfold(post.pa.full, K=10, cores = getOption("mc.cores", 1), save_fits = TRUE)
@@ -243,7 +238,6 @@ saveRDS(kfold.10.ps, file = "/Users/shannonspragg/ONA_GRIZZ/Data/processed/post_
 saveRDS(kfold.10.ps.int, file = "/Users/shannonspragg/ONA_GRIZZ/Data/processed/post_pa_kfold10_int.rds")
 
 kfold.10.ps <- readRDS(file = "/Users/shannonspragg/ONA_GRIZZ/Data/processed/post_pa_kfold10.rds")
-
 ```
 
 
@@ -253,7 +247,7 @@ kfold.10.ps <- readRDS(file = "/Users/shannonspragg/ONA_GRIZZ/Data/processed/pos
 plot_model(post.pa.full, type = "pred", title="Predicted Probabilities of General Conflict Presence",
            axis.labels=c("Conflict Presence", "Distance to PA" ,"Distance to Metro" ,"Dominant Farm Type", "Total Farm Count", "[Total Farm Count]^2", "Population Density" ))
 
-plot_model(post.pa.full, type = "pred", terms = c("b2pa.dist.ps", "b2met.dist.ps", "pop.dens", "dom.farms.ps"))
+plot_model(post.pa.full, type = "pred", terms = c("dist.2.pa.ps", "dist.2.met.ps", "pop.dens", "animal.farm.dens.ps", "ground.crop.dens.ps"))
 
 
 # Basic Mixed Effect Plot:
@@ -263,11 +257,9 @@ sjPlot::plot_model(post.pa.full)
 # Notes: axis labels should be in order from bottom to top. 
 # To see the values of the effect size and p-value, set show.values and show.p= TRUE
 post1.effects.plot <- sjPlot::plot_model(post.pa.full, 
-                   axis.labels=c( "Total Farm Count ^2" ,"Total Farm Count" ,"Vegetable & Melon Farming" ,
-                                 "Other Crop Farming (tobacco, peanut, sugar-cane, hay, herbs & spices) ", "Other Animal Production (bees & honey, equine, fur-bearers)" , "Fruit & Tree Nut Farming" , "Cattle Ranching & Farming" ,
-                                   "Distance to Metro Area (km)" , "Distance to Protected Area (km)"),
+                   axis.labels=c("Population Density", "Ground Crop & Produce Farming Density","Animal & Meat Farming Density","Distance to Metro Areas (km)", "Distance to Protected Area (km)"),
                    show.values=TRUE, show.p=FALSE,
-                   title="Effects of Social & Environmental Variables on Wildlife Conflict")
+                   title="Effects of Social & Environmental Variables on General Wildlife Conflict")
 
 ##### Model Table of Effect Size:
 sjPlot::tab_model(post.pa.full)
@@ -275,10 +267,9 @@ sjPlot::tab_model(post.pa.full)
 # Formatted Table (with labels):
 # Notes: predictor labels (pred.labels) should be listed from top to bottom; dv.labels= the name of the response variable that will be at the top of the table.
 
-post1.effects.tab <- sjPlot::tab_model(post1, 
+post1.effects.tab <- sjPlot::tab_model(post.pa.full, 
                   show.re.var= TRUE, show.se = TRUE , show.p = TRUE , show.r2 = TRUE, show.aic = TRUE , 
-                  pred.labels =c("(Intercept)" , "Distance to Protected Area (km)", "Distance to Metro Area (km)", "Cattle Ranching & Farming" , "Fruit & Tree Nut Farming" ,"Other Animal Production (bees & honey, equine, fur-bearers)" ,
-                                 "Other Crop Farming (tobacco, peanut, sugar-cane, hay, herbs & spices) ", "Vegetable & Melon Farming" , "Total Farm Count" , "Total Farm Count ^2" , "Grizz Increase", "Bear Habitat Suitability", "CS Biophysical (HII + topo ruggedness)"),
+                  pred.labels =c("(Intercept)" , "Distance to Protected Area (km)", "Distance to Metro Area (km)", "Animal & Meat Farming", "Ground Crop & Produce Farming", "Population Density"),
                                  dv.labels= "Effects of Social & Environmental Variables on Wildlife Conflict")
 
 ```
@@ -286,8 +277,6 @@ post1.effects.tab <- sjPlot::tab_model(post1,
 ## Create our P(General Conflict) Raster:
 
 Here we use the coefficients resulting from the above full regression to preform raster math (coeff_1 * predictor raster + coeff_2 * predictor raster + ...) to create one condensed raster representing the probability of general conflict.
-
-Then, we extract the values of this raster to our original warp conflict report data frame (1's = bears, 0's = other species reports), to use the p(general conlfict) as a predictor in the second Bayes model of bear conflict.
 
 ## Create our Varying Intercept Raster
 ```{r varying intercept raster}
@@ -372,17 +361,18 @@ ccs.varint.means.rast <- rast("/Users/shannonspragg/ONA_GRIZZ/Data/processed/CCS
 ```
 
 
-
-## Bring in Rasters:
+## Bring in Predictor Rasters:
 ```{r bring in data 2, include=FALSE}
 # Here we bring in all of our predictor rasters for the SOI region:
   # link to data here:   https://drive.google.com/drive/u/0/folders/1T60Al9vHOF-E7ftKzvzN2CMUyF1agC-l
 
   # Distance to Neartest Protected Area (km):
 dist2pa.rast <- terra::rast("/Users/shannonspragg/ONA_GRIZZ/Data/processed/dist2pa_SOI_10km.tif" )
+#dist2pa.inv.rast <- terra::rast("/Users/shannonspragg/ONA_GRIZZ/Data/processed/dist2pa_Sinvert_raster.tif" )
 
   # Distance to Nearest Metro Area (km):
 dist2met.rast <- terra::rast("/Users/shannonspragg/ONA_GRIZZ/Data/processed/dist2metro_raster.tif" )
+#dist2met.inv.rast <- terra::rast("/Users/shannonspragg/ONA_GRIZZ/Data/processed/dist2metro_invert_raster.tif" )
 
   # Animal & Meat Farming Density:
 animal.farming.rast <- terra::rast("/Users/shannonspragg/ONA_GRIZZ/Data/processed/animal_production_density_raster.tif")
@@ -397,12 +387,12 @@ hm.dens.rast <- terra::rast("/Users/shannonspragg/ONA_GRIZZ/Data/processed/human
 ccs.varint.rast <- terra::rast("/Users/shannonspragg/ONA_GRIZZ/Data/processed/CCS_varint_raster.tif" )
 ```
 
-## Scale Rasters:
+## Scale Predictor Rasters:
 ```{r scale our variables}
 # Scale the Rasters:
 # We can do this Step by Step:
 
-# Distance to PA:
+# Distance to PA: (using inverted rasters)
 d2pa.mean <- mean(warp.pres.abs$dst__PA)
 d2pa.sub.mean <- dist2pa.rast - d2pa.mean
 d2pa.sd <- sd(warp.pres.abs$dst__PA)
@@ -432,6 +422,7 @@ pop.sub.mean <- hm.dens.rast - pop.dens.mean
 pop.dens.sd <- sd(warp.pres.abs$Human_Dens)
 hm.dens.rast.sc <- pop.sub.mean / ( 2 * pop.dens.sd)
 ```
+Here, we scale our predictor rasters just like we scaled our variables. We scale each raster by the corresponding predictor value for mean and standard deviation that the predictor variable data was scaled with.
 
 ## Creating Probability of General Conflict Raster:
 ```{r raster math, include=TRUE}
@@ -462,11 +453,9 @@ We use raster math calculations to apply the regression coefficients to each cor
 
 ```{r write raster}
 # Save our P(General Conflict) Raster:
-terra::writeRaster(p_conf_rast, "/Users/shannonspragg/ONA_GRIZZ/Data/processed/prob_general_conf.tif")
-
+terra::writeRaster(p_conf_rast, "/Users/shannonspragg/ONA_GRIZZ/Data/processed/prob_general_conf_inv.tif")
 ```
-
-
+Next, we can extract the values of this raster to our original warp conflict report data frame (1's = bears, 0's = other species reports), to use the p(general conlfict) as a predictor in the second Bayes model of bear conflict.
 
 
 

@@ -30,7 +30,6 @@ library(bayestestR)
 
 
 # Import Data: ------------------------------------------------------------
-
 # Our just-conflict point data:
 warp.df <- st_read("/Users/shannonspragg/ONA_GRIZZ/Data/processed/warp.final.shp")
 str(warp.df)
@@ -171,8 +170,7 @@ post.co.offset <- readRDS(file = "/Users/shannonspragg/ONA_GRIZZ/Data/processed/
 post.co.offset.inv <- readRDS(file = "/Users/shannonspragg/ONA_GRIZZ/Data/processed/post_co_offset_inv.rds")
 
 ##### Plot the posterior for just fixed effects of our different variables:
-plot_model(post.co.full, sort.est = TRUE) # This plots just fixed effects
-plot_model(post.co.offset)
+plot_model(post.co.offset, sort.est = TRUE) # This plots just fixed effects
 
 # Posterior with varying intercepts:
 co.full.plot<-plot(post.co.full, "areas", prob = 0.95, prob_outer = 1)

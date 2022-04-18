@@ -36,7 +36,7 @@ warp.df <- st_read("/Users/shannonspragg/ONA_GRIZZ/Data/processed/warp.final.shp
 str(warp.df)
 
 # Bring in our P(General Conflict) Raster for Extraction:
-prob.gen.conf.rast <- terra::rast("/Users/shannonspragg/ONA_GRIZZ/Data/processed/prob_general_conf.tif")
+prob.gen.conf.rast <- terra::rast("/Users/shannonspragg/ONA_GRIZZ/Data/processed/prob_general_conf_inv.tif")
 names(prob.gen.conf.rast)[names(prob.gen.conf.rast) == "lyr.1"] <- "Probability of General Conflict"
 
 
@@ -45,9 +45,11 @@ names(prob.gen.conf.rast)[names(prob.gen.conf.rast) == "lyr.1"] <- "Probability 
 
   # Distance to Nearest Protected Area (km):
 dist2pa.rast <- terra::rast("/Users/shannonspragg/ONA_GRIZZ/Data/processed/dist2pa_SOI_10km.tif" )
+dist2pa.inv.rast <- terra::rast("/Users/shannonspragg/ONA_GRIZZ/Data/processed/dist2pa_Sinvert_raster.tif" )
 
   # Dist to Grizzly Populations:
 dist2grizzpop.rast <- terra::rast("/Users/shannonspragg/ONA_GRIZZ/Data/processed/dist2grizz_pop_raster.tif")
+dist2grizzpop.inv.rast <- terra::rast("/Users/shannonspragg/ONA_GRIZZ/Data/processed/dist2grizz_pop_invert_raster.tif")
 
   # Animal & Meat Farming Density:
 animal.farming.rast <- terra::rast("/Users/shannonspragg/ONA_GRIZZ/Data/processed/animal_production_density_raster.tif")
@@ -65,8 +67,8 @@ bhs.rast <- rast("/Users/shannonspragg/ONA_GRIZZ/Data/processed/bhs_SOI_10km.tif
 biophys.rast <- rast("/Users/shannonspragg/ONA_GRIZZ/Data/processed/biophys_SOI_10km.tif") # use this one
 
 # CCS Region ID:
-ccs.varint.rast <- terra::rast("/Users/shannonspragg/ONA_GRIZZ/Data/processed/CCS_varint_raster.tif" )
-names(ccs.varint.rast)[names(ccs.varint.rast) == "CCSMean"] <- "CCS Varying Intercept Mean"
+ccs.varint.means.rast.co <- rast("/Users/shannonspragg/ONA_GRIZZ/Data/processed/CCS_varint_raster_co.tif")
+names(ccs.varint.means.rast.co)[names(ccs.varint.means.rast.co) == "CCSMean"] <- "CCS Varying Intercept Mean"
 
 
 # Extract P(General Conflict) to WARP Points: -----------------------------
@@ -85,6 +87,8 @@ warp.sv <- vect(warp.all.buf)
 
 # Here I will extract the mean values from each raster to the buffered points
 warp.prob.gen.ext <- terra::extract(prob.gen.conf.rast, warp.sv, mean, na.rm = TRUE) 
+
+warp.prob.gen.ext <- terra::extract(p_conf_rast, warp.sv, mean, na.rm = TRUE) # with no inverted rasters
 
 # Create New Column(s) for Extracted Values:
 warp.df$ProbGeneralConf <- warp.prob.gen.ext[,2]
@@ -158,10 +162,13 @@ post.co.offset <- stan_glmer(bears_presence_co ~ dist.2.pa.co + dist.2.grizzpop.
 
 # Save an object to a file
 saveRDS(post.co.offset, file = "/Users/shannonspragg/ONA_GRIZZ/Data/processed/post_co_offset.rds")
+saveRDS(post.co.offset, file = "/Users/shannonspragg/ONA_GRIZZ/Data/processed/post_co_offset_inv.rds")
+
 saveRDS(post.co.int, file = "/Users/shannonspragg/ONA_GRIZZ/Data/processed/post_co_int.rds")
 
 # Restore the object
 post.co.offset <- readRDS(file = "/Users/shannonspragg/ONA_GRIZZ/Data/processed/post_co_offset.rds")
+post.co.offset.inv <- readRDS(file = "/Users/shannonspragg/ONA_GRIZZ/Data/processed/post_co_offset_inv.rds")
 
 ##### Plot the posterior for just fixed effects of our different variables:
 plot_model(post.co.full, sort.est = TRUE) # This plots just fixed effects
@@ -335,7 +342,6 @@ plot(ccs.varint.means.rast)
 
 # Save our CCS Post Means Raster: -----------------------------------------
 terra::writeRaster(ccs.varint.means.rast.co, "/Users/shannonspragg/ONA_GRIZZ/Data/processed/CCS_varint_raster_co.tif" )
-ccs.varint.means.rast.co <- rast("/Users/shannonspragg/ONA_GRIZZ/Data/processed/CCS_varint_raster_co.tif")
 
 
 # Scale our Predictor Rasters: --------------------------------------------

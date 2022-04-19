@@ -14,16 +14,23 @@ library(fasterize)
 library(terra)
 library(stars)
 library(units)
+library(googledrive)
 
-# Bring in the Data -------------------------------
+# Load our Data with GoogleDrive: -----------------------------------------
+options(
+  gargle_oauth_cache = ".secrets",
+  gargle_oauth_email = TRUE
+)
 
-  # Set up Google Drive Link to files: (do this after fully re-running script & making sure it works)
-folder_url <- "https://drive.google.com/drive/u/0/folders/1mpUVwvzqOsUF-Kpu_uF9UdZchJLcakSi"
+# Download Original Data --------------------------------------------
+folder_url <- "https://drive.google.com/drive/u/0/folders/1EOzq2fjN9FI0Pj8YR9eiVE_TnH0LaRCF" # all original data
 folder <- drive_get(as_id(folder_url))
 gdrive_files <- drive_ls(folder)
-lapply(gdrive_files$id, function(x) drive_download(as_id(x), 
-                                                   path = paste0(here::here("/Users/shannonspragg/Desktop/Boise State/BSU Research Lab/Grizzly Project/ONA_GRIZZ_ss/ONA-GRIZZ-shannon"), 
-                                                                 gdrive_files[gdrive_files$id==x,]$name), overwrite = TRUE))
+#have to treat the gdb as a folder and download it into a gdb directory in order to deal with the fact that gdb is multiple, linked files
+lapply(gdrive_files$id, function(x) drive_download(as_id(x),
+                                                   path = paste0(here::here("Data/original/"), gdrive_files[gdrive_files$id==x,]$name), overwrite = TRUE))
+
+
 
   # WARP All Species 1 Year:
 warp.all.sp <-read.csv("/Users/shannonspragg/ONA_GRIZZ/WARP Bears /WARP All Species Full Yr/WARP 3.24.20 to 3.31.21 full .csv")

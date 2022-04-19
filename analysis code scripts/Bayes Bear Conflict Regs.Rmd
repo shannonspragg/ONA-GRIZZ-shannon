@@ -411,7 +411,6 @@ bhs.sd.co <- sd(warp.df$BHS)
 bhs.rast.co.sc <- bhs.sub.mean.co / ( 2 * bhs.sd.co)
 
 # We don't need to scale the categorical rasters, CCS raster or the p(general conflict) raster
-
 ```
 Here, we scale our predictor rasters just like we scaled our variables. We scale each raster by the corresponding predictor value for mean and standard deviation that the predictor variable data was scaled with.
 
@@ -448,7 +447,7 @@ plot(p_BEAR_conf_offset_rast) # Our p(bear conflict) with offset for general con
 ```
 
 ```{r write raster, echo=FALSE, include=FALSE}
-# Save our P(General Conflict) Raster:
-terra::writeRaster(p_conf_rast, "/Users/shannonspragg/ONA_GRIZZ/Data/processed/prob_general_conf_inv.tif")
+# Save our P(Bear Conflict) Raster:
+terra::writeRaster(p_BEAR_conf_offset_rast, "/Users/shannonspragg/ONA_GRIZZ/Data/processed/prob_bear_conflict.tif")
 ```
 
